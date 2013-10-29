@@ -1,0 +1,43 @@
+#! /bin/bash
+
+
+
+# This script downloads FIA Legacy Data for lichens Phase 3 
+
+
+
+
+
+cd /gpfs/nfs/share/ftp/priv/priv/Groups/DBDGS/FIA/RawData/
+
+
+
+
+# Download Plot data
+
+for s in AL CA CO CT DE FL GA ID IL IN MA MD ME MI MN MO NC NV NH NJ NV NY OR PA RI SC TN UT VA VT WA WI WV WY
+
+do 
+
+address=http://www.fia.fs.fed.us/tools-data/other_data/csv/${s}.zip
+curl $address > ${s}.zip
+
+done
+
+
+
+
+
+# Unzip Data
+for s in AL CA CO CT DE FL GA ID IL IN MA MD ME MI MN MO NC NV NH NJ NV NY OR PA RI SC TN UT VA VT WA WI WV WY
+
+do 
+
+unzip ${s}.zip
+
+rm ${s}.zip
+
+done
+
+
+ls *LICHEN*

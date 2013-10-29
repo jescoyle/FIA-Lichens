@@ -1,7 +1,8 @@
 ## This script compiles data tables for FIA lichen plots into:
 ## master : a data table with all variables from 2228 plots
-## model_data : untransformed environmental data used in models from all plots without any data missing, includes PCA variables
-## working_data_unstd :  environmental data log or sqrt transformed to reduce skew and scaled by linear factor (usually 10) to put variables on similar range
+## model_data : data from plots used in models from all plots without any data missing, includes PCA variables
+## trans_data : environmental data log or sqrt transformed to reduce skew
+## working_data_unstd :  trans_data scaled by linear factor (usually 10) to put variables on similar range
 ## working_data : working_data_unstd scaled to have mean 0 and std dev 1
 ## Outliers are analyzed and removed from all data sets and working data sets are divided into equal sized test ('_test') and fitting ('_fit') sets.
 
@@ -288,6 +289,13 @@ working_data_unstd = subset(working_data_unstd, !(rownames(working_data_unstd) %
 model_data = subset(model_data, !(rownames(model_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
 trans_data = subset(trans_data, !(rownames(trans_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
 
+
+## Save data sets
+write.csv(working_data, './Data/fia_lichen_working_data.csv', row.names=T)
+write.csv(working_data_unstd, './Data/fia_lichen_working_data_unstd.csv', row.names=T)
+write.csv(trans_data, './Data/fia_lichen_trans_data.csv', row.names=T)
+write.csv(model_data, './Data/fia_lichen_model_data.csv', row.names=T)
+
 ## Divide data into fitting and testing data sets
 rownames(master) = master$yrplot.id
 allplots = rownames(model_data)
@@ -300,11 +308,6 @@ usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 #}))->fitplots
 #length(fitplots) # stopped at 961
 #testplots = allplots[!(allplots %in% fitplots)]
-
-working_data_test = working_data[testplots,]
-working_data_fit = working_data[fitplots,]
-working_data_unstd_test = working_data_unstd[testplots,]
-working_data_unstd_fit = working_data_unstd[fitplots,]
 
 # Write out list of test and fit plots
 write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
