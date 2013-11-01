@@ -19,7 +19,7 @@ testplots = read.csv('./Data/model test plots.csv')
 fitplots = read.csv('./Data/model fit plots.csv')
 
 # Subset working data to be in testing or fitting data sets
-working_data_test = working_data[testplots,]
-working_data_fit = working_data[fitplots,]
-working_data_unstd_test = working_data_unstd[testplots,]
-working_data_unstd_fit = working_data_unstd[fitplots,]
+working_data_test = working_data[testplots$yrplot.id,]
+working_data_fit = working_data[fitplots$yrplot.id,]
+working_data_unstd_test = working_data_unstd[testplots$yrplot.id,]
+working_data_unstd_fit = working_data_unstd[fitplots$yrplot.id,]
