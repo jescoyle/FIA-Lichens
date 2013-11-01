@@ -1,6 +1,6 @@
 # This script is used to fit SEM models of lichen FIA data
 
-source('load_data.R')
+source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('fia_lichen_analysis_functions.R')
 
 ################################################################################

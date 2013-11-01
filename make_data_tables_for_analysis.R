@@ -10,7 +10,7 @@
 setwd('C://Users/jrcoyle/Documents/Projects/FIA Lichen')
 options(stringsAsFactors=F)
 varnames=read.csv('varnames.csv', row.names=1)
-source('fia_lichen_analysis_functions.R')
+source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
 ########################################################################
 ### Combine data files into a master data file and working data file ###
@@ -67,7 +67,7 @@ rownames(master) = master$yrplot.id
 ### Data Subsetting ###
 
 # Use recent plots after plot design had been standardized
-model_data = subset(master, YEAR>=1997)
+model_data = subset(master, MEASYEAR>=1997)
 
 # Set row names to identify plots
 rownames(model_data) = model_data$yrplot.id
@@ -78,6 +78,7 @@ model_data = subset(model_data, numTreesBig>1) # removes 44 plots widely distrib
 ## Define variables used in analysis
 # Make a list of predictors of each type
 climate = c('ap','mat','iso','pseas','rh')
+local_env = c('radiation')
 pollution = c('totalNS')
 forest_het = c('bark_SG.rao.ba', 'bark_moist_pct.rao.ba', 'wood_SG.rao.ba', 'wood_moist_pct.rao.ba', 
 	'LogSeed.rao.ba','lightDist.mean','PIE.ba.tree','S.tree', 'propDead', 'diamDist.mean')
@@ -86,15 +87,15 @@ forest_hab = c('bark_SG.ba', 'bark_moist_pct.ba', 'wood_SG.ba', 'wood_moist_pct.
 forest_time = c('maxDiam')
 region = c('regS')
 
-predictors = data.frame(pred = c(climate, pollution, forest_het, forest_hab, forest_time, region),
-	type = c(rep('climate',length(climate)+length(pollution)),rep('forest',length(forest_het)+length(forest_hab)+length(forest_time)), rep('region',length(region))),
-	shape = c(rep(2,length(climate)), rep(1, length(pollution)), rep(1, length(forest_het)), rep(2, length(forest_hab)), rep(1, length(forest_time)), rep(1,length(region))),
-	hyp = c(rep('resource',length(climate)+length(pollution)), rep('niche', length(forest_het)), rep('resource', length(forest_hab)), rep('time', length(forest_time)), rep('region', length(region)))
+predictors = data.frame(pred = c(climate, pollution, local_env, forest_het, forest_hab, forest_time, region),
+	type = c(rep('climate',length(climate)+length(pollution)+length(local_env)),rep('forest',length(forest_het)+length(forest_hab)+length(forest_time)), rep('region',length(region))),
+	shape = c(rep(2,length(climate)), rep(1, length(pollution)), rep(2, length(local_env)), rep(1, length(forest_het)), rep(2, length(forest_hab)), rep(1, length(forest_time)), rep(1,length(region))),
+	hyp = c(rep('resource',length(climate)+length(pollution)+length(local_env)), rep('niche', length(forest_het)), rep('resource', length(forest_hab)), rep('time', length(forest_time)), rep('region', length(region)))
 )
 predictors[predictors$pred=='totalCirc','shape']<-1
 
 # Plot histograms of predictors
-pdf('./Figures/Predictor variable histograms.pdf', height=6, width=6)
+pdf('./Figures/New Coordinates/Predictor variable histograms.pdf', height=6, width=6)
 for(p in predictors$pred){
 	hist(model_data[,p], main=varnames[p,'displayName'])
 	mtext(paste('# Missing =',sum(is.na(model_data[,p]))), side=3, line=0, adj=1)
@@ -142,7 +143,7 @@ dev.off()
 
 ## Define new PCA variable pairs for dependently correlated variables
 newvars = data.frame(yrplot.id=rownames(model_data))
-rownames(newvars)==rownames(model_data)
+#rownames(newvars)==rownames(model_data)
 
 # max tree size and tree size range
 diam_pca = prcomp(na.omit(model_data[,c('diamDist.mean','maxDiam')]))
@@ -159,7 +160,7 @@ names(precip_vars) = c('wetness','rain_lowRH')
 newvars = cbind(newvars, precip_vars)
 
 ## Create data set with variables used for modeling
-myvars = c('lichen.rich','mat','iso','pseas','totalNS',
+myvars = c('lichen.rich','mat','iso','pseas','totalNS','radiation',
 	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'totalCirc','regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
@@ -185,6 +186,7 @@ hist(trans_data$bigTrees) # Not much I can do about transforming this, so I won'
 working_data_unstd = trans_data
 working_data_unstd$mat = working_data_unstd$mat/10
 working_data_unstd$pseas = working_data_unstd$pseas/10
+working_data_unstd$radiation = working_data_unstd$radiation/1000000
 working_data_unstd$totalNS = working_data_unstd$totalNS/100
 working_data_unstd$bark_moist_pct.ba = working_data_unstd$bark_moist_pct.ba/10
 working_data_unstd$bark_moist_pct.rao.ba = working_data_unstd$bark_moist_pct.rao.ba*10
@@ -248,7 +250,7 @@ outliers[rownames(subset(model_data, lichen.rich==1)),]
 subset(model_data, rownames(model_data) %in% rownames(outliers)[which(outliers$numOut>7)])
 
 # Used to check outliers in each variable
-i=26
+i=6
 ols = lm(working_data_unstd$lichen.rich_log~working_data_unstd[,i])
 opar <- par(mfrow = c(2, 2), oma = c(0, 0, 1.1, 0))
 plot(ols, las = 1)
@@ -260,6 +262,7 @@ subset(model_data, rownames(model_data) %in% names(which(cd>0.01)))
 # mat - none
 # iso - none
 # pseas - none
+# radiation - none
 # totalNS - none
 # bark_moist_pct.ba - none
 # bark_moist_pct.rao.ba: 1998_17_43_6379
