@@ -1,4 +1,6 @@
 # This script is used to fit SEM models of lichen FIA data
+# This code is total bs
+
 
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('fia_lichen_analysis_functions.R')

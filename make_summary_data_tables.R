@@ -35,8 +35,6 @@ siteXsp = siteXsp[,colSums(siteXsp)!=0]
 siteXsp = siteXsp[,-which(colnames(siteXsp)=='9999')]
 
 
-
-
 ### Where are the most species rich plots?
 ordered_data = model_data[order(model_data$lichen.rich, decreasing=T),] # aslo examined fric and genus.rich
 ordered_data30 = ordered_data[ordered_data$lichen.rich>=30,c('yrplot.id','STATE_NAME','COUNTYNM','LAT','LON','lichen.rich','genus.rich','regS','fric')]

@@ -7,7 +7,7 @@
 ## Outliers are analyzed and removed from all data sets and working data sets are divided into equal sized test ('_test') and fitting ('_fit') sets.
 
 
-setwd('C://Users/jrcoyle/Documents/Projects/FIA Lichen')
+setwd('C://Users/jrcoyle/Documents/UNC/Projects/FIA Lichen')
 options(stringsAsFactors=F)
 varnames=read.csv('varnames.csv', row.names=1)
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
@@ -65,6 +65,7 @@ write.csv(master, './Data/fia_lichen_master_data.csv', row.names=F)
 rownames(master) = master$yrplot.id
 ###############################################################################
 ### Data Subsetting ###
+master = read.csv('./Data/fia_lichen_master_data.csv', row.names=1)
 
 # Use recent plots after plot design had been standardized
 model_data = subset(master, MEASYEAR>=1997)
@@ -83,7 +84,7 @@ pollution = c('totalNS')
 forest_het = c('bark_SG.rao.ba', 'bark_moist_pct.rao.ba', 'wood_SG.rao.ba', 'wood_moist_pct.rao.ba', 
 	'LogSeed.rao.ba','lightDist.mean','PIE.ba.tree','S.tree', 'propDead', 'diamDist.mean')
 forest_hab = c('bark_SG.ba', 'bark_moist_pct.ba', 'wood_SG.ba', 'wood_moist_pct.ba', 
-	'LogSeed.ba','light.mean','totalCirc')
+	'LogSeed.ba','light.mean','totalCirc', 'Conifer_area')
 forest_time = c('maxDiam')
 region = c('regS')
 
@@ -161,7 +162,7 @@ newvars = cbind(newvars, precip_vars)
 
 ## Create data set with variables used for modeling
 myvars = c('lichen.rich','mat','iso','pseas','totalNS','radiation',
-	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba',
+	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','Conifer_area',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'totalCirc','regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
 )
@@ -227,7 +228,7 @@ dev.off()
 #	wood_SG.rao.ba, LogSeed.rao.ba, propDead, light.mean, 
 #	lightDist.mean, diamDiversity, bigTrees, totalCirc
 
-plot(working_data$bark_moist_pct.rao.ba~rank(working_data$bark_moist_pct.rao.ba))
+plot(working_data$Conifer_area~rank(working_data$Conifer_area))
 
 outliers = working_data_unstd[,2:ncol(working_data_unstd)]
 outliers[,]<-NA
@@ -250,7 +251,7 @@ outliers[rownames(subset(model_data, lichen.rich==1)),]
 subset(model_data, rownames(model_data) %in% rownames(outliers)[which(outliers$numOut>7)])
 
 # Used to check outliers in each variable
-i=6
+i=11
 ols = lm(working_data_unstd$lichen.rich_log~working_data_unstd[,i])
 opar <- par(mfrow = c(2, 2), oma = c(0, 0, 1.1, 0))
 plot(ols, las = 1)
@@ -285,6 +286,7 @@ subset(model_data, rownames(model_data) %in% names(which(cd>0.01)))
 # diamDiversity : 2004_16_49_85627, two trees diams 5.5, 27.1 leads to large diameter difference for relatively small trees, PCA exacerbates this
 # wetness - none
 # rain_lowRH - none
+# Conifer_area - none
 
 # Remove outliers
 working_data = subset(working_data, !(rownames(working_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))

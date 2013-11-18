@@ -326,9 +326,10 @@ plot(raoQ~rh, data=master)
 ##############################################
 ### Calculate trait means across plots
 
-spXtrait = read.csv('./Data/spXtrait_matrix_foranalysis.csv', row.names=1)
+spXtrait = read.csv('./Data/LichenTraits/spXtrait_matrix_foranalysis.csv', row.names=1)
 siteXsp = read.csv('./Data/siteXsp_matrix_foranalysis.csv', row.names=1)
-lichenFD_df = read.csv('./Data/lichen_FD.csv')
+lichenFD_df = read.csv('./Data/LichenTraits/lichen_FD.csv')
+traitdf = read.csv('./lias_trait_types.csv', row.names=1)
 
 ## Just based on presence absence
 siteXsp_pres = siteXsp>0
@@ -354,6 +355,65 @@ lichenLIAS = cbind(lichenFD_df, lichen_trait_means)
 write.csv(lichen_trait_means, './Data/fia_lichen_trait_means.csv', row.names=T)
 write.csv(lichenLIAS, './Data/fia_lichen_LIAS_means_diversity.csv')
 
+## Calculate probability of m out of M species with trait in pool of n out of N species with trait
+
+# Maximum number of species in a plot
+maxRich = max(rowSums(siteXsp_pres))
+
+# Number of randomizations
+NSAMP = 1000
+
+# Binary trait list to go through
+use_traits = rownames(subset(traitdf, type=='binary'))
+
+# Make list of null distributions for each richness level.
+nullexp = sapply(use_traits, function(tr){
+	replicate(NSAMP, sapply(1:maxRich, function(n){
+		use_samp = sample(spXtrait[,tr], n, replace=F)
+		sum(use_samp>0, na.rm=T)
+	}))
+}, simplify='array')
+
+dimnames(nullexp)
+nullexp[,1:10,'atranorin']
+
+## Calculate z-scores and significance levels for each plot for each trait
+
+# Count the number of species in each site that have each trait (state = 1 or 2)
+spXtrait_noNA = apply(spXtrait[,use_traits], 2, function(x) x %in% 1:2)
+
+siteXtrait = siteXsp_pres %*% spXtrait_noNA
+
+# Calculate z-scores of observed trait prevalance
+richness = rowSums(siteXsp_pres)
+means = apply(nullexp, c(1,3), mean, na.rm=T)
+stdevs = apply(nullexp, c(1,3), function(x) sqrt(var(x)))
+
+sapply(use_traits, function(tr){
+	(obs - means[richness,tr])/stdevs[richness, tr]
+}) -> zscores
+
+hist(zscores[,'atranorin'])
+
+
+write.csv(zscores, './Data/LichenTraits/trait_z-scores_across_plots.csv', row.names=T)
+
+
+# Would still like to calculate p-values but not sure exactly the correct way to do this.
+
+## Plot random distributions
+pdf('./Figures/Prevalence of lichen traits relative to null.pdf', height=5, width=10)
+for(tr in use_traits){
+
+plot(means[,tr], ylim=c(0,max(siteXtrait[,tr])+1), xlab='Species richness', 
+	ylab = '# Species with trait', cex=2, pch=15, main=traitdf[tr,'displayName'])
+arrows(1:37, means[,tr]+2*stdevs[,tr],1:37,means[,tr]-2*stdevs[,tr], 
+	angle=90, length=.1, code=0, lwd=2)
+arrows(1:37, means[,tr]+stdevs[,tr],1:37,means[,tr]-stdevs[,tr], 
+	angle=90, length=.1, code=0, col=2, lwd=3)
+points(jitter(richness), siteXtrait[,tr], col='blue')
+}
+dev.off()
 
 
 ##############################################
@@ -456,6 +516,8 @@ calc.bintraitmean = function(x, abun){
 	(abun %*% x_pres) / ((abun %*% x_pres) + (abun %*% x_abs))
 #	(abun %*% x_pres) / (abun %*% x_notNA)
 }
+
+
 
 calc.traitmean = function(x, abun){
 	x_noNA = x
