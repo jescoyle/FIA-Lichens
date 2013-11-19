@@ -1,9 +1,9 @@
 # This script is used to fit SEM models of lichen FIA data
-# This code is total bs
+
 
 
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
-source('fia_lichen_analysis_functions.R')
+source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
 ################################################################################
 ### Path Analysis ###
@@ -20,11 +20,11 @@ path_measerr = '
 	# Latent variables
 	lichen_rich =~ sqrt(0.75)*lichen.rich_log
 
-	# Climate effects on forest
-	bark_moist_pct.rao.ba + LogSeed.rao.ba + PIE.ba.tree + propDead + lightDist.mean + diamDiversity + bark_moist_pct.ba + LogSeed.ba + totalCirc + bigTrees + light.mean ~ wetness + rain_lowRH + iso + pseas + mat
-	wood_SG.ba + wood_SG.rao.ba ~ wetness + rain_lowRH + iso + pseas + mat# + mat2
+	# Climate effects on forest: both regional climate and local env (radiation) impact forest
+	wood_SG.ba + wood_SG.rao.ba + bark_moist_pct.rao.ba + LogSeed.rao.ba + PIE.ba.tree + propDead + lightDist.mean + diamDiversity + bark_moist_pct.ba + LogSeed.ba + totalCirc + bigTrees + light.mean + PC1 ~
+		wetness + rain_lowRH + iso + pseas + mat + radiation
 
-	# Climate effects on regional richness
+	# Climate effects on regional richness: local env does not impact regional richness
 	regS ~ wetness + rain_lowRH + iso + pseas + mat
 
 	# Climate effects on pollution
@@ -32,7 +32,7 @@ path_measerr = '
 
 	# Covariances
 	PIE.ba.tree ~~ bark_moist_pct.rao.ba + LogSeed.rao.ba + wood_SG.rao.ba
-	PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc
+	PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc + PC1
 	bark_moist_pct.rao.ba ~~ LogSeed.rao.ba + wood_SG.rao.ba
 	LogSeed.rao.ba ~~ wood_SG.rao.ba
 	LogSeed.ba ~~ wood_SG.ba + bark_moist_pct.ba
@@ -47,18 +47,18 @@ path_measerr = '
 
 	lichen_rich ~ bark_moist_pct.rao.ba + wood_SG.rao.ba + LogSeed.rao.ba +
 		PIE.ba.tree + propDead + lightDist.mean + diamDiversity +
-		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + totalCirc + bigTrees + light.mean + 
-		wetness + rain_lowRH + iso + pseas + mat + regS + totalNS +
+		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + totalCirc + bigTrees + light.mean + PC1 +
+		wetness + rain_lowRH + iso + pseas + mat + radiation + regS + totalNS +
 		tot_abun_log
 	
 	tot_abun_log ~ bark_moist_pct.rao.ba + wood_SG.rao.ba + LogSeed.rao.ba +
 		PIE.ba.tree + propDead + lightDist.mean + diamDiversity +
-		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + totalCirc + bigTrees + light.mean + 
-		wetness + rain_lowRH + iso + pseas + mat + totalNS
+		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + totalCirc + bigTrees + light.mean + PC1 +
+		wetness + rain_lowRH + iso + pseas + mat + radiation + totalNS
 '
 
 # Fit model
-fit_measerr = sem(path_measerr, data=working_data_unstd, fixed.x=F)
+fit_measerr = sem(path_measerr, data=working_data_unstd_fit, fixed.x=F)
 
 summary(fit_measerr, standardized=T, rsq=TRUE, fit.measures=T)
 fitMeasures(fit_measerr)
@@ -79,19 +79,20 @@ path_measerr = '
 	lichen_rich =~ sqrt(0.75)*lichen.rich_log
 
 	# Climate effects on forest
-	bark_moist_pct.rao.ba ~ FH1a*wetness + FH1b*rain_lowRH + FH1c*iso + FH1d*pseas + FH1e*mat
-	wood_SG.rao.ba ~ FH2a*wetness + FH2b*rain_lowRH + FH2c*iso + FH2d*pseas + FH2e*mat
-	LogSeed.rao.ba ~ FH3a*wetness + FH3b*rain_lowRH + FH3c*iso + FH3d*pseas + FH3e*mat
-	PIE.ba.tree ~ FH4a*wetness + FH4b*rain_lowRH + FH4c*iso + FH4d*pseas + FH4e*mat
-	propDead ~ FH5a*wetness + FH5b*rain_lowRH + FH5c*iso + FH5d*pseas + FH5e*mat
-	lightDist.mean ~ FH6a*wetness + FH6b*rain_lowRH + FH6c*iso + FH6d*pseas + FH6e*mat
-	diamDiversity ~ FH7a*wetness + FH7b*rain_lowRH + FH7c*iso + FH7d*pseas + FH7e*mat
-	bark_moist_pct.ba ~ FM1a*wetness + FM1b*rain_lowRH + FM1c*iso + FM1d*pseas + FM1e*mat
-	wood_SG.ba ~ FM2a*wetness + FM2b*rain_lowRH + FM2c*iso + FM2d*pseas + FM2e*mat
-	LogSeed.ba ~ FM3a*wetness + FM3b*rain_lowRH + FM3c*iso + FM3d*pseas + FM3e*mat
-	totalCirc ~ FM4a*wetness + FM4b*rain_lowRH + FM4c*iso + FM4d*pseas + FM4e*mat
-	bigTrees ~ FM5a*wetness + FM5b*rain_lowRH + FM5c*iso + FM5d*pseas + FM5e*mat
-	light.mean  ~ FM6a*wetness + FM6b*rain_lowRH + FM6c*iso + FM6d*pseas + FM6e*mat
+	bark_moist_pct.rao.ba ~ FH1a*wetness + FH1b*rain_lowRH + FH1c*iso + FH1d*pseas + FH1e*mat + FH1f*radiation
+	wood_SG.rao.ba ~ FH2a*wetness + FH2b*rain_lowRH + FH2c*iso + FH2d*pseas + FH2e*mat +  FH2f*radiation
+	LogSeed.rao.ba ~ FH3a*wetness + FH3b*rain_lowRH + FH3c*iso + FH3d*pseas + FH3e*mat + FH3f*radiation
+	PIE.ba.tree ~ FH4a*wetness + FH4b*rain_lowRH + FH4c*iso + FH4d*pseas + FH4e*mat + FH4f*radiation
+	propDead ~ FH5a*wetness + FH5b*rain_lowRH + FH5c*iso + FH5d*pseas + FH5e*mat + FH5f*radiation
+	lightDist.mean ~ FH6a*wetness + FH6b*rain_lowRH + FH6c*iso + FH6d*pseas + FH6e*mat + FH6f*radiation
+	diamDiversity ~ FH7a*wetness + FH7b*rain_lowRH + FH7c*iso + FH7d*pseas + FH7e*mat + FH7f*radiation
+	bark_moist_pct.ba ~ FM1a*wetness + FM1b*rain_lowRH + FM1c*iso + FM1d*pseas + FM1e*mat + FM1f*radiation
+	wood_SG.ba ~ FM2a*wetness + FM2b*rain_lowRH + FM2c*iso + FM2d*pseas + FM2e*mat + FM2f*radiation
+	LogSeed.ba ~ FM3a*wetness + FM3b*rain_lowRH + FM3c*iso + FM3d*pseas + FM3e*mat + FM3f*radiation
+	totalCirc ~ FM4a*wetness + FM4b*rain_lowRH + FM4c*iso + FM4d*pseas + FM4e*mat + FM4f*radiation
+	bigTrees ~ FM5a*wetness + FM5b*rain_lowRH + FM5c*iso + FM5d*pseas + FM5e*mat + FM5f*radiation
+	light.mean  ~ FM6a*wetness + FM6b*rain_lowRH + FM6c*iso + FM6d*pseas + FM6e*mat + FM6f*radiation
+	PC1 ~ FM7a*wetness + FM7b*rain_lowRH + FM7c*iso + FM7d*pseas + FM7e*mat + FM7f*radiation
 
 	# Climate effects on regional richness
 	regS ~ R1*wetness + R2*rain_lowRH + R3*iso + R4*pseas + R5*mat
@@ -101,7 +102,7 @@ path_measerr = '
 
 	# Covariances
 	PIE.ba.tree ~~ bark_moist_pct.rao.ba + LogSeed.rao.ba + wood_SG.rao.ba
-	PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc
+	PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc + PC1
 	bark_moist_pct.rao.ba ~~ LogSeed.rao.ba + wood_SG.rao.ba
 	LogSeed.rao.ba ~~ wood_SG.rao.ba
 	LogSeed.ba ~~ wood_SG.ba + bark_moist_pct.ba
@@ -117,15 +118,15 @@ path_measerr = '
 	# Lichen richness regression
 	lichen_rich ~ FH1*bark_moist_pct.rao.ba + FH2*wood_SG.rao.ba + FH3*LogSeed.rao.ba +
 		FH4*PIE.ba.tree + FH5*propDead + FH6*lightDist.mean + FH7*diamDiversity +
-		FM1*bark_moist_pct.ba + FM2*wood_SG.ba + FM3*LogSeed.ba + FM4*totalCirc + FM5*bigTrees + FM6*light.mean + 
-		C1*wetness + C2*rain_lowRH + C3*iso + C4*pseas + C5*mat + R*regS + P*totalNS +
+		FM1*bark_moist_pct.ba + FM2*wood_SG.ba + FM3*LogSeed.ba + FM4*totalCirc + FM5*bigTrees + FM6*light.mean + FM7*PC1 +
+		C1*wetness + C2*rain_lowRH + C3*iso + C4*pseas + C5*mat + C6*radiation + R*regS + P*totalNS +
 		A*tot_abun_log
 
 	# Lichen abundance regression
 	tot_abun_log ~ AFH1*bark_moist_pct.rao.ba + AFH2*wood_SG.rao.ba + AFH3*LogSeed.rao.ba +
 		AFH4*PIE.ba.tree + AFH5*propDead + AFH6*lightDist.mean + AFH7*diamDiversity +
-		AFM1*bark_moist_pct.ba + AFM2*wood_SG.ba + AFM3*LogSeed.ba + AFM4*totalCirc + AFM5*bigTrees + AFM6*light.mean + 
-		AC1*wetness + AC2*rain_lowRH + AC3*iso + AC4*pseas + AC5*mat + AP*totalNS
+		AFM1*bark_moist_pct.ba + AFM2*wood_SG.ba + AFM3*LogSeed.ba + AFM4*totalCirc + AFM5*bigTrees + AFM6*light.mean + AFM7*PC1 +
+		AC1*wetness + AC2*rain_lowRH + AC3*iso + AC4*pseas + AC5*mat + AC6*radiation + AP*totalNS
 	
 	# Indirect effects of forest structure variables on richness via abundance
 	IE_bark_moist_pct.rao.ba := AFH1*A
@@ -141,6 +142,7 @@ path_measerr = '
 	IE_totalCirc := AFM4*A
 	IE_bigTrees := AFM5*A
 	IE_light.mean := AFM6*A
+	IE_PC1 := AFM7*A
 
 	# Indirect effect of pollution via abundance
 	IE_totalNS := AP*A
@@ -150,7 +152,8 @@ path_measerr = '
 		FH3a*(FH3 + IE_LogSeed.rao.ba) + FH4a*(FH4 + IE_PIE.ba.tree) + FH5a*(FH5 + IE_propDead) + 
 		FH6a*(FH6 + IE_lightDist.mean) + FH7a*(FH7 + IE_diamDiversity)
 	IE_wetness_FM := FM1a*(FM1 + IE_bark_moist_pct.ba) + FM2a*(FM2 + IE_wood_SG.ba) + 
-		FM3a*(FM3 + IE_LogSeed.ba) + FM4a*(FM4 + IE_totalCirc) + FM5a*(FM5 + IE_bigTrees) + FM6a*(FM6 + IE_light.mean)
+		FM3a*(FM3 + IE_LogSeed.ba) + FM4a*(FM4 + IE_totalCirc) + FM5a*(FM5 + IE_bigTrees) + 
+		FM6a*(FM6 + IE_light.mean) + FM7a*(FM7 + IE_PC1)
 	IE_wetness_R := R1*R
 	IE_wetness_P := P1*(P + IE_totalNS)
 	IE_wetness_A := AC1*A
@@ -160,7 +163,8 @@ path_measerr = '
 		FH3b*(FH3 + IE_LogSeed.rao.ba) + FH4b*(FH4 + IE_PIE.ba.tree) + FH5b*(FH5 + IE_propDead) + 
 		FH6b*(FH6 + IE_lightDist.mean) + FH7b*(FH7 + IE_diamDiversity)
 	IE_rain_lowRH_FM := FM1b*(FM1 + IE_bark_moist_pct.ba) + FM2b*(FM2 + IE_wood_SG.ba) + 
-		FM3b*(FM3 + IE_LogSeed.ba) + FM4b*(FM4 + IE_totalCirc) + FM5b*(FM5 + IE_bigTrees) + FM6b*(FM6 + IE_light.mean)
+		FM3b*(FM3 + IE_LogSeed.ba) + FM4b*(FM4 + IE_totalCirc) + FM5b*(FM5 + IE_bigTrees) + 
+		FM6b*(FM6 + IE_light.mean) + FM7b*(FM7 + IE_PC1)
 	IE_rain_lowRH_R := R2*R
 	IE_rain_lowRH_P := P2*(P + IE_totalNS)
 	IE_rain_lowRH_A := AC2*A
@@ -170,7 +174,8 @@ path_measerr = '
 		FH3c*(FH3 + IE_LogSeed.rao.ba) + FH4c*(FH4 + IE_PIE.ba.tree) + FH5c*(FH5 + IE_propDead) + 
 		FH6c*(FH6 + IE_lightDist.mean) + FH7c*(FH7 + IE_diamDiversity)
 	IE_iso_FM := FM1c*(FM1 + IE_bark_moist_pct.ba) + FM2c*(FM2 + IE_wood_SG.ba) + 
-		FM3c*(FM3 + IE_LogSeed.ba) + FM4c*(FM4 + IE_totalCirc) + FM5c*(FM5 + IE_bigTrees) + FM6c*(FM6 + IE_light.mean)
+		FM3c*(FM3 + IE_LogSeed.ba) + FM4c*(FM4 + IE_totalCirc) + FM5c*(FM5 + IE_bigTrees) +
+		FM6c*(FM6 + IE_light.mean) +  FM7c*(FM7 + IE_PC1)
 	IE_iso_R := R3*R
 	IE_iso_A := AC3*A
 	IE_iso := IE_iso_FH + IE_iso_FM + IE_iso_R + IE_iso_A
@@ -179,7 +184,8 @@ path_measerr = '
 		FH3d*(FH3 + IE_LogSeed.rao.ba) + FH4d*(FH4 + IE_PIE.ba.tree) + FH5d*(FH5 + IE_propDead) + 
 		FH6d*(FH6 + IE_lightDist.mean) + FH7d*(FH7 + IE_diamDiversity)
 	IE_pseas_FM := FM1d*(FM1 + IE_bark_moist_pct.ba) + FM2d*(FM2 + IE_wood_SG.ba) + 
-		FM3d*(FM3 + IE_LogSeed.ba) + FM4d*(FM4 + IE_totalCirc) + FM5d*(FM5 + IE_bigTrees) + FM6d*(FM6 + IE_light.mean)
+		FM3d*(FM3 + IE_LogSeed.ba) + FM4d*(FM4 + IE_totalCirc) + FM5d*(FM5 + IE_bigTrees) + 
+		FM6d*(FM6 + IE_light.mean) + FM7d*(FM7 + IE_PC1)
 	IE_pseas_R := R4*R
 	IE_pseas_A := AC4*A
 	IE_pseas := IE_pseas_FH + IE_pseas_FM + IE_pseas_R + IE_pseas_A
@@ -188,10 +194,20 @@ path_measerr = '
 		FH3e*(FH3 + IE_LogSeed.rao.ba) + FH4e*(FH4 + IE_PIE.ba.tree) + FH5e*(FH5 + IE_propDead) + 
 		FH6e*(FH6 + IE_lightDist.mean) + FH7e*(FH7 + IE_diamDiversity)
 	IE_mat_FM := FM1e*(FM1 + IE_bark_moist_pct.ba) + FM2e*(FM2 + IE_wood_SG.ba) + 
-		FM3e*(FM3 + IE_LogSeed.ba) + FM4e*(FM4 + IE_totalCirc) + FM5e*(FM5 + IE_bigTrees) + FM6e*(FM6 + IE_light.mean)
+		FM3e*(FM3 + IE_LogSeed.ba) + FM4e*(FM4 + IE_totalCirc) + FM5e*(FM5 + IE_bigTrees) + 
+		FM6e*(FM6 + IE_light.mean) + FM7e*(FM7 + IE_PC1)
 	IE_mat_R := R5*R
 	IE_mat_A := AC5*A
 	IE_mat := IE_mat_FH + IE_mat_FM + IE_mat_R + IE_mat_A
+
+	IE_radiation_FH := FH1f*(FH1 + IE_bark_moist_pct.rao.ba) + FH2f*(FH2 + IE_wood_SG.rao.ba) +
+		FH3f*(FH3 + IE_LogSeed.rao.ba) + FH4f*(FH4 + IE_PIE.ba.tree) + FH5f*(FH5 + IE_propDead) + 
+		FH6f*(FH6 + IE_lightDist.mean) + FH7f*(FH7 + IE_diamDiversity)
+	IE_radiation_FM := FM1f*(FM1 + IE_bark_moist_pct.ba) + FM2f*(FM2 + IE_wood_SG.ba) + 
+		FM3f*(FM3 + IE_LogSeed.ba) + FM4f*(FM4 + IE_totalCirc) + FM5f*(FM5 + IE_bigTrees) + 
+		FM6f*(FM6 + IE_light.mean) + FM7f*(FM7 + IE_PC1)
+	IE_radiation_A := AC6*A
+	IE_radiation := IE_radiation_FH + IE_radiation_FM + IE_radiation_A
 
 	# Total effects on lichen richness
 	TE_wetness := IE_wetness + C1	
@@ -199,6 +215,7 @@ path_measerr = '
 	TE_iso := IE_iso + C3
 	TE_pseas := IE_pseas + C4
 	TE_mat := IE_mat + C5
+	TE_radiation := IE_radiation + C6
 
 	TE_bark_moist_pct.rao.ba := IE_bark_moist_pct.rao.ba + FH1
 	TE_wood_SG.rao.ba := IE_wood_SG.rao.ba + FH2
@@ -213,11 +230,12 @@ path_measerr = '
 	TE_totalCirc := IE_totalCirc + FM4
 	TE_bigTrees := IE_bigTrees + FM5
 	TE_light.mean := IE_light.mean + FM6
+	TE_PC1 := IE_PC1 +  FM7	
 
 	TE_FH := TE_bark_moist_pct.rao.ba +	TE_wood_SG.rao.ba + TE_LogSeed.rao.ba +
 		TE_PIE.ba.tree + TE_propDead + TE_lightDist.mean + TE_diamDiversity
 	TE_FM := TE_bark_moist_pct.ba + TE_wood_SG.ba + TE_LogSeed.ba + TE_totalCirc +
-		TE_bigTrees + TE_light.mean
+		TE_bigTrees + TE_light.mean + TE_PC1
 
 	TE_totalNS := IE_totalNS + P
 
