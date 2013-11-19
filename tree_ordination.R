@@ -62,7 +62,7 @@ sum(is.na(siteXsp)) # Make sure there is no missing data due to bad matches
 ## Ordination
 library(ape) #pcoa
 library(ade4) #is.euclid
-library(vegan) # decostand
+library(vegan) # decostand, rda
 
 # Transform abundances using log10 to increase normality
 siteXsp_trans = log10(siteXsp+1)
@@ -217,6 +217,16 @@ grppca = rda(siteXgrp_hel)
 grpscore = scores(grppca,1:10,display='species')
 sitescore = as.data.frame(scores(grppca, 1:10, display='sites'))
 
+plot(sitescore[,1], sitescore[,2])
+
+# Write out PC1-3 scores
+write.csv(data.frame(yrplot.id = rownames(sitescore), sitescore[,1:3]),'./Data/TreeData/tree_funcgrp_pca1-3.csv', row.names=F)
+
+
+# Variation explained:
+eigenvals(grppca)/sum(eigenvals(grppca))
+
+
 # Use above code to make maps
 
 
@@ -226,7 +236,7 @@ rownames(grpscore) = jenkins[rownames(grpscore),'Description']
 
 grpscore[order(grpscore[,1]),1:3]
 
-biplot(grppca, c(3,4), type=c('text','points'))
+biplot(grppca, c(1,2), type=c('text','points'))
 
 
 # Which axis is lichen richness correlated with?
