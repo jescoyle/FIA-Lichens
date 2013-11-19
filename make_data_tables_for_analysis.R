@@ -39,6 +39,7 @@ tree_data = read.csv('./Data/TreeData/master_data_forest.csv')[,c('yrplot.id','S
 	'wood_moist_pct.rao.ba','bark_moist_pct.rao.ba','wood_SG.rao.ba','bark_SG.rao.ba','LogSeed.rao.ba',
 	'wood_moist_pct.ba','bark_moist_pct.ba','wood_SG.ba','bark_SG.ba','LogSeed.ba','diamDist.mean',
 	'n.stems','basal.area','light.mean','light.var','lightDist.mean','totalCirc')]
+tree_pca = read.csv('./Data/TreeData/tree_funcgrp_pca1-3.csv')
 
 # Lichen functional diversity data
 fd_data = read.csv('./Data/LichenTraits/fia_lichen_LIAS_means_diversity.csv')
@@ -55,6 +56,7 @@ master = merge(plot_data, env_plot_data, all.x=T, all.y=F)
 master = merge(master, rich_data, all.x=T, all.y=F)
 master = merge(master, abun_data, all.x=T, all.y=T)
 master = merge(master, tree_data, all.x=T, all.y=F)
+master = merge(master, tree_pca, all.x=T, all.y=F)
 master = merge(master, fd_data, all.x=T, all.y=F)
 master = merge(master, reg_data, all.x=T, all.y=F)
 master = merge(master, env_data, all.x=T, all.y=F)
@@ -84,7 +86,7 @@ pollution = c('totalNS')
 forest_het = c('bark_SG.rao.ba', 'bark_moist_pct.rao.ba', 'wood_SG.rao.ba', 'wood_moist_pct.rao.ba', 
 	'LogSeed.rao.ba','lightDist.mean','PIE.ba.tree','S.tree', 'propDead', 'diamDist.mean')
 forest_hab = c('bark_SG.ba', 'bark_moist_pct.ba', 'wood_SG.ba', 'wood_moist_pct.ba', 
-	'LogSeed.ba','light.mean','totalCirc', 'Conifer_area')
+	'LogSeed.ba','light.mean','totalCirc', 'PC1')
 forest_time = c('maxDiam')
 region = c('regS')
 
@@ -162,7 +164,7 @@ newvars = cbind(newvars, precip_vars)
 
 ## Create data set with variables used for modeling
 myvars = c('lichen.rich','mat','iso','pseas','totalNS','radiation',
-	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','Conifer_area',
+	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','PC1',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'totalCirc','regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
 )
@@ -202,6 +204,7 @@ working_data_unstd$regS = working_data_unstd$regS/10
 working_data_unstd$regParm = working_data_unstd$regParm/10
 working_data_unstd$regPhys = working_data_unstd$regPhys/10
 working_data_unstd$bigTrees = working_data_unstd$bigTrees/10
+working_data_unstd$PC1 = working_data_unstd$PC1*10
 
 # Rescale by mean and stddev
 working_data = trans_data
@@ -228,7 +231,7 @@ dev.off()
 #	wood_SG.rao.ba, LogSeed.rao.ba, propDead, light.mean, 
 #	lightDist.mean, diamDiversity, bigTrees, totalCirc
 
-plot(working_data$Conifer_area~rank(working_data$Conifer_area))
+plot(working_data$PC1~rank(working_data$PC1))
 
 outliers = working_data_unstd[,2:ncol(working_data_unstd)]
 outliers[,]<-NA
@@ -286,7 +289,7 @@ subset(model_data, rownames(model_data) %in% names(which(cd>0.01)))
 # diamDiversity : 2004_16_49_85627, two trees diams 5.5, 27.1 leads to large diameter difference for relatively small trees, PCA exacerbates this
 # wetness - none
 # rain_lowRH - none
-# Conifer_area - none
+# PC1 - none
 
 # Remove outliers
 working_data = subset(working_data, !(rownames(working_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
@@ -317,7 +320,6 @@ usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 # Write out list of test and fit plots
 write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
 write.csv(data.frame(yrplot.id=fitplots), './Data/model fit plots.csv')
-
 
 
 
