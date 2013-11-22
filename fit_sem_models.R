@@ -240,7 +240,7 @@ path_measerr = '
 	TE_totalNS := IE_totalNS + P
 
 '
-endfit =  sem(path_measerr, data=working_data_unstd_test, fixed.x=F, se='robust')
+endfit =  sem(path_measerr, data=working_data_unstd_test, fixed.x=F, estimator='ML', se='robust.sem')
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 
 # Examine model residuals
@@ -249,7 +249,7 @@ which(abs(res$cov)>0.2, arr.ind=T)
 
 save(endfit, file='./SEM models/path_measerr_finalmod_testdata.Rdata')
 
-endfit_ests = parameterEstimates(endfit, standardized=T, boot.ci.type='perc')
+endfit_ests = parameterEstimates(endfit, standardized=T, level=0.95, boot.ci.type='perc')
 subset(endfit_ests, pvalue>0.05)
 endfit_paths = subset(endfit_ests, op=='~')
 endfit_paths[order(endfit_paths$std.all, decreasing=T),]
@@ -265,7 +265,7 @@ alldata=data.frame(working_data_unstd_test,
 write.csv(alldata, './SEM models/Bootstrap/unstandardized_test_dataset.csv', row.names=T)
 
 alldata = read.csv('./SEM models/Bootstrap/unstandardized_test_dataset.csv', row.names=1)
-endfit =  sem(path_measerr, data=alldata, fixed.x=F, se='robust')
+endfit =  sem(path_measerr, data=alldata, fixed.x=F, estimator='ML', se='robust.sem')
 
 
 ### See scripts for bootstrap calculations done on the cluster
@@ -274,32 +274,30 @@ endfit =  sem(path_measerr, data=alldata, fixed.x=F, se='robust')
 ## Calculate confidence intervals from bootstrapped results
 ## Uses Rdata files saved from Kure cluster runs
 library(lavaan)
-load('./SEM Models/Bootstrap/bootstrap_lichen_richness_model.Rdata')
+load('./SEM Models/Bootstrap/bootstrap_Parmeliaceae_model.Rdata')
 
 coefrange = (length(coef(endfit))+1):(nrow(standardizedSolution(endfit))+length(coef(endfit)))
 
 #phys_boot = endfit_std[,coefrange] # save results to use later
 #parm_boot = endfit_std[,coefrange] # save results to use later
 
-## Test whether parameter values are different between Parm and Phys
-# Calculate difference between Parm and Phys estimates for each bootsample
-diffs = parm_boot - phys_boot
-
-# Calculate the probability of getting 0 from the distribution of bootsample differences
-pvals = apply(diffs, 2, function(x) min(sum(x<0), sum(x>0))/1000*2 ) 
-parameterEstimates(endfit)[which(pvals<0.05),'label']
 
 ## Create tables of estimates
-
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 endfit_ests = parameterEstimates(endfit)
 endfit_ests$std.all = apply(endfit_std[,coefrange], 2, median)
 endfit_ests$std.ci.lower = apply(endfit_std[,coefrange], 2, function(x) quantile(x, p=0.025))
 endfit_ests$std.ci.upper = apply(endfit_std[,coefrange], 2, function(x) quantile(x, p=0.975))
-#endfit_ests$pval_parmphys = pvals
+
 sum(endfit_ests$std.all > endfit_ests$std.ci.upper) # Checking
 sum(endfit_ests$std.all < endfit_ests$std.ci.lower) # Checking
 
+## Test whether parameter values are different between Parm and Phys
+## Do this using t-test on bootstrapped parameter distributions
+endfit_ests$pval_parmphys = sapply(1:ncol(parm_boot), function(x){
+	if(length(unique(parm_boot[,x]))<10){ NA } else { 
+ 		t.test(parm_boot[,x], phys_boot[,x], alternative='two.sided')$p.value
+	}})
 
 # Check whether bootstrapped standardized solutions match the regular standardized solution
 plot(apply(endfit_std[,coefrange], 2, median)~standardizedSolution(endfit)$est.std)
@@ -314,8 +312,8 @@ direct_rich = subset(endfit_ests, (lhs=='lichen_rich')&(op=='~'))
 direct_rich = direct_rich[,c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper')] #, 'pval_parmphys', 'pval_parmphys'
 names(direct_rich)[1] = 'predictor'
 rownames(direct_rich) = direct_rich$predictor
-rownames(direct_rich)[rownames(direct_rich)=='regS'] = 'reg' # These change with each dataset
-rownames(direct_rich)[rownames(direct_rich)=='tot_abun_log'] = 'abun_log' # These change with each dataset
+rownames(direct_rich)[rownames(direct_rich)=='regS'] = 'reg' 
+rownames(direct_rich)[rownames(direct_rich)=='parm_abun_log'] = 'abun_log' # These change with each dataset
 
 ## Make a table of total effects on lichen richness
 total = endfit_ests[grep('TE',endfit_ests$label),]
@@ -327,22 +325,23 @@ colnames(addrows) = colnames(total)
 total = rbind(total, addrows)
 rownames(total) = total$predictor
 rownames(total)[rownames(total)=='regS'] = 'reg' # These change with each dataset
-rownames(total)[rownames(total)=='tot_abun_log'] = 'abun_log' # These change with each dataset; tot, parm, phys
+rownames(total)[rownames(total)=='parm_abun_log'] = 'abun_log' # These change with each dataset; tot, parm, phys
 
 ## Make a table of indirect effects on lichen richness via abundance
+## For climate variables that also affect forest structure, this is just the path directly from climate to abundance, not via forest structure
 c(paste('IE',c('bark_moist_pct.rao.ba','wood_SG.rao.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','lightDist.mean','diamDiversity',
-		'bark_moist_pct.ba','wood_SG.ba','LogSeed.ba','totalCirc','bigTrees','light.mean','totalNS'), sep='_'),
-	paste('IE',c('wetness','rain_lowRH','iso','pseas','mat'),'A', sep='_'))->indir_vars
+		'bark_moist_pct.ba','wood_SG.ba','LogSeed.ba','totalCirc','bigTrees','light.mean','PC1','totalNS'), sep='_'),
+	paste('IE',c('wetness','rain_lowRH','iso','pseas','mat','radiation'),'A', sep='_'))->indir_vars
 indirect = subset(endfit_ests, label %in% indir_vars)
-indirect = indirect[,c('lhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper')]#, 'pval_parmphys', 'pval_parmphys'
+indirect = indirect[,c('lhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper','pval_parmphys')]#, 'pval_parmphys', 'pval_parmphys'
 names(indirect)[1] = 'predictor'
 indirect$predictor = substring(indirect$predictor, first=4)
 indirect$predictor = sapply( indirect$predictor, function(x) ifelse(substr(x, nchar(x), nchar(x))=='A', substr(x, 1, nchar(x)-2), x))	
 rownames(indirect) = indirect$predictor
 
 ## Make a table of direct effects on lichen abundance
-direct_abun = subset(endfit_ests, (lhs=='tot_abun_log')&(op=='~')) # This changes with each model; tot, parm, phys
-direct_abun = direct_abun[,c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper')]#,'pval_parmphys' ,'pval_parmphys'
+direct_abun = subset(endfit_ests, (lhs=='parm_abun_log')&(op=='~')) # This changes with each model; tot, parm, phys
+direct_abun = direct_abun[,c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper', 'pval_parmphys')]#,'pval_parmphys' ,'pval_parmphys'
 names(direct_abun)[1] = 'predictor'
 rownames(direct_abun) = direct_abun$predictor
 
@@ -355,44 +354,14 @@ direct_abun$type = vartypes[rownames(direct_abun),'type']
 indirect$type = vartypes[rownames(indirect),'type']
 
 ## Save tables- make sure to changes names to appropriate dataset
-write.csv(total, './SEM models/AllSp_testdata_totaleffects.csv', row.names=T)
-write.csv(direct_rich, './SEM models/AllSp_testdata_directeffects_richness.csv', row.names=T)
-write.csv(direct_abun, './SEM models/AllSp_testdata_directeffects_abundance.csv', row.names=T)
-write.csv(indirect, './SEM models/AllSp_testdata_indirecteffects_via_abundance.csv', row.names=T)
+write.csv(total, './SEM models/Parm_testdata_totaleffects.csv', row.names=T)
+write.csv(direct_rich, './SEM models/Parm_testdata_directeffects_richness.csv', row.names=T)
+write.csv(direct_abun, './SEM models/Parm_testdata_directeffects_abundance.csv', row.names=T)
+write.csv(indirect, './SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=T)
 
 ### Figures ###
 
 ## Compare direct effects on richness vs abundance
-use_direct = direct_rich[rownames(direct_abun),]
-
-mycols = c('dodgerblue','darkred','forestgreen','purple')
-mypch = 15:18
-
-png('./Figures/New Coordinates/Compare direct effects on Physciaceae richness vs abunance.png', height=500, width=500)
-par(mar=c(5,5,1,1))
-plot(as.numeric(as.matrix(direct_abun[,c('std.ci.lower','std.ci.upper')])),
-	as.numeric(as.matrix(use_direct[,c('std.ci.lower','std.ci.upper')])), 
-	type='n', xlab='Effect on lichen abundance', ylab='Effect on lichen richness', las=1)
-abline(h=0,v=0, lty=3, lwd=3, col='grey30')
-arrows(direct_abun$std.all,use_direct$std.ci.lower,direct_abun$std.all,
-	use_direct$std.ci.upper,length=.05, code=3, angle=90, lwd=2, col=mycols[factor(use_direct$type)])
-arrows(direct_abun$std.ci.lower,use_direct$std.all,direct_abun$std.ci.upper,
-	use_direct$std.all,length=.05, code=3, angle=90, lwd=2, col=mycols[factor(use_direct$type)])
-points(direct_abun$std.all, use_direct$std.all, col=mycols[factor(use_direct$type)], 
-	pch=mypch[factor(use_direct$type)], cex=2)
-dev.off()
-
-## Compare direct effects vs. indirect effects via abundance vs. total effects
-ordered_vars = rownames(total[order(total$std.all),])
-ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
-
-# put tables in same order
-use_direct = direct_rich[ordered_vars,]
-use_indirect = indirect[ordered_vars,]
-use_total = total[ordered_vars,]
-
-library(lattice)
-#library(gplots)
 
 # Color scheme: http://colorschemedesigner.com/#3341SsYrGvyw0
 mycols = c('#000000','#07395D','#902E07','#05633B','#711392','#DD8615')
@@ -402,13 +371,27 @@ mypch = c('I','I','I') #c(0,4,5)#
 mypcols = c('black','grey30','white')
 myadj=.15
 
+## Compare direct effects vs. indirect effects via abundance vs. total effects
+
+# Order variables from lowest to highest total effects
+ordered_vars = rownames(total[order(total$std.all),])
+ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
+
+# Put tables in same order
+use_direct = direct_rich[ordered_vars,]
+use_indirect = indirect[ordered_vars,] # regS and tot_abun will be missing
+use_total = total[ordered_vars,]
+
+library(lattice)
+#library(gplots)
+
+# Define range limits that will include 95% confidence intervals
 myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')],
 	use_direct[,c('std.ci.lower','std.ci.upper')],
 	use_indirect[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
 
-
 # Total and direct standardized effects on same graph
-png('./Figures/New Coordinates/Standardized direct total indirect via abundance effects on Physciaceae richness.png', height=800, width=1400, type="cairo-png")
+png('./Figures/New Coordinates/Standardized direct total indirect via abundance effects on AllSp richness.png', height=900, width=1400, type="cairo-png")
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized coefficient',cex=3), ylab='',
 	main='',cex.lab=3,aspect=4/5, xlim=myrange,
@@ -453,6 +436,29 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 dev.off()
 
 ## Make plot comparing Total richness, Parmeliaceae and Physciaceae
+
+use_direct = direct_rich[rownames(direct_abun),]
+
+mycols = c('dodgerblue','darkred','forestgreen','purple')
+mypch = 15:18
+
+png('./Figures/New Coordinates/Compare direct effects on Physciaceae richness vs abunance.png', height=500, width=500)
+par(mar=c(5,5,1,1))
+plot(as.numeric(as.matrix(direct_abun[,c('std.ci.lower','std.ci.upper')])),
+	as.numeric(as.matrix(use_direct[,c('std.ci.lower','std.ci.upper')])), 
+	type='n', xlab='Effect on lichen abundance', ylab='Effect on lichen richness', las=1)
+abline(h=0,v=0, lty=3, lwd=3, col='grey30')
+arrows(direct_abun$std.all,use_direct$std.ci.lower,direct_abun$std.all,
+	use_direct$std.ci.upper,length=.05, code=3, angle=90, lwd=2, col=mycols[factor(use_direct$type)])
+arrows(direct_abun$std.ci.lower,use_direct$std.all,direct_abun$std.ci.upper,
+	use_direct$std.all,length=.05, code=3, angle=90, lwd=2, col=mycols[factor(use_direct$type)])
+points(direct_abun$std.all, use_direct$std.all, col=mycols[factor(use_direct$type)], 
+	pch=mypch[factor(use_direct$type)], cex=2)
+dev.off()
+
+
+
+
 
 # Using total effects
 parm = read.csv('./SEM models/Parmeliaceae_testdata_totaleffects.csv', row.names=1)
