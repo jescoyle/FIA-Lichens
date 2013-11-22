@@ -461,16 +461,16 @@ dev.off()
 
 
 # Using total effects
-parm = read.csv('./SEM models/Parmeliaceae_testdata_totaleffects.csv', row.names=1)
-phys = read.csv('./SEM models/Physciaceae_testdata_totaleffects.csv', row.names=1)
+parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
+phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
 allsp = read.csv('./SEM models/AllSp_testdata_totaleffects.csv', row.names=1)
 
-parm_i = read.csv('./SEM models/Parmeliaceae_testdata_indirecteffects_via_abundance.csv', row.names=1)
-phys_i = read.csv('./SEM models/Physciaceae_testdata_indirecteffects_via_abundance.csv', row.names=1)
+parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
+phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
 allsp_i = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
-parm_d = read.csv('./SEM models/Parmeliaceae_testdata_directeffects_richness.csv', row.names=1)
-phys_d = read.csv('./SEM models/Physciaceae_testdata_directeffects_richness.csv', row.names=1)
+parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
+phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
 allsp_d = read.csv('./SEM models/AllSp_testdata_directeffects_richness.csv', row.names=1)
 
 ordered_vars = rownames(allsp[order(allsp$std.all),])
@@ -530,6 +530,9 @@ dotplot(1:nrow(allsp)~std.all, data=allsp,
 		background='#00000033', cex=3, divide=1, padding.text=5)
 )
 dev.off()
+
+
+################# START HERE ########################
 
 ## Effects table
 rownames(parm_d)==rownames(phys_d) #checking
