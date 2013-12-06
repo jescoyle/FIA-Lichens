@@ -185,8 +185,10 @@ for(v in sqrtTrans_vars){
 }
 hist(trans_data$bigTrees) # Not much I can do about transforming this, so I won't
 
-# Rescale by constant so that variances in path analysis will be of similar scale
+working_data = trans_data
 working_data_unstd = trans_data
+
+# For unstd data: rescale by constant so that variances in path analysis will be of similar scale
 working_data_unstd$mat = working_data_unstd$mat/10
 working_data_unstd$pseas = working_data_unstd$pseas/10
 working_data_unstd$radiation = working_data_unstd$radiation/1000000
@@ -206,14 +208,14 @@ working_data_unstd$regPhys = working_data_unstd$regPhys/10
 working_data_unstd$bigTrees = working_data_unstd$bigTrees/10
 working_data_unstd$PC1 = working_data_unstd$PC1*10
 
-# Rescale by mean and stddev
-working_data = trans_data
-working_data[,2:ncol(working_data)] = scale(working_data[,2:ncol(working_data)])
-
 # Make transformation of richness response used in models
 working_data$lichen.rich_log = log(working_data$lichen.rich+1)
 working_data_unstd$lichen.rich_log = log(working_data_unstd$lichen.rich+1)
 #working_data_unstd$lichen.rich = working_data_unstd$lichen.rich/10
+
+# Rescale by mean and stddev for standardized data
+# Note: this scales the response variable (lichen richness), which may not be what we want to do
+working_data = scale(working_data, center=T, scale=T)
 
 # Plot correlation matrix of rescaled and transformed data
 cortab = cor(working_data_unstd, use='complete.obs')

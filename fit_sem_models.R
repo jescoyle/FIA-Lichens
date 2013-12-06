@@ -243,6 +243,18 @@ path_measerr = '
 endfit =  sem(path_measerr, data=working_data_unstd_test, fixed.x=F, estimator='ML', se='robust.sem')
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 
+
+fit1 = sem(path_measerr, data=working_data, fixed.x=F, estimator='ML', se='robust.sem')
+est1 = parameterEstimates(fit1, standardized=T, level=0.95, boot.ci.type='perc')
+
+fit2 = sem(path_measerr, data=trans_data, fixed.x=F, estimator='ML', se='robust.sem')
+est2 = parameterEstimates(fit2, standardized=T, level=0.95, boot.ci.type='perc')
+
+cbind(est1$est, est2$est, est1$std.all, est2$std.all)
+
+
+stdest1 = standardizedSolution(fit1)
+
 # Examine model residuals
 res = resid(endfit)
 which(abs(res$cov)>0.2, arr.ind=T)
@@ -254,7 +266,12 @@ subset(endfit_ests, pvalue>0.05)
 endfit_paths = subset(endfit_ests, op=='~')
 endfit_paths[order(endfit_paths$std.all, decreasing=T),]
 
+stdsol = standardizedSolution(endfit)
+
 write.csv(endfit_ests, './SEM models/finalmod_testdata_estimates.csv', row.names=F)
+
+# Compare standardized coefs
+cbind(stdsol$se, endfit_ests$se)
 
 # Set up data for bootstrapping standardized coefficients
 # This will be done on the cluster
@@ -266,7 +283,6 @@ write.csv(alldata, './SEM models/Bootstrap/unstandardized_test_dataset.csv', row
 
 alldata = read.csv('./SEM models/Bootstrap/unstandardized_test_dataset.csv', row.names=1)
 endfit =  sem(path_measerr, data=alldata, fixed.x=F, estimator='ML', se='robust.sem')
-
 
 ### See scripts for bootstrap calculations done on the cluster
 
