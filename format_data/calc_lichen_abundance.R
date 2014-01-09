@@ -2,11 +2,6 @@
 
 
 
-
-
-
-
-
 ################################################################
 ### Plot abundance vs. richness
 
@@ -95,3 +90,33 @@ model_data$phys_abun_log = log(model_data$phys_abun + 1)
 # Write out abundance data
 abun_data = model_data[,c('tot_abun','parm_abun','phys_abun','tot_abun_log','parm_abun_log','phys_abun_log')]
 write.csv(abun_data, './Data/lichen abundance on plots.csv', row.names=T)
+
+
+### Plot the tree-occupance -> abundance function ###
+
+
+func1 = function(N) min(2/N, .3)
+func2 = function(N) min(7/N, .4)
+func3 = function(N) ifelse(N > 20, 5/N + .25, .5)
+func4 = function(N) .75
+
+ntrees = 2:100
+
+pdf('./Paper/supp fig abundance calc.pdf', height=4, width=7)
+par(mfrow=c(1,2))
+par(mar=c(5,5,1,1))
+plot(ntrees, sapply(ntrees, func4), pch=16, las=1, xlab='Number of Trees', 
+	ylab='Proportion of Trees Occupied', ylim=c(0,1))
+points(ntrees, sapply(ntrees, func3), pch=16, col='dodgerblue')
+points(ntrees, sapply(ntrees, func2), pch=16, col='forestgreen')
+points(ntrees, sapply(ntrees, func1), pch=16, col='darkorange')
+text(1, c(func1(2), func2(2), func3(2), func4(2)), paste('Class', 1:4), adj=c(0,-.5))
+
+plot(ntrees, sapply(ntrees, func4)*ntrees, pch=16, las=1, xlab='Number of Trees', 
+	ylab='Number of Trees Occupied', ylim=c(0,100))
+points(ntrees, sapply(ntrees, func3)*ntrees, pch=16, col='dodgerblue')
+points(ntrees, sapply(ntrees, func2)*ntrees, pch=16, col='forestgreen')
+points(ntrees, sapply(ntrees, func1)*ntrees, pch=16, col='darkorange')
+text(100, c(func1(100), func2(100), func3(100), func4(100))*100, paste('Class', 1:4), adj=c(1,-.5))
+dev.off()
+

@@ -13,7 +13,8 @@ library(semPlot)
 library(semTools)
 
 # Full path model with measurement error model on lichen.rich_log
-# Previously decided to use unstandardized data
+# 1/3/2014: Decided to use standardized data because the model will not fit to unscaled data and I did not want to apply an arbitrary scaling.
+#           Standardized data is in working_data dataframe. Note that the response variables are also standardized.     
 # I modified covariances and played with using log richness and adding abundace with this model before fitting the final model below.
 path_measerr = '
 
@@ -41,9 +42,10 @@ path_measerr = '
 	light.mean ~~ diamDiversity + totalCirc
 	totalNS ~~ iso + pseas + mat
 	regS ~~ totalNS
-	rain_lowRH + wetness ~~ iso + pseas + mat
-	mat ~~ iso + pseas
-	iso ~~ pseas
+	rain_lowRH + wetness ~~ iso + pseas + mat + radiation
+	mat ~~ iso + pseas + radiation
+	iso ~~ pseas + radiation
+	pseas ~~ radiation
 
 	lichen_rich ~ bark_moist_pct.rao.ba + wood_SG.rao.ba + LogSeed.rao.ba +
 		PIE.ba.tree + propDead + lightDist.mean + diamDiversity +
@@ -58,7 +60,7 @@ path_measerr = '
 '
 
 # Fit model
-fit_measerr = sem(path_measerr, data=working_data_unstd_fit, fixed.x=F)
+fit_measerr = sem(path_measerr, data=working_data_fit, fixed.x=F)
 
 summary(fit_measerr, standardized=T, rsq=TRUE, fit.measures=T)
 fitMeasures(fit_measerr)
@@ -70,7 +72,6 @@ problem_parms = subset(mi, decision %in% c('M', 'EPC:M'))
 problem_parms[order(problem_parms$mi),]
 res = resid(fit_measerr)
 which(abs(res$cov)>.2, arr.ind=T)
-
 
 ## Define model that will calculate indirect and total effects
 path_measerr = '
@@ -111,9 +112,10 @@ path_measerr = '
 	light.mean ~~ diamDiversity + totalCirc
 	totalNS ~~ iso + pseas + mat
 	regS ~~ totalNS
-	rain_lowRH + wetness ~~ iso + pseas + mat
-	mat ~~ iso + pseas
-	iso ~~ pseas
+	rain_lowRH + wetness ~~ iso + pseas + mat + radiation
+	mat ~~ iso + pseas + radiation
+	iso ~~ pseas + radiation
+	pseas ~~ radiation
 	
 	# Lichen richness regression
 	lichen_rich ~ FH1*bark_moist_pct.rao.ba + FH2*wood_SG.rao.ba + FH3*LogSeed.rao.ba +
@@ -240,38 +242,34 @@ path_measerr = '
 	TE_totalNS := IE_totalNS + P
 
 '
-endfit =  sem(path_measerr, data=working_data_unstd_test, fixed.x=F, estimator='ML', se='robust.sem')
+endfit =  sem(path_measerr, data=working_data_test, fixed.x=F, estimator='ML', se='robust.sem')
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 
-
-fit1 = sem(path_measerr, data=working_data, fixed.x=F, estimator='ML', se='robust.sem')
-est1 = parameterEstimates(fit1, standardized=T, level=0.95, boot.ci.type='perc')
-
-fit2 = sem(path_measerr, data=trans_data, fixed.x=F, estimator='ML', se='robust.sem')
-est2 = parameterEstimates(fit2, standardized=T, level=0.95, boot.ci.type='perc')
-
-cbind(est1$est, est2$est, est1$std.all, est2$std.all)
-
-
-stdest1 = standardizedSolution(fit1)
 
 # Examine model residuals
 res = resid(endfit)
 which(abs(res$cov)>0.2, arr.ind=T)
 
+# Save model output
 save(endfit, file='./SEM models/path_measerr_finalmod_testdata.Rdata')
 
-endfit_ests = parameterEstimates(endfit, standardized=T, level=0.95, boot.ci.type='perc')
+# Examine significance of model paths
+endfit_ests = parameterEstimates(endfit, standardized=T, ci=T, level=0.95)
 subset(endfit_ests, pvalue>0.05)
 endfit_paths = subset(endfit_ests, op=='~')
 endfit_paths[order(endfit_paths$std.all, decreasing=T),]
 
-stdsol = standardizedSolution(endfit)
-
 write.csv(endfit_ests, './SEM models/finalmod_testdata_estimates.csv', row.names=F)
+
+# Get standardized coeficient estimates
+stdsol = standardizedSolution(endfit)
 
 # Compare standardized coefs
 cbind(stdsol$se, endfit_ests$se)
+
+
+## NO LONGER BOOTSTRAPPING ###
+## Because standardizedSolution() includes confidence intervals on indirect effects in lavaan version 0.5-15
 
 # Set up data for bootstrapping standardized coefficients
 # This will be done on the cluster

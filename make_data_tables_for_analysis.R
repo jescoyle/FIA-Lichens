@@ -218,10 +218,10 @@ working_data_unstd$lichen.rich_log = log(working_data_unstd$lichen.rich+1)
 working_data = scale(working_data, center=T, scale=T)
 
 # Plot correlation matrix of rescaled and transformed data
-cortab = cor(working_data_unstd, use='complete.obs')
+cortab = cor(working_data, use='complete.obs')
 cortabsig = 1-abs(cortab)
 
-png('./Figures/New Coordinates/correlation matrix unstd working vars.png', height=900, width=900, type='cairo')
+png('./Figures/New Coordinates/correlation matrix working vars.png', height=900, width=900, type='cairo')
 corrplot(cortab[2:nrow(cortab),2:ncol(cortab)], method='square', type='upper', diag=F, 
 	order='hclust', hclust.method='complete', p.mat=cortabsig[2:nrow(cortab),2:ncol(cortab)],
 	sig.level=0.6, insig='blank', tl.cex=1.5, tl.col=1, cl.cex=2, mar=c(1,1,4,1))

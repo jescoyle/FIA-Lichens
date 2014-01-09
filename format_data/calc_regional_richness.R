@@ -235,6 +235,41 @@ for(i in 1:nrow(fia_geo)){
 	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], records_sp, 500)))
 } # min=499 all sp, min=144 Parmeliaceae, min=8 Physciaceae, but used 144 since only 26 plots with fewer than 144.
 
+dist1000 = c()
+for(i in 1:nrow(fia_geo)){
+	dist1000 = c(dist1000, nrow(find_recs(fia_geo[i,], records_sp, 1000)))
+} # min=1865
+
+dist700 = c()
+for(i in 1:nrow(fia_geo)){
+	dist700 = c(dist700, nrow(find_recs(fia_geo[i,], records_sp, 700)))
+} # min=772
+
+dist600 = c()
+for(i in 1:nrow(fia_geo)){
+	dist600 = c(dist600, nrow(find_recs(fia_geo[i,], records_sp, 600)))
+} # min=665
+
+dist400 = c()
+for(i in 1:nrow(fia_geo)){
+	dist400 = c(dist400, nrow(find_recs(fia_geo[i,], records_sp, 400)))
+} # min=422
+
+dist200 = c()
+for(i in 1:nrow(fia_geo)){
+	dist200 = c(dist200, nrow(find_recs(fia_geo[i,], records_sp, 200)))
+} # min=12, but used 100
+
+dist100 = c()
+for(i in 1:nrow(fia_geo)){
+	dist100 = c(dist100, nrow(find_recs(fia_geo[i,], records_sp, 100)))
+} # 12 plots have no nearby records
+
+dist50 = c()
+for(i in 1:nrow(fia_geo)){
+	dist50 = c(dist50, nrow(find_recs(fia_geo[i,], records_sp, 50)))
+} # Many plots have no nearby records.
+
 # Only calculate for plots that are missing regional richness data
 # This was done after the initial calculation
 #fia_geo = subset(fia_geo, is.na(regS))
@@ -263,6 +298,36 @@ png('../FIA Lichen/Figures/regional richness (500 records subsample) vs sampling
 par(mar=c(5,6,1,1))
 plot(regS~dist500, las=1, xlab='Number of records w/in 500km radius', ylab='Avg. richness of 499 records', cex=2, cex.lab=1.5, cex.axis=1.5)
 dev.off()
+
+
+
+## Assess how sampling radius (km) affects richness estimates
+#Note: subsampled different number of records in each case b/c more records in larger radii
+
+rich1000 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_1000km.csv')
+rich700 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_700km.csv')
+rich500 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness.csv')
+rich200 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_200km.csv')
+
+
+plot(rich1000$regS~rich500$regS)
+
+ranks = data.frame(R1000 = rank(rich1000$regS),
+	R700 = rank(rich700$regS),
+	R500 = rank(rich500$regS),
+	R200 = rank(rich200$regS)
+)
+
+plot(ranks$R500,ranks$R700)
+
+
+
+
+
+
+
+
+
 
 ## Calculate for FIA plots without spatial coordinates
 
