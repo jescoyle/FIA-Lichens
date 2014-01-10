@@ -244,7 +244,7 @@ path_measerr = '
 	TE_totalNS := IE_totalNS + P
 
 '
-endfit =  sem(path_measerr, data=working_data_test, fixed.x=F, estimator='ML', se='robust.sem')
+endfit =  sem(path_measerr, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 
 
