@@ -248,7 +248,7 @@ for(i in 1:nrow(fia_geo)){
 dist600 = c()
 for(i in 1:nrow(fia_geo)){
 	dist600 = c(dist600, nrow(find_recs(fia_geo[i,], records_sp, 600)))
-} # min=665
+} # min=655
 
 dist400 = c()
 for(i in 1:nrow(fia_geo)){
@@ -306,7 +306,9 @@ dev.off()
 
 rich1000 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_1000km.csv')
 rich700 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_700km.csv')
+rich600 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_600km.csv')
 rich500 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness.csv')
+rich400 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_400km.csv')
 rich200 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_200km.csv')
 
 
@@ -314,11 +316,26 @@ plot(rich1000$regS~rich500$regS)
 
 ranks = data.frame(R1000 = rank(rich1000$regS),
 	R700 = rank(rich700$regS),
+	R600 = rank(rich600$regS),
 	R500 = rank(rich500$regS),
+	R400 = rank(rich400$regS),
 	R200 = rank(rich200$regS)
 )
 
+rich = data.frame(R1000 = rich1000$regS,
+	R700 = rich700$regS,
+	R600 = rich600$regS,
+	R500 = rich500$regS,
+	R400 = rich400$regS, 
+	R200 = rich200$regS
+)
+
+plot(ranks$R500,ranks$R400)
+plot(ranks$R500,ranks$R600)
 plot(ranks$R500,ranks$R700)
+
+cor(ranks)
+
 
 
 
