@@ -102,20 +102,22 @@ path_measerr = '
 	totalNS ~ P1*wetness + P2*rain_lowRH
 
 	# Covariances
-	PIE.ba.tree ~~ bark_moist_pct.rao.ba + LogSeed.rao.ba + wood_SG.rao.ba
-	PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc + PC1
-	bark_moist_pct.rao.ba ~~ LogSeed.rao.ba + wood_SG.rao.ba
-	LogSeed.rao.ba ~~ wood_SG.rao.ba
-	LogSeed.ba ~~ wood_SG.ba + bark_moist_pct.ba
-	wood_SG.ba ~~ bark_moist_pct.ba
-	totalCirc ~~ diamDiversity + bigTrees
-	light.mean ~~ diamDiversity + totalCirc
-	totalNS ~~ iso + pseas + mat
-	regS ~~ totalNS
-	rain_lowRH + wetness ~~ iso + pseas + mat + radiation
-	mat ~~ iso + pseas + radiation
-	iso ~~ pseas + radiation
-	pseas ~~ radiation
+	# NO LONGER USING fixed.x=F B/C IT IS BETTER TO KEEP EXOGENOUS VARIABLES AS FIXED (NON-RANDOM)
+	# COVARIANCES AUTOMATICALLY CALCULATED
+	#PIE.ba.tree ~~ bark_moist_pct.rao.ba + LogSeed.rao.ba + wood_SG.rao.ba
+	#PIE.ba.tree ~~ diamDiversity + bigTrees + totalCirc + PC1
+	#bark_moist_pct.rao.ba ~~ LogSeed.rao.ba + wood_SG.rao.ba
+	#LogSeed.rao.ba ~~ wood_SG.rao.ba
+	#LogSeed.ba ~~ wood_SG.ba + bark_moist_pct.ba
+	#wood_SG.ba ~~ bark_moist_pct.ba
+	#totalCirc ~~ diamDiversity + bigTrees
+	#light.mean ~~ diamDiversity + totalCirc
+	#totalNS ~~ iso + pseas + mat
+	#regS ~~ totalNS
+	#rain_lowRH + wetness ~~ iso + pseas + mat + radiation
+	#mat ~~ iso + pseas + radiation
+	#iso ~~ pseas + radiation
+	#pseas ~~ radiation
 	
 	# Lichen richness regression
 	lichen_rich ~ FH1*bark_moist_pct.rao.ba + FH2*wood_SG.rao.ba + FH3*LogSeed.rao.ba +
