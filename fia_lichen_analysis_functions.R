@@ -4,6 +4,16 @@
 ######################################################################################################
 ### Functions
 
+
+# Two functions that create unique plot identifiers by pasting together state, county plot, and year information.
+make.plotid = function(x){
+	paste(x$STATECD, x$COUNTYCD, x$PLOT, sep='_')
+}
+make.yrplotid = function(x){
+	paste(x$INVYR, make.plotid(x), sep='_')
+}
+
+
 # Two functions that calculate Spearman rank correlation coefficients between two sets of variables
 # and returns a dataframe with correlations or an array of permutation-based confidence intervals
 calc.corrs = function(predictors, responses, data){
