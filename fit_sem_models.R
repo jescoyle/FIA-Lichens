@@ -79,7 +79,7 @@ path_measerr = '
 	# Latent variables
 	lichen_rich =~ sqrt(0.75)*lichen.rich_log
 
-	# Climate effects on forest
+	# Climate and local environment effects on forest
 	bark_moist_pct.rao.ba ~ FH1a*wetness + FH1b*rain_lowRH + FH1c*iso + FH1d*pseas + FH1e*mat + FH1f*radiation
 	wood_SG.rao.ba ~ FH2a*wetness + FH2b*rain_lowRH + FH2c*iso + FH2d*pseas + FH2e*mat +  FH2f*radiation
 	LogSeed.rao.ba ~ FH3a*wetness + FH3b*rain_lowRH + FH3c*iso + FH3d*pseas + FH3e*mat + FH3f*radiation
@@ -151,7 +151,7 @@ path_measerr = '
 	# Indirect effect of pollution via abundance
 	IE_totalNS := AP*A
 	
-	# Indirect effects of climate on lichen richness
+	# Indirect effects of climate and local environment on lichen richness
 	IE_wetness_FH := FH1a*(FH1 + IE_bark_moist_pct.rao.ba) + FH2a*(FH2 + IE_wood_SG.rao.ba) +
 		FH3a*(FH3 + IE_LogSeed.rao.ba) + FH4a*(FH4 + IE_PIE.ba.tree) + FH5a*(FH5 + IE_propDead) + 
 		FH6a*(FH6 + IE_lightDist.mean) + FH7a*(FH7 + IE_diamDiversity)
@@ -270,18 +270,20 @@ stdsol = standardizedSolution(endfit)
 cbind(stdsol$se, endfit_ests$se)
 
 
-## NO LONGER BOOTSTRAPPING ###
-## Because standardizedSolution() includes confidence intervals on indirect effects in lavaan version 0.5-15
-
 # Set up data for bootstrapping standardized coefficients
 # This will be done on the cluster
-endfit_std = bootstrapLavaan(endfit, R=3, FUN=function(x) c(coef(x),standardizedSolution(x)$est.std))
+endfit_std = bootstrapLavaan(endfit, R=3, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 
-alldata=data.frame(working_data_unstd_test, 
-	master[rownames(working_data_unstd_test),c('fric','fdiv','raoQ','Parmeliaceae','Physciaceae')])
-write.csv(alldata, './SEM models/Bootstrap/unstandardized_test_dataset.csv', row.names=T)
+# Make a data frame that has all response variables in it
+new_response = master[rownames(working_data),c('fric','fdiv','raoQ')]
+new_response$Parm_log = log(master[rownames(working_data),'Parmeliaceae']+1)
+new_response$Phys_log = log(master[rownames(working_data),'Physciaceae']+1)
+new_response = scale(new_response, center=T, scale=T)
+alldata=data.frame(working_data,new_response)
 
-alldata = read.csv('./SEM models/Bootstrap/unstandardized_test_dataset.csv', row.names=1)
+write.csv(alldata[testplots$yrplot.id,], './SEM models/Bootstrap/standardized_test_dataset.csv', row.names=T)
+
+alldata = read.csv('./SEM models/Bootstrap/standardized_test_dataset.csv', row.names=1)
 endfit =  sem(path_measerr, data=alldata, fixed.x=F, estimator='ML', se='robust.sem')
 
 ### See scripts for bootstrap calculations done on the cluster
@@ -299,21 +301,24 @@ coefrange = (length(coef(endfit))+1):(nrow(standardizedSolution(endfit))+length(
 
 
 ## Create tables of estimates
-summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
-endfit_ests = parameterEstimates(endfit)
-endfit_ests$std.all = apply(endfit_std[,coefrange], 2, median)
-endfit_ests$std.ci.lower = apply(endfit_std[,coefrange], 2, function(x) quantile(x, p=0.025))
-endfit_ests$std.ci.upper = apply(endfit_std[,coefrange], 2, function(x) quantile(x, p=0.975))
+endfit_ests = parameterEstimates(endfit)[,c('label','lhs','op','rhs')]
+nEst = ncol(endfit_std)/2 # number of parameters
+endfit_ests$std.all = apply(endfit_std[,(nEst+1):(2*nEst)], 2, mean)
+endfit_ests$std.se = apply(endfit_std[,(nEst+1):(2*nEst)], 2, mean)
+endfit_ests$std.ci.lower = apply(endfit_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.025))
+endfit_ests$std.ci.upper = apply(endfit_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.975))
 
 sum(endfit_ests$std.all > endfit_ests$std.ci.upper) # Checking
 sum(endfit_ests$std.all < endfit_ests$std.ci.lower) # Checking
 
 ## Test whether parameter values are different between Parm and Phys
 ## Do this using t-test on bootstrapped parameter distributions
-endfit_ests$pval_parmphys = sapply(1:ncol(parm_boot), function(x){
-	if(length(unique(parm_boot[,x]))<10){ NA } else { 
- 		t.test(parm_boot[,x], phys_boot[,x], alternative='two.sided')$p.value
-	}})
+## NO LONGER DOING THIS 
+## Because it doesn't make sense to compare models on different data sets.
+#endfit_ests$pval_parmphys = sapply(1:ncol(parm_boot), function(x){
+#	if(length(unique(parm_boot[,x]))<10){ NA } else { 
+# 		t.test(parm_boot[,x], phys_boot[,x], alternative='two.sided')$p.value
+#	}})
 
 # Check whether bootstrapped standardized solutions match the regular standardized solution
 plot(apply(endfit_std[,coefrange], 2, median)~standardizedSolution(endfit)$est.std)
@@ -357,9 +362,17 @@ rownames(indirect) = indirect$predictor
 
 ## Make a table of direct effects on lichen abundance
 direct_abun = subset(endfit_ests, (lhs=='parm_abun_log')&(op=='~')) # This changes with each model; tot, parm, phys
-direct_abun = direct_abun[,c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper', 'pval_parmphys')]#,'pval_parmphys' ,'pval_parmphys'
+direct_abun = direct_abun[, c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper', 'pval_parmphys')]#,'pval_parmphys' ,'pval_parmphys'
 names(direct_abun)[1] = 'predictor'
 rownames(direct_abun) = direct_abun$predictor
+
+# Make a table of indirect effect of climate variable via regional richness
+indirect_reg = endfit_ests[grep('IE_[A-za-z._]*_R', endfit_ests$label),]
+indirect_reg = indirect_reg[,c('lhs','std.all','std.se','std.ci.lower','std.ci.upper')]
+names(indirect_reg)[1] = 'predictor'
+indirect_reg$predictor = substring(indirect_reg$predictor, first=4)
+indirect_reg$predictor = sapply(indirect_reg$predictor, function (x) substr(x, 1, nchar(x)-2))
+rownames(indirect_reg) = indirect_reg$predictor
 
 ## Append variable types column
 vartypes = read.csv('./SEM models/var_types.csv', row.names=1)
