@@ -225,13 +225,22 @@ indirect_reg$predictor = substring(indirect_reg$predictor, first=4)
 indirect_reg$predictor = sapply(indirect_reg$predictor, function (x) substr(x, 1, nchar(x)-2))
 rownames(indirect_reg) = indirect_reg$predictor
 
+# Make a table of indirect effect of climate and local environment via forest structure
+indirect_for = endfit_ests[grep('IE_[A-za-z._1-9]*_F[MH]', endfit_ests$label),]
+indirect_for$Ftype = sapply(indirect_for$label, function(x) substr(x, nchar(x)-1, nchar(x)))
+indirect_for = indirect_for[,c('lhs','Ftype','std.all','std.se','std.ci.lower','std.ci.upper')]
+names(indirect_for)[1] = 'predictor'
+indirect_for$predictor = substring(indirect_for$predictor, first=4)
+rownames(indirect_for) = indirect_for$predictor
+indirect_for$predictor = sapply(indirect_for$predictor, function (x) substr(x, 1, nchar(x)-3))
+
 # Append variable types column
 vartypes = read.csv('var_types.csv', row.names=1)
 total$type = vartypes[rownames(total),'type']
 direct_rich$type = vartypes[rownames(direct_rich),'type']
 direct_abun$type = vartypes[rownames(direct_abun),'type']
 indirect$type = vartypes[rownames(indirect),'type']
-
+indirect_for$type = vartypes[indirect_for$predictor, 'type']
 
 # Save tables
 write.csv(endfit_ests, 'AllSp_testdata_parameterEstimates.csv')
@@ -240,6 +249,9 @@ write.csv(direct_rich, 'AllSp_testdata_directeffects_richness.csv', row.names=T)
 write.csv(direct_abun, 'AllSp_testdata_directeffects_abundance.csv', row.names=T)
 write.csv(indirect, 'AllSp_testdata_indirecteffects_via_abundance.csv', row.names=T)
 write.csv(indirect_reg, 'AllSp_testdata_indirecteffects_via_regS.csv', row.names=T)
+write.csv(indirect_for, 'AllSp_testdata_indirecteffects_via_forest.csv', row.names=T)
+
+
 
 
 save.image('bootstrap_allsp_richness_model.RData')
