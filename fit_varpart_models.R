@@ -1,31 +1,133 @@
 ## This script performs the variation partitioning analysis on lichen diversity for FIA plots.
 
-source('load_data.R')
-source('fia_lichen_analysis_functions.R')
+source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
+source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
 ###################################################################################
 ### Variation Partitioning among climate, forest, regional richness, and pollution
-
-rownames(model_data) = model_data$yrplot.id
 
 library(hier.part)
 library(MuMIn)
 library(MASS) # glm.nb
 library(Vennerable) 
 
-# Define dataset
-use_response = 'lichen.rich'
-use_data = trans_data[,colnames(trans_data)!=use_response]
 
-predtypes = allsp[,c('predictor','type')]
-predtypes = subset(predtypes, !(predictor %in% c('FM','FH')))
-use_data = use_data[, colnames(use_data) %in% predtypes$predictor]
-use_data = data.frame(richness=model_data[rownames(trans_data),use_response], use_data)
+# Read in table of predictor variable types
+predtypes = read.csv('./SEM models/var_types.csv', row.names=1)
+predtypes = subset(predtypes, !(rownames(predtypes) %in% c('FM','FH')))
+
+# Define dataset- use trans_data where variables have been log or sqrt transformed but not scaled
+use_data = trans_data[,colnames(trans_data)%in% rownames(predtypes)]
+
+# Define predictor variable and appropriate abundance and regional richness variables
+use_response = 'lichen.rich'
+use_reg = 'regS'
+use_abun = 'tot_abun_log'
+use_data$richness = trans_data[,use_response]
+use_data$reg = trans_data[,use_reg]
+use_data$abun_log = trans_data[,use_abun]
+
+# Append soil PCA variables
+soil = read.csv('./Soil/soil_PCA.csv', row.names=1)
+use_data$soilPC1 = soil[rownames(use_data),'PC1']
+use_data$soilPC2 = soil[rownames(use_data), 'PC2']
+
+### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
+
+
+
+### Univariate models ###
 
 # Initially use fitplots to determine whether to use quadratic relationships.
 # Then, re-run final analysis using only use testing data set
-use_data = use_data[fitplots,]
-sum(is.na(use_data)) # Checking for NAs
+use_data_fit = use_data[fitplots$yrplot.id,]
+sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
+
+unimods = sapply(rownames(predtypes), function(x){
+	
+	# Define non-NA observations
+	use_obs = rownames(use_data_fit)[!is.na(use_data_fit[,x])]
+	
+	# By default uses log link function, so coefficients are on log scale
+	linear_mod = glm.nb(use_data_fit[use_obs,'richness']~use_data_fit[use_obs,x])
+	quad_mod = 	glm.nb(use_data_fit[use_obs,'richness']~use_data_fit[use_obs,x]+I(use_data_fit[use_obs,x]^2))
+	null_mod = glm.nb(richness~1, data=use_data_fit[use_obs,])	
+
+	linear_sum = summary(linear_mod)$coefficients
+	quad_sum = summary(quad_mod)$coefficients
+
+	c(AIC(linear_mod), AIC(quad_mod), 
+		r.squaredLR(linear_mod, null=null_mod), r.squaredLR(quad_mod, null=null_mod),
+		coef(linear_mod),linear_mod$theta, linear_mod$SE.theta,
+		coef(quad_mod), quad_mod$theta, quad_mod$SE.theta, 
+		length(use_obs)
+	)
+
+})
+
+unimods = data.frame(t(unimods))
+names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
+	'line_int','line_slope','line_theta','line_theta_SE',
+	'quad_int','quad_slope','quad_sq','quad_theta','quad_theta_SE','N')
+
+write.csv(unimods, 'univariate_models.csv', row.names=T)
+
+# Make a chart of linear vs quadratic and concavity
+
+modcompare = data.frame(deltaAIC = unimods$AIC_line-unimods$AIC_quad) # deltaAIC neg indicates AIC_line < AIC_quad and quadratic term not needed
+rownames(modcompare) = rownames(unimods)
+modcompare$type = ifelse(modcompare$deltaAIC>2, 'quadratic','linear')
+modcompare$coef_sq = unimods$quad_sq
+modcompare$concavity = ifelse(unimods$quad_sq>0, 'up','down')
+# Note: even though coefficients are on log scale, the quadratic models will be 
+# concave down whenever the quadratic coefficient is negative- proved using calculus.
+
+write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
+
+# Plotting some models
+
+mod2 = glm.nb(richness~wetness+I(wetness^2), data=use_data_fit)
+coef2 = coef(mod2)
+x = seq(-4,3, .1)
+
+y_pred = predict(mod2, list(wetness=x))
+y_calc = coef2[1] + coef2[2]*x + coef2[3]*x^2
+
+y_predR = predict(mod2, list(wetness=x), type='response')
+y_calcR = exp(coef2[1] + coef2[2]*x + coef2[3]*x^2)
+
+plot(y_predR, y_calcR)
+
+plot(richness~wetness, data=use_data_fit)
+lines(y_predR~x, col='red')
+
+# Which variables have AIC supported concave-down relationships?
+sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
+
+# Using quadratic relationships for concave-down AIC supported models in variation partitioning
+sq_df = use_data_[,sq_vars]^2
+colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
+use_data = cbind(use_data, sq_df)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 forestvars = predtypes$predictor[predtypes$type %in% c('FM','FH')]
 climvars = predtypes$predictor[predtypes$type == 'C']
@@ -39,22 +141,12 @@ clim_mod = glm.nb(richness~., data=use_data[,c('richness', climvars)])
 pol_mod = glm.nb(richness~., data=use_data[,c('richness', polvars)])
 
 
-## Univariate models ##
-mymods = sapply(predtypes$predictor, function(x){
-	
-
-})
 
 
 
 
-# Using quadratic relationships for concave-down AIC supported models
-sq_vars = c('wetness','bark_moist_pct.rao.ba','wood_SG.rao.ba',
-	'LogSeed.rao.ba','propDead','lightDist.mean','wood_SG.ba',
-	'light.mean','LogSeed.ba','totalNS')
-sq_df = use_data[,sq_vars]^2
-colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
-use_data = cbind(use_data, sq_df)
+
+
 
 forest_mod = glm.nb(richness~. , data=use_data[,c('richness', forestvars, colnames(sq_df)[sq_vars %in% forestvars])])
 reg_mod = glm.nb(richness~., data=use_data[,c('richness', regvars, colnames(sq_df)[sq_vars %in% regvars])])

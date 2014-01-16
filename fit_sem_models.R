@@ -1,7 +1,5 @@
 # This script is used to fit SEM models of lichen FIA data
 
-
-
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
@@ -247,7 +245,6 @@ path_measerr = '
 endfit =  sem(path_measerr, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
 summary(endfit, standardized=T, rsq=TRUE, fit.measures=T)
 
-
 # Examine model residuals
 res = resid(endfit)
 which(abs(res$cov)>0.2, arr.ind=T)
@@ -269,7 +266,6 @@ stdsol = standardizedSolution(endfit)
 # Compare standardized coefs
 cbind(stdsol$se, endfit_ests$se)
 
-
 # Set up data for bootstrapping standardized coefficients
 # This will be done on the cluster
 endfit_std = bootstrapLavaan(endfit, R=3, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
@@ -287,132 +283,76 @@ alldata = read.csv('./SEM models/Bootstrap/standardized_test_dataset.csv', row.n
 endfit =  sem(path_measerr, data=alldata, fixed.x=F, estimator='ML', se='robust.sem')
 
 ### See scripts for bootstrap calculations done on the cluster
+# kure_sem_boot_[allsp, parm, phys, fric, raoQ].R
 
 
-## Calculate confidence intervals from bootstrapped results
-## Uses Rdata files saved from Kure cluster runs
-library(lavaan)
-load('./SEM Models/Bootstrap/bootstrap_Parmeliaceae_model.Rdata')
+## Read in tables of parameter estimates and effects
+# Total effects
+allsp = read.csv('./SEM models/AllSp_testdata_totaleffects.csv', row.names=1)
+parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
+phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
+fric = read.csv('./SEM models/Fric_testdata_totaleffects.csv', row.names=1)
+raoq = read.csv('./SEM models/RaoQ_testdata_totaleffects.csv', row.names=1)
 
-coefrange = (length(coef(endfit))+1):(nrow(standardizedSolution(endfit))+length(coef(endfit)))
+# Direct effecst
+allsp_d = read.csv('./SEM models/AllSp_testdata_directeffects_richness.csv', row.names=1)
+parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
+phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
+fric_d = read.csv('./SEM models/Fric_testdata_directeffects_richness.csv', row.names=1)
+raoq_d = read.csv('./SEM models/RaoQ_testdata_directeffects_richness.csv', row.names=1)
 
-#phys_boot = endfit_std[,coefrange] # save results to use later
-#parm_boot = endfit_std[,coefrange] # save results to use later
+# Indirect effects via abundance
+allsp_i = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
+phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
+fric_i = read.csv('./SEM models/Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
+raoq_i = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
+# Indirect effects via regional richness
+allsp_ir = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_regS.csv', row.names=1)
+parm_ir = read.csv('./SEM models/Parm_testdata_indirecteffects_via_regS.csv', row.names=1)
+phys_ir = read.csv('./SEM models/Phys_testdata_indirecteffects_via_regS.csv', row.names=1)
+fric_ir = read.csv('./SEM models/Fric_testdata_indirecteffects_via_regS.csv', row.names=1)
+raoq_ir = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_regS.csv', row.names=1)
 
-## Create tables of estimates
-endfit_ests = parameterEstimates(endfit)[,c('label','lhs','op','rhs')]
-nEst = ncol(endfit_std)/2 # number of parameters
-endfit_ests$std.all = apply(endfit_std[,(nEst+1):(2*nEst)], 2, mean)
-endfit_ests$std.se = apply(endfit_std[,(nEst+1):(2*nEst)], 2, mean)
-endfit_ests$std.ci.lower = apply(endfit_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.025))
-endfit_ests$std.ci.upper = apply(endfit_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.975))
+# Indirect effects via forest structure
+allsp_if = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_forest.csv', row.names=1)
+parm_if = read.csv('./SEM models/Parm_testdata_indirecteffects_via_forest.csv', row.names=1)
+phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', row.names=1)
+fric_if = read.csv('./SEM models/Fric_testdata_indirecteffects_via_forest.csv', row.names=1)
+raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', row.names=1)
 
-sum(endfit_ests$std.all > endfit_ests$std.ci.upper) # Checking
-sum(endfit_ests$std.all < endfit_ests$std.ci.lower) # Checking
-
-## Test whether parameter values are different between Parm and Phys
-## Do this using t-test on bootstrapped parameter distributions
-## NO LONGER DOING THIS 
-## Because it doesn't make sense to compare models on different data sets.
-#endfit_ests$pval_parmphys = sapply(1:ncol(parm_boot), function(x){
-#	if(length(unique(parm_boot[,x]))<10){ NA } else { 
-# 		t.test(parm_boot[,x], phys_boot[,x], alternative='two.sided')$p.value
-#	}})
-
-# Check whether bootstrapped standardized solutions match the regular standardized solution
-plot(apply(endfit_std[,coefrange], 2, median)~standardizedSolution(endfit)$est.std)
-abline(0,1,col=2)
-hist(apply(endfit_std[,coefrange], 2, median)-standardizedSolution(endfit)$est.std)
-hist(apply(endfit_std[,coefrange], 2, mean)-standardizedSolution(endfit)$est.std)
-
-
-## Make a table of direct effects on lichen richness
-## Keep in mind that se for non-standardized coefficients were caluclated using the robust method, not bootstrapped
-direct_rich = subset(endfit_ests, (lhs=='lichen_rich')&(op=='~'))
-direct_rich = direct_rich[,c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper')] #, 'pval_parmphys', 'pval_parmphys'
-names(direct_rich)[1] = 'predictor'
-rownames(direct_rich) = direct_rich$predictor
-rownames(direct_rich)[rownames(direct_rich)=='regS'] = 'reg' 
-rownames(direct_rich)[rownames(direct_rich)=='parm_abun_log'] = 'abun_log' # These change with each dataset
-
-## Make a table of total effects on lichen richness
-total = endfit_ests[grep('TE',endfit_ests$label),]
-total = total[,c('lhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper')]#, 'pval_parmphys', 'pval_parmphys'
-names(total)[1] = 'predictor'
-total$predictor = substring(total$predictor, first=4)
-addrows = subset(direct_rich, !(predictor %in% total$predictor))
-colnames(addrows) = colnames(total)
-total = rbind(total, addrows)
-rownames(total) = total$predictor
-rownames(total)[rownames(total)=='regS'] = 'reg' # These change with each dataset
-rownames(total)[rownames(total)=='parm_abun_log'] = 'abun_log' # These change with each dataset; tot, parm, phys
-
-## Make a table of indirect effects on lichen richness via abundance
-## For climate variables that also affect forest structure, this is just the path directly from climate to abundance, not via forest structure
-c(paste('IE',c('bark_moist_pct.rao.ba','wood_SG.rao.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','lightDist.mean','diamDiversity',
-		'bark_moist_pct.ba','wood_SG.ba','LogSeed.ba','totalCirc','bigTrees','light.mean','PC1','totalNS'), sep='_'),
-	paste('IE',c('wetness','rain_lowRH','iso','pseas','mat','radiation'),'A', sep='_'))->indir_vars
-indirect = subset(endfit_ests, label %in% indir_vars)
-indirect = indirect[,c('lhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper','pval_parmphys')]#, 'pval_parmphys', 'pval_parmphys'
-names(indirect)[1] = 'predictor'
-indirect$predictor = substring(indirect$predictor, first=4)
-indirect$predictor = sapply( indirect$predictor, function(x) ifelse(substr(x, nchar(x), nchar(x))=='A', substr(x, 1, nchar(x)-2), x))	
-rownames(indirect) = indirect$predictor
-
-## Make a table of direct effects on lichen abundance
-direct_abun = subset(endfit_ests, (lhs=='parm_abun_log')&(op=='~')) # This changes with each model; tot, parm, phys
-direct_abun = direct_abun[, c('rhs','est','se','z','pvalue','ci.lower','ci.upper','std.all','std.ci.lower','std.ci.upper', 'pval_parmphys')]#,'pval_parmphys' ,'pval_parmphys'
-names(direct_abun)[1] = 'predictor'
-rownames(direct_abun) = direct_abun$predictor
-
-# Make a table of indirect effect of climate variable via regional richness
-indirect_reg = endfit_ests[grep('IE_[A-za-z._]*_R', endfit_ests$label),]
-indirect_reg = indirect_reg[,c('lhs','std.all','std.se','std.ci.lower','std.ci.upper')]
-names(indirect_reg)[1] = 'predictor'
-indirect_reg$predictor = substring(indirect_reg$predictor, first=4)
-indirect_reg$predictor = sapply(indirect_reg$predictor, function (x) substr(x, 1, nchar(x)-2))
-rownames(indirect_reg) = indirect_reg$predictor
-
-## Append variable types column
-vartypes = read.csv('./SEM models/var_types.csv', row.names=1)
-
-total$type = vartypes[rownames(total),'type']
-direct_rich$type = vartypes[rownames(direct_rich),'type']
-direct_abun$type = vartypes[rownames(direct_abun),'type']
-indirect$type = vartypes[rownames(indirect),'type']
-
-## Save tables- make sure to changes names to appropriate dataset
-write.csv(total, './SEM models/Parm_testdata_totaleffects.csv', row.names=T)
-write.csv(direct_rich, './SEM models/Parm_testdata_directeffects_richness.csv', row.names=T)
-write.csv(direct_abun, './SEM models/Parm_testdata_directeffects_abundance.csv', row.names=T)
-write.csv(indirect, './SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=T)
-
+#######################################################################################
 ### Figures ###
 
 ## Compare direct effects on richness vs abundance
 
 # Color scheme: http://colorschemedesigner.com/#3341SsYrGvyw0
-mycols = c('#000000','#07395D','#902E07','#05633B','#711392','#DD8615')
-names(mycols) = c('A','C','FH','FM','P','R')
-mycols_trans = paste(mycols, '66', sep='')
-mypch = c('I','I','I') #c(0,4,5)#
+mycols = c('#000000','#07395D','#066788','#688e60','#05633B','#902E07','#DD8615')
+names(mycols) = c('A','C','L','FH','FM','P','R')
+mycols_trans = paste(mycols, '50', sep='')
+names(mycols_trans) = c('A','C','L','FH','FM','P','R')
+mypch = c(3,3,3) #c(0,4,5)#
 mypcols = c('black','grey30','white')
 myadj=.15
+
+plot(1:7,rep(0,7),pch=15, cex=4, col=mycols_trans) # Check colors
 
 ## Compare direct effects vs. indirect effects via abundance vs. total effects
 
 # Order variables from lowest to highest total effects
+total = allsp
 ordered_vars = rownames(total[order(total$std.all),])
 ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
 
 # Put tables in same order
-use_direct = direct_rich[ordered_vars,]
-use_indirect = indirect[ordered_vars,] # regS and tot_abun will be missing
+use_direct = allsp_d[ordered_vars,]
+use_indirect = allsp_i[ordered_vars,] # regS and tot_abun will be missing
 use_total = total[ordered_vars,]
+use_indirectF = allsp_if
+use_indirectR = allsp_ir
 
 library(lattice)
-#library(gplots)
 
 # Define range limits that will include 95% confidence intervals
 myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')],
@@ -420,15 +360,15 @@ myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')],
 	use_indirect[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
 
 # Total and direct standardized effects on same graph
-png('./Figures/New Coordinates/Standardized direct total indirect via abundance effects on AllSp richness.png', height=900, width=1400, type="cairo-png")
+png('./Figures/New Coordinates/Standardized direct total indirect via abundance effects on AllSp richness.png', height=1000, width=1400, type="cairo-png")
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
-	xlab=list('Standardized coefficient',cex=3), ylab='',
-	main='',cex.lab=3,aspect=4/5, xlim=myrange,
+	xlab=list('Standardized Effect',cex=3), ylab='',
+	main='',cex.lab=3,aspect=9/10, xlim=myrange,
 	panel=function(x,y){
 		
 		# Add horizontal boxes
 		panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
-			col=mycols_trans[factor(total[ordered_vars,'type'])], border='transparent' )
+			col=mycols_trans[use_total[ordered_vars,'type']], border='transparent' )
 
 		# Add vertical line at 0
 		panel.abline(v=0, col='grey30', lty=2, lwd=2)		
@@ -456,13 +396,92 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
-		cex=3, col=mycols[factor(total[ordered_vars,'type'])]),
+		cex=3, col=mycols[use_total[ordered_vars,'type']]),
 		x=list(cex=3, tick.number=8)),
-	key=list(x=1, y=.48, corner=c(1,.5), lines=list(type='o', pch=mypch, col=mypcols, lwd=3),
+	key=list(x=1, y=0, corner=c(1,0), lines=list(type='o', pch=mypch, col=mypcols, lwd=3),
 		text=list(c('Total effect','Indirect effect\nvia abundance','Direct effect')),
-		background='#00000033', cex=3, divide=1, padding.text=5)
+		background='#bbbbbbff', cex=3, divide=1, padding.text=5, border='black')
 )
 dev.off()
+
+## Larger figure including more indirect effects via panels
+myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')],
+	use_direct[,c('std.ci.lower','std.ci.upper')],
+	use_indirect[,c('std.ci.lower','std.ci.upper')],
+	use_indirectF[,c('std.ci.lower','std.ci.upper')],
+	use_indirectR[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
+
+# Climate: direct/total
+use_total_sub = subset(use_total, type %in% c('C','L'))
+use_direct_sub = subset(use_direct, type %in% c('C','L'))
+use_indirect_sub = subset(use_indirect, type %in% c('C','L'))
+order_clim = use_direct_sub[order(use_direct_sub$std.all),'predictor']
+
+use_total_sub = use_total_sub[order_clim,]
+use_direct_sub = use_direct_sub[order_clim,]
+use_indirect_sub = use_indirect_sub[order_clim,]
+use_indirectR_sub = use_indirectR[order_clim[order_clim %in% rownames(use_indirectR)],]
+use_indirectF_sub = use_indirectF_sub[c(paste(order_clim,'FM', sep='_'),paste(order_clim,'FH', sep='_')),]
+
+svg('./Figures/New Coordinates/Effects figure P1 climate direct total.svg', height=2.25, width=7, bg='transparent', pointsize=8)
+dotplot(as.numeric(factor(use_total_sub$predictor, levels = order_clim))~std.all, data=use_total_sub, 
+	xlab=list('Standardized Effect',cex=1), ylab='',
+	main='',cex.lab=1,aspect=5/12, xlim=myrange,
+	panel=function(x,y){
+		
+		# Add horizontal boxes
+		#panel.rect(-2,1:length(order_clim)-.5, 2, 1:length(order_clim)+.5,
+		#	col=mycols_trans[use_total_sub[order_clim,'type']], border='transparent' )
+
+		# Add vertical line at 0
+		panel.abline(v=0, col='black', lty=1, lwd=1)		
+		
+		# Add 95% CI segments for total effects
+		panel.segments(use_total_sub$std.ci.lower, y,
+			use_total_sub$std.ci.upper, y, 
+			col=mypcols[2], lwd=2, lend=1)
+		# Add points for total estimated effects
+		panel.points(x, y, col=mypcols[2], pch=mypch[1], cex=1, lwd=2) 
+		
+		# Add 95% CI for direct effects
+		panel.segments(use_direct_sub$std.ci.lower, y+myadj,
+			use_direct_sub$std.ci.upper, y+myadj, 
+			col=mypcols[1], lwd=2, lend=1)
+		# Add points for direct estimated effects
+		panel.points(use_direct_sub$std.all, y+myadj, col=mypcols[1], pch=mypch[3], cex=1, lwd=2) 
+			
+	},
+	scales=list(y=list(labels=varnames[order_clim,'midName'], 
+		cex=1, col=mycols[use_total_sub[order_clim,'type']]),
+		x=list(cex=1, tick.number=8)),
+	key=list(x=1, y=.48, corner=c(0,.5), lines=list(type='o', pch=mypch[1:2], col=mypcols[1:2], lwd=1, size=2),
+		text=list(c('Direct effect','Total effect')),
+		background='#ffffff00', cex=1, divide=1, padding.text=2, between=1)
+)
+dev.off()
+
+## Make table of indirect climat effects
+
+climEff_tab = data.frame(varnames[use_direct_sub$predictor,'displayName'], 
+	direct = use_direct_sub$std.all,
+	directSig = apply(use_direct_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectA = use_indirect_sub$std.all,
+	indirectASig = apply(use_indirect_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectFH = subset(use_indirectF_sub, Ftype=='FH')$std.all,
+	indirectFHSig = apply(subset(use_indirectF_sub, Ftype=='FH')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectFM = subset(use_indirectF_sub, Ftype=='FM')$std.all,
+	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectR = use_indirectR[order_clim,]$std.all,
+	indirectRSig = apply(use_indirectR[order_clim,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+)
+
+write.csv(climEff_tab, './SEM models/Compare effects climate variables.csv', row.names=F)
+
+
+
+
+
+--------------------------------------------
 
 ## Make plot comparing Total richness, Parmeliaceae and Physciaceae
 
