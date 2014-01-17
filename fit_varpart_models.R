@@ -33,7 +33,18 @@ use_data$soilPC1 = soil[rownames(use_data),'PC1']
 use_data$soilPC2 = soil[rownames(use_data), 'PC2']
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
+use_vars = rownames(predtypes)[predtypes$type!='A'] # Leave out abundance
+use_vars = use_vars[-grep('soil',use_vars)] # Leav out soil variables
 
+pois_log_mod = glm(richness~., family=poisson(link='log'), data=use_data_fit[,c('richness',use_vars)])
+pois_iden_mod = glm(richness~., family=poisson(link='identity'), start=rep(1,23), data=use_data_fit[,c('richness',use_vars)]) #warnings- may not have fit correctly
+nb_log_mod = glm.nb(richness~., link='log', data=use_data_fit[,c('richness',use_vars)])
+nb_iden_mod = glm.nb(richness~., link='identity', init.theta=10, data=use_data_fit[,c('richness',use_vars)])
+gaus_log_mod = glm(richness~., family=gaussian(link='log'), data=use_data_fit[,c('richness',use_vars)])
+gaus_iden_mod= glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
+
+AIC(gaus_iden_mod, gaus_log_mod, pois_iden_mod, pois_log_mod, nb_iden_mod, nb_log_mod)
+# nb_log mod wins by far.
 
 
 ### Univariate models ###
@@ -100,6 +111,7 @@ plot(y_predR, y_calcR)
 
 plot(richness~wetness, data=use_data_fit)
 lines(y_predR~x, col='red')
+lines(y_calcR~x, col='blue')
 
 # Which variables have AIC supported concave-down relationships?
 sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
