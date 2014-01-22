@@ -1,7 +1,11 @@
 ## This script performs the variation partitioning analysis on lichen diversity for FIA plots.
 
+
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
+
+save.image('varpart_analysis.Rdata')
+load('varpart_analysis.Rdata')
 
 ###################################################################################
 ### Variation Partitioning among climate, forest, regional richness, and pollution
@@ -32,6 +36,12 @@ soil = read.csv('./Soil/soil_PCA.csv', row.names=1)
 use_data$soilPC1 = soil[rownames(use_data),'PC1']
 use_data$soilPC2 = soil[rownames(use_data), 'PC2']
 
+
+# Initially use fitplots to determine whether to use quadratic relationships.
+# Then, re-run final analysis using only use testing data set
+use_data_fit = use_data[fitplots$yrplot.id,]
+sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
+
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
 use_vars = rownames(predtypes)[predtypes$type!='A'] # Leave out abundance
 use_vars = use_vars[-grep('soil',use_vars)] # Leav out soil variables
@@ -46,13 +56,33 @@ gaus_iden_mod= glm(richness~., family=gaussian(link='identity'), data=use_data_f
 AIC(gaus_iden_mod, gaus_log_mod, pois_iden_mod, pois_log_mod, nb_iden_mod, nb_log_mod)
 # nb_log mod wins by far.
 
+### Test linear, log-linear, Poisson, and Negative Binomial GLMs for abundance
+abun_pois_log = glm(richness~abun_log, family=poisson(link='log'), data=use_data_fit)
+#abun_pois_iden = glm(richness~abun_log, family=poisson(link='identity'), start=rep(1,2), data=use_data_fit) 
+abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit) # Doesn't fit b/c data is basically Poisson distributed
+#abun_nb_iden = glm.nb(richness~abun_log, link='identity', init.theta=1, data=use_data_fit)
+abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_data_fit)
+abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
+
+AIC(abun_pois_log, abun_gaus_log, abun_gaus_iden) 
+
+
+pois_y = predict(abun_pois_log, list(abun_log=use_x), type='response')
+gauslog_y = predict(abun_gaus_log, list(abun_log=use_x), type='response')
+gausiden_y = predict(abun_gaus_iden, list(abun_log=use_x), type='response')
+
+plot(richness~abun_log, data=use_data_test)
+lines(use_x, pois_y, col='red')
+lines(use_x, gauslog_y, col='blue')
+lines(use_x, gausiden_y, col='green')
+
+plot(log10(richness)~abun_log, data=use_data_test, ylim=c(-1,2))
+lines(use_x, log10(pois_y), col='red', lwd=2)
+lines(use_x, log10(gauslog_y), col='blue', lwd=2)
+lines(use_x, log10(gausiden_y), col='green', lwd=2)
+
 
 ### Univariate models ###
-
-# Initially use fitplots to determine whether to use quadratic relationships.
-# Then, re-run final analysis using only use testing data set
-use_data_fit = use_data[fitplots$yrplot.id,]
-sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
 
 unimods = sapply(rownames(predtypes), function(x){
 	
@@ -95,8 +125,9 @@ modcompare$concavity = ifelse(unimods$quad_sq>0, 'up','down')
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
 
-# Plotting some models
+modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
 
+# Plotting some models
 mod2 = glm.nb(richness~wetness+I(wetness^2), data=use_data_fit)
 coef2 = coef(mod2)
 x = seq(-4,3, .1)
@@ -117,89 +148,247 @@ lines(y_calcR~x, col='blue')
 sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
 
 # Using quadratic relationships for concave-down AIC supported models in variation partitioning
-sq_df = use_data_[,sq_vars]^2
+sq_df = use_data[,sq_vars]^2
 colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
 use_data = cbind(use_data, sq_df)
 
+## Use test plots for model results:
 
+use_data_test = use_data[testplots$yrplot.id,]
 
+## Variation Partitioning by Local / Regional
 
+regionvars = rownames(predtypes)[predtypes$scale=='R']
+localvars = rownames(predtypes)[predtypes$scale=='L']
+localvars = localvars[-grep('soil', localvars)] # Leave out soil vars
+localvars = subset(localvars, localvars != 'abun_log') # Leavr out abundance
 
+region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, colnames(sq_df)[sq_vars %in% regionvars])])
+local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, colnames(sq_df)[sq_vars %in% localvars])])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-forestvars = predtypes$predictor[predtypes$type %in% c('FM','FH')]
-climvars = predtypes$predictor[predtypes$type == 'C']
-regvars = predtypes$predictor[predtypes$type == 'R']
-polvars = predtypes$predictor[predtypes$type == 'P']
-
-# Using only linear relationships
-forest_mod = glm.nb(richness~., data=use_data[,c('richness', forestvars)] )
-reg_mod = glm.nb(richness~., data=use_data[,c('richness', regvars)])
-clim_mod = glm.nb(richness~., data=use_data[,c('richness', climvars)])
-pol_mod = glm.nb(richness~., data=use_data[,c('richness', polvars)])
-
-
-
-
-
-
-
-
-
-forest_mod = glm.nb(richness~. , data=use_data[,c('richness', forestvars, colnames(sq_df)[sq_vars %in% forestvars])])
-reg_mod = glm.nb(richness~., data=use_data[,c('richness', regvars, colnames(sq_df)[sq_vars %in% regvars])])
-clim_mod = glm.nb(richness~., data=use_data[,c('richness', climvars, colnames(sq_df)[sq_vars %in% climvars])])
-pol_mod = glm.nb(richness~., data=use_data[,c('richness', polvars, colnames(sq_df)[sq_vars %in% polvars])])
+AIC(forest_mod, reg_mod, env_mod, pol_mod, region_mod, local_mod) # region_mod is best
 
 # Make a list of predictors
-predlist = list(climate=names(clim_mod$coefficients[-1]),
+predlist = list(Regional=names(region_mod$coefficients[-1]),
+	Local=names(local_mod$coefficients[-1])
+)
+
+# Define null model
+null_mod = glm.nb(richness~1, data=use_data_test)
+
+# Calculate pseudo R2 for each model containing successive subsets of variables
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)])
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
+
+names(Rs) = names(predlist)
+
+local_regional_partition = partvar2(Rs)
+
+## Variation Partitioning by Forest Heterogeneity / Mean Conditions
+nichevars = rownames(predtypes)[predtypes$type=='FH']
+resvars = rownames(predtypes)[predtypes$type %in% c('FM','L')]
+resvars = resvars[-grep('soil',resvars)] # Don't include soil
+
+niche_mod = glm.nb(richness~., data=use_data_test[,c('richness', nichevars, colnames(sq_df)[sq_vars %in% nichevars])])
+res_mod = glm.nb(richness~., data=use_data_test[,c('richness', resvars, colnames(sq_df)[sq_vars %in% resvars])])
+
+AIC(forest_mod, reg_mod, env_mod, pol_mod, region_mod, local_mod, niche_mod, res_mod) # region_mod is best
+
+# Make a list of predictors
+predlist = list(Heterogeneity=names(niche_mod$coefficients[-1]),
+	Optimality=names(res_mod$coefficients[-1])
+)
+
+# Define null model
+null_mod = glm.nb(richness~1, data=use_data_test)
+
+# Calculate pseudo R2 for each model containing successive subsets of variables
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)])
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
+
+names(Rs) = names(predlist)
+
+niche_res_partition = partvar2(Rs)
+
+
+# Plot variation vartitioning
+barwide = .5
+use_part = local_regional_partition
+
+svg('./Figures/partition variance among local vs regional include quadratic effects.svg', height=6, width=6*barwide)
+	par(mar=c(0,4,0,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,1), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for unexplained variation
+	rect(0,sum(use_part[1:3]),barwide,1, lwd=3, col='white')
+	
+	# Add rectangle for regional model
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col='#AA000088')
+
+	# Add rectangle for local model
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col='#0000AA88')
+
+	# Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part), cex=2)
+dev.off()
+
+
+# Plot without unexplained variation
+barwide=.6
+use_part = niche_res_partition
+svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp.svg', height=6, width=6*barwide)
+	par(mar=c(0,0,0,5))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,sum(use_part[1:3])), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for regional model
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col='#00AA0088')
+
+	# Add rectangle for local model
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col='#0000AA88')
+
+	# Add axis
+	axis(4, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
+dev.off()
+
+
+# Plot variation vartitioning in black and white
+barwide = .5
+use_part = local_regional_partition
+
+svg('./Figures/partition variance among local vs regional include quadratic effects bw.svg', height=6, width=6*barwide)
+	par(mar=c(0,4,0,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,1), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for unexplained variation
+	rect(0,sum(use_part[1:3]),barwide,1, lwd=3, col='white')
+	
+	# Add rectangle for regional model
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, density=10, angle=45)
+
+	# Add rectangle for local model
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, density=10, angle=-45)
+
+	# Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part), cex=2, bg='white')
+dev.off()
+
+
+# Plot without unexplained variation
+barwide=.6
+use_part = niche_res_partition
+svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp bw.svg', height=6, width=6*barwide)
+	par(mar=c(0,0,0,5))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,sum(use_part[1:3])), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for regional model
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, density=10, angle=20)
+
+	# Add rectangle for local model
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, density=10, angle=-20)
+
+	# Add axis
+	axis(4, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
+dev.off()
+
+
+
+
+
+
+
+
+## Variation partitioning by variable type
+## Should I be scaling data if I am going to be comparing variation explained among groups?
+## Note: not using this any more. hier.part does not give same partitioning as Borcard 1992.
+forestvars = rownames(predtypes)[predtypes$type %in% c('FM','FH')]
+envvars = rownames(predtypes)[predtypes$type %in% c('C','L')]
+envvars = envvars[-grep('soil', envvars)] # not using soil variables here
+regvars = rownames(predtypes)[predtypes$type == 'R']
+polvars = rownames(predtypes)[predtypes$type == 'P']
+
+forest_mod = glm.nb(richness~. , data=use_data_test[,c('richness', forestvars, colnames(sq_df)[sq_vars %in% forestvars])])
+reg_mod = glm.nb(richness~., data=use_data_test[,c('richness', regvars, colnames(sq_df)[sq_vars %in% regvars])])
+env_mod = glm.nb(richness~., data=use_data_test[,c('richness', envvars, colnames(sq_df)[sq_vars %in% envvars])])
+pol_mod = glm.nb(richness~., data=use_data_test[,c('richness', polvars, colnames(sq_df)[sq_vars %in% polvars])])
+AIC(forest_mod, reg_mod, env_mod, pol_mod) # env_mod is best
+
+# Make a list of predictors
+predlist = list(environ=names(env_mod$coefficients[-1]),
 	forest=names(forest_mod$coefficients[-1]),
 	regional=names(reg_mod$coefficients[-1]),
 	pollution=names(pol_mod$coefficients[-1])
 )
 
+# Define null model
+null_mod = glm.nb(richness~1, data=use_data_test)
+
 # Calculate pseudo R2 for each model containing successive subsets of variables
 apply(combos(4)$ragged, 1, function(x){
 	use_vars = unlist(predlist[x])
 
-	this_mod = glm.nb(richness~., data=use_data[,c('richness',use_vars)])
-	r.squaredLR(this_mod)
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)])
+	r.squaredLR(this_mod, null=null_mod)
 })->Rs
 
 # Add the null model
-nullR = r.squaredLR(glm.nb(richness~1, data=use_data))
+nullR = r.squaredLR(null_mod)
 Rs = c(nullR,Rs)
 
 # Partition variation among variable sets (from hier.part package)
-partition(Rs, 4, var.names = names(predlist))-> var_sets_partition 
+partition(Rs, 4, var.names = names(predlist))-> varTypes_partition 
 
-pdf('./Figures/partition variance among predictor sets include quadratic effects barplot.pdf', heigh=6, width=7)
+png('./Figures/partition variance among predictor types include quadratic effects barplot.png', height=500, width=750)
 par(mar=c(4,6,1,1))
-barplot(t(as.matrix(var_sets_partition$IJ[,c('I','J')])),
-	legend.text = c('Independent','Joint'),ylim=c(0,.4),
+barplot(t(as.matrix(varTypes_partition$IJ[,c('I','J')])),
+	legend.text = c('Independent','Joint'),ylim=c(0,1),
 	las=1, cex.axis=1.5, cex.lab=1.5, cex.names=1.5,col=c('grey30','grey60'),
 	args.legend=list(bty='n', cex=1.5, border='transparent'), mgp=c(3,2,1),
-	names=c('Climate','Forest\nStructure','Regional\nRichness','Pollution'), border=F
+	names=c('Environment','Forest\nStructure','Regional\nRichness','Pollution'), border=F
 )
 mtext('Variation Explained',2,4.5,cex=1.5)
-
 dev.off()
 
-### Need to do this for models with quadratic effects
+
+
+
+
+
+
+
+
+
 
 
 #### Partition among climate, forest heterogeneity and mean conditions
@@ -217,12 +406,13 @@ predlist = list(climate=names(clim_mod$coefficients[-1]),
 )
 
 # Calculate pseudo R2 for each model containing successive subsets of variables
-apply(combos(3)$ragged, 1, function(x){
+apply(combos(2)$ragged, 1, function(x){
 	use_vars = unlist(predlist[x])
 
 	this_mod = glm.nb(richness~., data=use_data[,c('richness',use_vars)])
 	r.squaredLR(this_mod)
 })->Rs
+
 
 # Partition variation
 inds = Rs[7]-Rs[6:4]
