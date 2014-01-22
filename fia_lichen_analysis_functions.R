@@ -91,6 +91,24 @@ partvar3 = function(modlist){
 }
 
 
+## A function that partitions variation between two models
+## Must be supplied with R2 for [A, B, AB]
+partvar2 = function(R2s){
+	
+	a = R2s[3]-R2s[2]
+	c = R2s[3]-R2s[1]
+	b = R2s[1] - a
+	d = 1-R2s[3]
+
+	this_partition = c(a,b,c,d)
+	names(this_partition) = c(names(R2s)[1], 'Both', names(R2s)[2], 'Unexplained')
+
+	this_partition
+}
+
+
+
+
 # A function which plots any type of polynomial given the coefficients.
 #  a is a vector of coefficients
 polyfunc = function(x,a){
