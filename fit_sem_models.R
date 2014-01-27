@@ -275,17 +275,7 @@ cbind(stdsol$se, endfit_ests$se)
 # This will be done on the cluster
 endfit_std = bootstrapLavaan(endfit, R=3, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 
-# Make a data frame that has all response variables in it
-new_response = master[rownames(working_data),c('fric','fdiv','raoQ')]
-new_response$Parm_log = log(master[rownames(working_data),'Parmeliaceae']+1)
-new_response$Phys_log = log(master[rownames(working_data),'Physciaceae']+1)
-new_response = scale(new_response, center=T, scale=T)
-alldata=data.frame(working_data,new_response)
-
-write.csv(alldata[testplots$yrplot.id,], './SEM models/Bootstrap/standardized_test_dataset.csv', row.names=T)
-
-alldata = read.csv('./SEM models/Bootstrap/standardized_test_dataset.csv', row.names=1)
-endfit =  sem(path_measerr, data=alldata, fixed.x=F, estimator='ML', se='robust.sem')
+write.csv(working_data[testplots$yrplot.id,], './SEM models/New Abundance/standardized_test_dataset.csv', row.names=T)
 
 ### See scripts for bootstrap calculations done on the cluster
 # kure_sem_boot_[allsp, parm, phys, fric, raoQ].R

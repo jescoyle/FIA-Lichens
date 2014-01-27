@@ -3,7 +3,7 @@
 ## model_data : data from plots used in models from all plots without any data missing, includes PCA variables
 ## trans_data : environmental data log or sqrt transformed to reduce skew
 ## working_data_unstd :  trans_data scaled by linear factor (usually 10) to put variables on similar range
-## working_data : working_data_unstd scaled to have mean 0 and std dev 1
+## working_data : trans_data scaled to have mean 0 and std dev 1
 ## Outliers are analyzed and removed from all data sets and working data sets are divided into equal sized test ('_test') and fitting ('_fit') sets.
 
 
@@ -27,7 +27,7 @@ rich_current = rich_current[,names(rich_legacy)]
 rich_data = rbind(rich_current, rich_legacy)
 
 # Lichen abundance data
-abun_data = read.csv('./Data/lichen abundance on plots.csv') # Not available for all plots b/c originally calculated after subsetting.
+abun_data = read.csv('./Data/lichen abundance based on tree occupancy.csv') # Not available for all plots b/c originally calculated after subsetting.
 
 # FIA tree data
 tree_data = read.csv('./Data/TreeData/master_data_forest.csv')[,c('yrplot.id','S.tree','D.abun.tree',
@@ -71,9 +71,6 @@ master = read.csv('./Data/fia_lichen_master_data.csv', row.names=1)
 
 # Use recent plots after plot design had been standardized
 model_data = subset(master, MEASYEAR>=1997)
-
-# Set row names to identify plots
-rownames(model_data) = model_data$yrplot.id
 
 # Remove plots with only one large tree (heterogeneity measurements are NA)
 model_data = subset(model_data, numTreesBig>1) # removes 44 plots widely distributed across US
@@ -149,7 +146,7 @@ newvars = data.frame(yrplot.id=rownames(model_data))
 #rownames(newvars)==rownames(model_data)
 
 # max tree size and tree size range
-diam_pca = prcomp(na.omit(model_data[,c('diamDist.mean','maxDiam')]))
+diam_pca = prcomp(na.omit(use_data[,c('diamDist.mean','maxDiam')]))
 diam_vars = data.frame(predict(diam_pca))
 names(diam_vars) = c('bigTrees','diamDiversity')
 diam_vars$diamDiversity = -1*diam_vars$diamDiversity
@@ -163,7 +160,7 @@ names(precip_vars) = c('wetness','rain_lowRH')
 newvars = cbind(newvars, precip_vars)
 
 ## Create data set with variables used for modeling
-myvars = c('lichen.rich','mat','iso','pseas','totalNS','radiation',
+myvars = c('lichen.rich','Parmeliaceae','Physciaceae','fric','fdiv','raoQ','mat','iso','pseas','totalNS','radiation',
 	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','PC1',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'totalCirc','regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
@@ -172,7 +169,7 @@ myvars = c('lichen.rich','mat','iso','pseas','totalNS','radiation',
 model_data = cbind(model_data[,myvars], newvars[,2:ncol(newvars)])
 
 ## Create scaled and transformed datasets
-t(apply(model_data, 2, range)) # Examine ranges of variables
+t(apply(model_data, 2, range, na.rm=T)) # Examine ranges of variables
 
 trans_data = model_data
 logTrans_vars = c('totalCirc')
@@ -183,34 +180,38 @@ for(v in logTrans_vars){
 for(v in sqrtTrans_vars){
 	trans_data[,v] = sqrt(trans_data[,v])
 }
+
 hist(trans_data$bigTrees) # Not much I can do about transforming this, so I won't
 
 working_data = trans_data
-working_data_unstd = trans_data
+#working_data_unstd = trans_data
 
 # For unstd data: rescale by constant so that variances in path analysis will be of similar scale
-working_data_unstd$mat = working_data_unstd$mat/10
-working_data_unstd$pseas = working_data_unstd$pseas/10
-working_data_unstd$radiation = working_data_unstd$radiation/1000000
-working_data_unstd$totalNS = working_data_unstd$totalNS/100
-working_data_unstd$bark_moist_pct.ba = working_data_unstd$bark_moist_pct.ba/10
-working_data_unstd$bark_moist_pct.rao.ba = working_data_unstd$bark_moist_pct.rao.ba*10
-working_data_unstd$wood_SG.rao.ba = working_data_unstd$wood_SG.rao.ba*10
-working_data_unstd$wood_SG.ba = working_data_unstd$wood_SG.ba*10
-working_data_unstd$LogSeed.rao.ba = working_data_unstd$LogSeed.rao.ba*10
-working_data_unstd$PIE.ba.tree = working_data_unstd$PIE.ba.tree*10
-working_data_unstd$propDead = working_data_unstd$propDead*10
-working_data_unstd$light.mean = working_data_unstd$light.mean/10
-working_data_unstd$lightDist.mean = working_data_unstd$lightDist.mean/10
-working_data_unstd$regS = working_data_unstd$regS/10
-working_data_unstd$regParm = working_data_unstd$regParm/10
-working_data_unstd$regPhys = working_data_unstd$regPhys/10
-working_data_unstd$bigTrees = working_data_unstd$bigTrees/10
-working_data_unstd$PC1 = working_data_unstd$PC1*10
+#working_data_unstd$mat = working_data_unstd$mat/10
+#working_data_unstd$pseas = working_data_unstd$pseas/10
+#working_data_unstd$radiation = working_data_unstd$radiation/1000000
+#working_data_unstd$totalNS = working_data_unstd$totalNS/100
+#working_data_unstd$bark_moist_pct.ba = working_data_unstd$bark_moist_pct.ba/10
+#working_data_unstd$bark_moist_pct.rao.ba = working_data_unstd$bark_moist_pct.rao.ba*10
+#working_data_unstd$wood_SG.rao.ba = working_data_unstd$wood_SG.rao.ba*10
+#working_data_unstd$wood_SG.ba = working_data_unstd$wood_SG.ba*10
+#working_data_unstd$LogSeed.rao.ba = working_data_unstd$LogSeed.rao.ba*10
+#working_data_unstd$PIE.ba.tree = working_data_unstd$PIE.ba.tree*10
+#working_data_unstd$propDead = working_data_unstd$propDead*10
+#working_data_unstd$light.mean = working_data_unstd$light.mean/10
+#working_data_unstd$lightDist.mean = working_data_unstd$lightDist.mean/10
+#working_data_unstd$regS = working_data_unstd$regS/10
+#working_data_unstd$regParm = working_data_unstd$regParm/10
+#working_data_unstd$regPhys = working_data_unstd$regPhys/10
+#working_data_unstd$bigTrees = working_data_unstd$bigTrees/10
+#working_data_unstd$PC1 = working_data_unstd$PC1*10
 
 # Make transformation of richness response used in models
 working_data$lichen.rich_log = log(working_data$lichen.rich+1)
-working_data_unstd$lichen.rich_log = log(working_data_unstd$lichen.rich+1)
+working_data$Parm_log = log(working_data$Parmeliaceae+1)
+working_data$Phys_log = log(working_data$Physciaceae+1)
+
+#working_data_unstd$lichen.rich_log = log(working_data_unstd$lichen.rich+1)
 #working_data_unstd$lichen.rich = working_data_unstd$lichen.rich/10
 
 # Rescale by mean and stddev for standardized data
@@ -295,19 +296,18 @@ subset(model_data, rownames(model_data) %in% names(which(cd>0.01)))
 
 # Remove outliers
 working_data = subset(working_data, !(rownames(working_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
-working_data_unstd = subset(working_data_unstd, !(rownames(working_data_unstd) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
+#working_data_unstd = subset(working_data_unstd, !(rownames(working_data_unstd) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
 model_data = subset(model_data, !(rownames(model_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
 trans_data = subset(trans_data, !(rownames(trans_data) %in% c('2004_16_49_85627','2007_4_19_83376','1999_41_25_7306','1998_17_43_6379')))
 
 
 ## Save data sets
 write.csv(working_data, './Data/fia_lichen_working_data.csv', row.names=T)
-write.csv(working_data_unstd, './Data/fia_lichen_working_data_unstd.csv', row.names=T)
+#write.csv(working_data_unstd, './Data/fia_lichen_working_data_unstd.csv', row.names=T)
 write.csv(trans_data, './Data/fia_lichen_trans_data.csv', row.names=T)
 write.csv(model_data, './Data/fia_lichen_model_data.csv', row.names=T)
 
 ## Divide data into fitting and testing data sets
-rownames(master) = master$yrplot.id
 allplots = rownames(model_data)
 usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 
@@ -319,9 +319,9 @@ usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 #length(fitplots) # stopped at 961
 #testplots = allplots[!(allplots %in% fitplots)]
 
-# Write out list of test and fit plots
-write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
-write.csv(data.frame(yrplot.id=fitplots), './Data/model fit plots.csv')
+## Write out list of test and fit plots
+#write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
+#write.csv(data.frame(yrplot.id=fitplots), './Data/model fit plots.csv')
 
 
 
