@@ -23,38 +23,45 @@ predtypes = subset(predtypes, !(rownames(predtypes) %in% c('FM','FH')))
 # Define dataset- use trans_data where variables have been log or sqrt transformed but not scaled
 use_data = trans_data[,colnames(trans_data)%in% rownames(predtypes)]
 
+# Add other variables used to analyze FD and restricted taxonomic groups
+other_data = master[rownames(use_data),c('lichen.rich','fric','raoQ','Parmeliaceae','Physciaceae',
+	'tot_abun_log','parm_abun_log','phys_abun_log','regS','regParm','regPhys')]
+
 # Define predictor variable and appropriate abundance and regional richness variables
-use_response = 'lichen.rich'
+use_response = 'lichen.rich' # This changes based on the analysis
 use_reg = 'regS'
 use_abun = 'tot_abun_log'
-use_data$richness = trans_data[,use_response]
-use_data$reg = trans_data[,use_reg]
-use_data$abun_log = trans_data[,use_abun]
+use_data$richness = other_data[,use_response]
+use_data$reg = other_data[,use_reg]
+use_data$abun_log = other_data[,use_abun]
 
 # Append soil PCA variables
 soil = read.csv('./Soil/soil_PCA.csv', row.names=1)
 use_data$soilPC1 = soil[rownames(use_data),'PC1']
 use_data$soilPC2 = soil[rownames(use_data), 'PC2']
 
-
+# Testing and training data sets
 # Initially use fitplots to determine whether to use quadratic relationships.
 # Then, re-run final analysis using only use testing data set
+use_data_test = use_data[testplots$yrplot.id,]
 use_data_fit = use_data[fitplots$yrplot.id,]
+
 sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
 use_vars = rownames(predtypes)[predtypes$type!='A'] # Leave out abundance
-use_vars = use_vars[-grep('soil',use_vars)] # Leav out soil variables
+use_vars = use_vars[-grep('soil',use_vars)] # Leave out soil variables
 
 pois_log_mod = glm(richness~., family=poisson(link='log'), data=use_data_fit[,c('richness',use_vars)])
 pois_iden_mod = glm(richness~., family=poisson(link='identity'), start=rep(1,23), data=use_data_fit[,c('richness',use_vars)]) #warnings- may not have fit correctly
 nb_log_mod = glm.nb(richness~., link='log', data=use_data_fit[,c('richness',use_vars)])
 nb_iden_mod = glm.nb(richness~., link='identity', init.theta=10, data=use_data_fit[,c('richness',use_vars)])
 gaus_log_mod = glm(richness~., family=gaussian(link='log'), data=use_data_fit[,c('richness',use_vars)])
-gaus_iden_mod= glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
+gaus_iden_mod = glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
 
 AIC(gaus_iden_mod, gaus_log_mod, pois_iden_mod, pois_log_mod, nb_iden_mod, nb_log_mod)
-# nb_log mod wins by far.
+# nb_log mod wins by far for lichen richness
+# gaus_iden wins by far for fric, can't use nb or pois b/c not integer.
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs for abundance
 abun_pois_log = glm(richness~abun_log, family=poisson(link='log'), data=use_data_fit)
@@ -65,7 +72,6 @@ abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_dat
 abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
 
 AIC(abun_pois_log, abun_gaus_log, abun_gaus_iden) 
-
 
 pois_y = predict(abun_pois_log, list(abun_log=use_x), type='response')
 gauslog_y = predict(abun_gaus_log, list(abun_log=use_x), type='response')
@@ -81,9 +87,32 @@ lines(use_x, log10(pois_y), col='red', lwd=2)
 lines(use_x, log10(gauslog_y), col='blue', lwd=2)
 lines(use_x, log10(gausiden_y), col='green', lwd=2)
 
+## Test gaussian, Poisson, NB for regS
+pois_log = glm(richness~reg, family=poisson(link='log'), data=use_data_fit)
+pois_iden = glm(richness~reg, family=poisson(link='identity'), data=use_data_fit)
+nb_log = glm.nb(richness~reg, link='log', data=use_data_fit)
+nb_iden = glm.nb(richness~reg, link='identity', data=use_data_fit)
+gaus_log = glm(richness~reg, family=gaussian(link='log'), data=use_data_fit)
+gaus_iden = glm(richness~reg, family=gaussian(link='identity'), data=use_data_fit)
+
+summary(gaus_iden)
+
+AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_log, gaus_iden) # Ended up using nb_log for consistency with other variables
+
+# Plot nb_log and nb_iden
+use_x = seq(0, max(use_data$reg), length.out=200)
+log_y = predict(nb_log, list(reg=use_x), type='response')
+iden_y = predict(nb_iden, list(reg=use_x), type='response')
+plot(richness~reg, data=use_data_fit, xlim=c(0,220))
+lines(use_x, log_y, lwd=2, col='blue')
+lines(use_x, iden_y, lwd=2, col='red')
+r.squaredLR(nb_log, null=glm.nb(richness~1, data=use_data_fit))
+r.squaredLR(nb_iden, null=glm.nb(richness~1, data=use_data_fit))
+
 
 ### Univariate models ###
 
+# For lichen richness
 unimods = sapply(rownames(predtypes), function(x){
 	
 	# Define non-NA observations
@@ -103,7 +132,6 @@ unimods = sapply(rownames(predtypes), function(x){
 		coef(quad_mod), quad_mod$theta, quad_mod$SE.theta, 
 		length(use_obs)
 	)
-
 })
 
 unimods = data.frame(t(unimods))
@@ -113,6 +141,32 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 
 write.csv(unimods, 'univariate_models.csv', row.names=T)
 
+# For functional diversity
+unimods = sapply(rownames(predtypes), function(x){
+	
+	# Define non-NA observations
+	use_obs = rownames(use_data_fit)[!is.na(use_data_fit[,x])]
+	
+	linear_mod = lm(use_data_fit[use_obs,'richness']~use_data_fit[use_obs,x])
+	quad_mod = 	lm(use_data_fit[use_obs,'richness']~use_data_fit[use_obs,x]+I(use_data_fit[use_obs,x]^2))
+
+	linear_sum = summary(linear_mod)$coefficients
+	quad_sum = summary(quad_mod)$coefficients
+
+	c(AIC(linear_mod), AIC(quad_mod), 
+		summary(linear_mod)$r.squared, summary(quad_mod)$r.squared,
+		coef(linear_mod),	coef(quad_mod),  
+		length(use_obs)
+	)
+
+})
+
+unimods = data.frame(t(unimods))
+names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
+	'line_int','line_slope','quad_int','quad_slope','quad_sq','N')
+
+write.csv(unimods, 'univariate_models_fric.csv', row.names=T)
+
 # Make a chart of linear vs quadratic and concavity
 
 modcompare = data.frame(deltaAIC = unimods$AIC_line-unimods$AIC_quad) # deltaAIC neg indicates AIC_line < AIC_quad and quadratic term not needed
@@ -120,12 +174,20 @@ rownames(modcompare) = rownames(unimods)
 modcompare$type = ifelse(modcompare$deltaAIC>2, 'quadratic','linear')
 modcompare$coef_sq = unimods$quad_sq
 modcompare$concavity = ifelse(unimods$quad_sq>0, 'up','down')
+modcompare$varType = predtypes[rownames(modcompare),'type']
+
+modcompare = data.frame(predictor=varnames[rownames(modcompare),'midName'], modcompare)
+
+modcompare = modcompare[order(modcompare$varType, modcompare$deltaAIC),]
+
 # Note: even though coefficients are on log scale, the quadratic models will be 
 # concave down whenever the quadratic coefficient is negative- proved using calculus.
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
+write.csv(modcompare, 'Univariate model shapes fric.csv', row.names=T)
 
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
+modcompare = read.csv('Univariate model shapes fric.csv', row.names=1)
 
 # Plotting some models
 mod2 = glm.nb(richness~wetness+I(wetness^2), data=use_data_fit)
@@ -153,8 +215,6 @@ colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
 use_data = cbind(use_data, sq_df)
 
 ## Use test plots for model results:
-
-use_data_test = use_data[testplots$yrplot.id,]
 
 ## Variation Partitioning by Local / Regional
 
@@ -217,6 +277,25 @@ apply(combos(2)$ragged, 1, function(x){
 names(Rs) = names(predlist)
 
 niche_res_partition = partvar2(Rs)
+
+## Variation partitioning for Fric
+niche_mod_fric = lm(richness~., data=use_data_test[,c('richness', nichevars, colnames(sq_df)[sq_vars %in% nichevars])])
+res_mod_fric = lm(richness~., data=use_data_test[,c('richness', resvars, colnames(sq_df)[sq_vars %in% resvars])])
+
+predlist = list(Heterogeneity=names(niche_mod$coefficients[-1]),
+	Optimality=names(res_mod$coefficients[-1])
+)
+
+# Calculate R2 for each model containing successive subsets of variables
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = lm(richness~., data=use_data_test[,c('richness',use_vars)])
+	summary(this_mod)$adj.r.squared
+})->Rs
+
+names(Rs) = names(predlist)
+
+niche_res_partition_fric = partvar2(Rs)
 
 
 # Plot variation vartitioning
@@ -321,10 +400,6 @@ svg('./Figures/partition variance among heterogeneity vs optimality include quad
 	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
 	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
 dev.off()
-
-
-
-
 
 
 
