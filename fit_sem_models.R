@@ -333,6 +333,24 @@ phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', 
 fric_if = read.csv('./SEM models/Fric_testdata_indirecteffects_via_forest.csv', row.names=1)
 raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', row.names=1)
 
+##################################################################
+### Results ###
+
+# How many predictors have significant total effects?
+names(which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
+tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+
+tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
+
+
+# Examine order of effects among forest structure variables
+allsp_f = subset(allsp, type %in% c('FH','FM'))
+allsp_df = subset(allsp_d, type %in% c('FH','FM'))
+
+allsp_f[order(abs(allsp_f$std.all)),]
+allsp_df[order(abs(allsp_df$std.all)),]
+
+
 #######################################################################################
 ### Figures ###
 
@@ -343,12 +361,12 @@ raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', 
 ## Compare direct effects vs. indirect effects via abundance vs. total effects
 
 # Order variables from lowest to highest total effects
-total = allsp
+total = fric # This changes based on what response variable is being analyzed
 ordered_vars = rownames(total[order(total$std.all),])
 ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
 
 # Put tables in same order
-use_direct = allsp_d[ordered_vars,]
+use_direct = fric_d[ordered_vars,] # This changes based on what response variable is being analyzed
 use_total = total[ordered_vars,]
 
 library(lattice)
@@ -371,7 +389,7 @@ mytypes = expression('C'['R'],'C'['L'],'F'['H'],'F'['O'],'C'['R'],'R','') # symb
 names(mytypes)=c('C','L','FH','FM','P','R','A')
 
 # Total and direct standardized effects on same graph
-svg('./Figures/New Coordinates/Standardized direct total effects on AllSp richness.svg', height=12, width=19)
+svg('./Figures/New Coordinates/Standardized direct total effects on Fric.svg', height=12, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
@@ -527,6 +545,8 @@ text(0.08, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], 
 
 dev.off()
 
+
+
 ##################################################
 ### Draw path diagram for significant paths
 
@@ -641,7 +661,62 @@ dev.off()
 
 
 ##################################################
-## 
+## Functional Richness
+
+## A table comparing direct effects of local variables on species richness vs functional richness
+allsp_d$sig = apply(allsp_d[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+fric_d$sig = apply(fric_d[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+use_cols = c('std.all','std.se','sig')
+compare_tab = cbind(predictor=varnames[rownames(allsp_d),'midName'],
+	allsp_d[,use_cols], fric_d[rownames(allsp_d),use_cols])
+compare_tab[order(compare_tab[,2], decreasing=T),]
+
+use_allsp = subset(allsp_d, type %in% c('FH','FM','L'))
+use_fric = fric_d[rownames(use_allsp),]
+ordered_vars = rownames(use_allsp)[order(use_allsp$type,use_allsp$std.all)]
+use_allsp = use_allsp[ordered_vars,]
+use_fric = use_fric[ordered_vars,]
+
+# Comparing direct effects on richness and fric
+svg('./Figures/New Coordinates/Standardized direct effects on Fric vs richness.svg', height=13, width=19)
+dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, data=use_allsp, 
+	xlab=list('Standardized Direct Effect',cex=3), ylab='',
+	main='',cex.lab=3,aspect=9/10, xlim=c(-.2,.2),
+	panel=function(x,y){
+	
+		# Add horizontal boxes
+		panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
+			col='white', border='grey50')
+
+		# Add vertical line at 0
+		panel.abline(v=0, col='grey30', lty=2, lwd=2)		
+		
+		# Add null distribution segments for fric
+		panel.segments(use_fric$std.ci.lower, y+myadj,
+			use_fric$std.ci.upper, y+myadj, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for direct estimated effects
+		panel.points(use_fric$std.all, y+myadj, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+		
+		# Add null distribution segments for richness
+		panel.segments(use_allsp$std.ci.lower, y,
+			use_allsp$std.ci.upper, y, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for total estimated effects
+		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
+	
+		# Add text labeling the variable type
+		panel.text(-.19, y, labels=mytypes[use_allsp$type], cex=2)
+		
+	},
+	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
+		cex=3, col='black'),
+		x=list(cex=3, tick.number=8)),
+	key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
+		text=list(c('Species Richness','Functional Richness')),
+		background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
+)
+dev.off()
 
 
 
