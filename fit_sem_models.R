@@ -351,13 +351,14 @@ allsp_df[order(abs(allsp_df$std.all)),]
 ## Compare direct effects vs. indirect effects via abundance vs. total effects
 
 # Order variables from lowest to highest total effects
-total = fric # This changes based on what response variable is being analyzed
+total = allsp # This changes based on what response variable is being analyzed
 ordered_vars = rownames(total[order(total$std.all),])
 ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
 
 # Put tables in same order
-use_direct = fric_d[ordered_vars,] # This changes based on what response variable is being analyzed
+use_direct = allsp_d[ordered_vars,] # This changes based on what response variable is being analyzed
 use_total = total[ordered_vars,]
+
 
 library(lattice)
 
@@ -379,7 +380,7 @@ mytypes = expression('C'['R'],'C'['L'],'F'['H'],'F'['O'],'C'['R'],'R','') # symb
 names(mytypes)=c('C','L','FH','FM','P','R','A')
 
 # Total and direct standardized effects on same graph
-svg('./Figures/New Coordinates/Standardized direct total effects on Fric.svg', height=12, width=19)
+svg('./Figures/New Coordinates/Standardized direct total effects on AllSp richness.svg', height=12, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
@@ -478,6 +479,22 @@ dev.off()
 ###########################################
 ## Make table of indirect climate effects
 
+indirect = allsp_i
+indirectR = allsp_ir
+indirectF = allsp_if
+
+use_total_sub = subset(use_total, type %in% c('C','L'))
+use_direct_sub = subset(use_direct, type %in% c('C','L'))
+use_indirect_sub = subset(indirect, type %in% c('C','L'))
+order_clim = use_direct_sub[order(use_direct_sub$std.all),'predictor']
+
+use_total_sub = use_total_sub[order_clim,]
+use_direct_sub = use_direct_sub[order_clim,]
+use_indirect_sub = use_indirect_sub[order_clim,]
+use_indirectR_sub = indirectR[order_clim,]
+use_indirectF_sub = indirectF[c(paste(order_clim,'FM', sep='_'),paste(order_clim,'FH', sep='_')),]
+
+
 climEff_tab = data.frame(varnames[use_direct_sub$predictor,'displayName'], 
 	direct = use_direct_sub$std.all,
 	directSig = apply(use_direct_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
@@ -487,8 +504,8 @@ climEff_tab = data.frame(varnames[use_direct_sub$predictor,'displayName'],
 	indirectFHSig = apply(subset(use_indirectF_sub, Ftype=='FH')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
 	indirectFM = subset(use_indirectF_sub, Ftype=='FM')$std.all,
 	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
-	indirectR = use_indirectR[order_clim,]$std.all,
-	indirectRSig = apply(use_indirectR[order_clim,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+	indirectR = use_indirectR_sub$std.all,
+	indirectRSig = apply(use_indirectR_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 )
 
 write.csv(climEff_tab, './SEM models/Compare effects climate variables.csv', row.names=F)
@@ -524,14 +541,14 @@ points(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'],
 legend('bottomright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
 	pt.lwd=2, bg='white', box.lwd=1)
 
-text(-.07,.22,'Significant Effect\non Abundance', font=2, adj=1)
+text(-.09,.22,'Significant Effect\non Abundance', font=2, adj=1)
 sigvars_a = names(which(apply(allsp_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
-text(-.07, allsp_da[sigvars_a,'std.all'], labels=varnames[sigvars_a, 'midName'],
+text(-.09, allsp_da[sigvars_a,'std.all'], labels=varnames[sigvars_a, 'midName'],
 	adj=1)
 
-text(.08,.22,'Significant Effect\non Richness', font=2, adj=0)
+text(.09,.22,'Significant Effect\non Richness', font=2, adj=0)
 sigvars_r = names(which(apply(allsp_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
-text(0.08, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
+text(0.09, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
 
 dev.off()
 
@@ -578,7 +595,7 @@ fh_vars = rownames(subset(predtypes[sigvars,], type=='FH'))
 fm_vars = rownames(subset(predtypes[sigvars,], type=='FM'))
 
 var_locs[fh_vars,]=cbind(rep(3,length(fh_vars)), 3.5/(length(fh_vars)-1)*(0:(length(fh_vars)-1))-2)
-var_locs[fm_vars,]=cbind(rep(-3,length(fh_vars)), 3.5/(length(fh_vars)-1)*(0:(length(fh_vars)-1))-2)
+var_locs[fm_vars,]=cbind(rep(-3,length(fm_vars)), 3.5/(length(fm_vars)-1)*(0:(length(fm_vars)-1))-2)
 
 var_locs=data.frame(var_locs)
 
@@ -616,8 +633,8 @@ dev.off()
 ## Only show variables with significant paths to richness
 
 # Variables to remove
-subset(sigpaths, rhs=='PC1') # Check variables that are difficult to distinguish on path diagram
-remove_vars = c('lightDist.mean','propDead','LogSeed.rao.ba','radiation','bark_moist_pct.ba')
+subset(sigpaths, rhs=='propDead') # Check variables that are difficult to distinguish on path diagram
+remove_vars = c('bigTrees','LogSeed.ba','LogSeed.rao.ba', 'propDead')
 keep_vars = sigvars[!(sigvars %in% remove_vars)]
 
 sigpaths2 = subset(sigpaths, (lhs %in% keep_vars)&(rhs %in% keep_vars))
@@ -671,7 +688,7 @@ use_fric = use_fric[ordered_vars,]
 svg('./Figures/New Coordinates/Standardized direct effects on Fric vs richness.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, data=use_allsp, 
 	xlab=list('Standardized Direct Effect',cex=3), ylab='',
-	main='',cex.lab=3,aspect=9/10, xlim=c(-.2,.2),
+	main='',cex.lab=3,aspect=9/10, xlim=c(-.52,.2),
 	panel=function(x,y){
 	
 		# Add horizontal boxes
@@ -696,7 +713,7 @@ dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, 
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
-		panel.text(-.19, y, labels=mytypes[use_allsp$type], cex=2)
+		panel.text(-.5, y, labels=mytypes[use_allsp$type], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
