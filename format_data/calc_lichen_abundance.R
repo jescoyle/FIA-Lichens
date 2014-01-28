@@ -188,7 +188,7 @@ abun_mat[,i] = randAbun
 # I DON'T UNDERSTAND WHY THE CORRELATION IS SO STRONG AND THE OBSERVED IS SO WEAK
 
 # abundance is calculated in the same way!
-cbind(trans_data[testplots$yrplot.id,'tot_abun_log'], log(tot_abun_exp[testplots$yrplot.id]+1))
+cbind(trans_data[testplots$yrplot.id,'tot_abun_log'], log(tot_abun[testplots$yrplot.id]+1))
 
 
 ### Based on tree occupancy
@@ -276,7 +276,7 @@ apply(use_abun_mat, 2, function(x){
 obs_mod = glm(fit_rich~fit_abun, family=poisson(link='log'))
 obs.R2 = r.squaredLR(obs_mod, null = glm(lichen.rich~1, data=trans_data_test, family=poisson(link='log')))
 
-hist(R2s, xlim=c(.92,1))
+hist(R2s, xlim=c(.94,0.96))
 abline(v=obs.R2, lwd=2, col='red')
 
 # correlation
@@ -314,10 +314,40 @@ abun_mat_occu2[,j] = randAbun
 
 
 
+### All possible relationships between richness and abundance
+
+parms = expand.grid(1:40, 1:150)
 
 
 
+c(min(2/ntrees, .3), min(7/ntrees, .4), ifelse(ntrees > 20, 5/ntrees + .25, .5), .75)
 
+
+class1 = apply(parms, 1, function(p){
+	min(2/p[2], .3)*p[1]*p[2]
+})
+class2 = apply(parms, 1, function(p){
+	min(7/p[2],.4)*p[1]*p[2]
+})
+class3 = apply(parms, 1, function(p){
+	ifelse(p[2] > 20, 5/p[2] + .25, .5)*p[1]*p[2]
+})
+class4 = apply(parms, 1, function(p){
+	0.75*p[1]*p[2]
+})
+
+allabuns = data.frame(parms, class1,class2,class3,class4)
+names(allabuns)[1:2] = c('richness','ntrees')
+
+plot(log(richness+1)~log(class4+1), data=allabuns,xlab='Log Abundance', ylab='Log Richness', pch=16, cex=.7)
+points(log(richness+1)~log(class3+1), data=allabuns, pch=16, cex=.7, col='blue')
+points(log(richness+1)~log(class2+1), data=allabuns, pch=16, cex=.7, col='green')
+points(log(richness+1)~log(class1+1), data=allabuns, pch=16, cex=.7, col='orange')
+
+obs_mod = glm(lichen.rich~tot_abun_log, data=trans_data_test, family=poisson(link='log'))
+use_x = seq(min(trans_data_test$tot_abun_log), max(trans_data_test$tot_abun_log), length.out=100)
+use_y = predict(obs_mod, list(tot_abun_log=use_x), type='response')
+lines(use_x, log(use_y+1), lwd=3, col='red')
 
 
 
