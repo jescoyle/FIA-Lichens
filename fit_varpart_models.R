@@ -24,11 +24,11 @@ predtypes = subset(predtypes, !(rownames(predtypes) %in% c('FM','FH')))
 use_data = trans_data[,colnames(trans_data)%in% rownames(predtypes)]
 
 # Add other variables used to analyze FD and restricted taxonomic groups
-other_data = master[rownames(use_data),c('lichen.rich','fric','raoQ','Parmeliaceae','Physciaceae',
+other_data = trans_data[,c('lichen.rich','fric','raoQ','Parmeliaceae','Physciaceae',
 	'tot_abun_log','parm_abun_log','phys_abun_log','regS','regParm','regPhys')]
 
 # Define predictor variable and appropriate abundance and regional richness variables
-use_response = 'lichen.rich' # This changes based on the analysis
+use_response = 'fric' # This changes based on the analysis
 use_reg = 'regS'
 use_abun = 'tot_abun_log'
 use_data$richness = other_data[,use_response]
@@ -73,16 +73,17 @@ abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=u
 
 AIC(abun_pois_log, abun_gaus_log, abun_gaus_iden) 
 
+use_x = seq(min(use_data$abun_log), max(use_data$abun_log), length.out=100)
 pois_y = predict(abun_pois_log, list(abun_log=use_x), type='response')
 gauslog_y = predict(abun_gaus_log, list(abun_log=use_x), type='response')
 gausiden_y = predict(abun_gaus_iden, list(abun_log=use_x), type='response')
 
-plot(richness~abun_log, data=use_data_test)
-lines(use_x, pois_y, col='red')
-lines(use_x, gauslog_y, col='blue')
-lines(use_x, gausiden_y, col='green')
+plot(richness~abun_log, data=use_data_fit)
+lines(use_x, pois_y, col='red', lwd=2)
+lines(use_x, gauslog_y, col='blue', lwd=2)
+lines(use_x, gausiden_y, col='green', lwd=2)
 
-plot(log10(richness)~abun_log, data=use_data_test, ylim=c(-1,2))
+plot(log10(richness)~abun_log, data=use_data_fit, ylim=c(0,2))
 lines(use_x, log10(pois_y), col='red', lwd=2)
 lines(use_x, log10(gauslog_y), col='blue', lwd=2)
 lines(use_x, log10(gausiden_y), col='green', lwd=2)
@@ -215,18 +216,20 @@ colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
 use_data = cbind(use_data, sq_df)
 
 ## Use test plots for model results:
+use_data_test = use_data[testplots$yrplot.id,]
 
 ## Variation Partitioning by Local / Regional
 
 regionvars = rownames(predtypes)[predtypes$scale=='R']
 localvars = rownames(predtypes)[predtypes$scale=='L']
 localvars = localvars[-grep('soil', localvars)] # Leave out soil vars
-localvars = subset(localvars, localvars != 'abun_log') # Leavr out abundance
+localvars = subset(localvars, localvars != 'abun_log') # Leave out abundance
+localvars = subset(localvars, localvars != 'totalCirc') # Leave our total circumference
 
 region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, colnames(sq_df)[sq_vars %in% regionvars])])
 local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, colnames(sq_df)[sq_vars %in% localvars])])
 
-AIC(forest_mod, reg_mod, env_mod, pol_mod, region_mod, local_mod) # region_mod is best
+AIC(region_mod, local_mod) # region_mod is best
 
 # Make a list of predictors
 predlist = list(Regional=names(region_mod$coefficients[-1]),
@@ -234,12 +237,12 @@ predlist = list(Regional=names(region_mod$coefficients[-1]),
 )
 
 # Define null model
-null_mod = glm.nb(richness~1, data=use_data_test)
+null_mod = glm.nb(richness~1, link='log', data=use_data_test)
 
 # Calculate pseudo R2 for each model containing successive subsets of variables
 apply(combos(2)$ragged, 1, function(x){
 	use_vars = unlist(predlist[x])
-	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)])
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)], link='log')
 	r2 = r.squaredLR(this_mod, null=null_mod)
 	attr(r2, 'adj.r.squared')
 })->Rs
@@ -252,11 +255,12 @@ local_regional_partition = partvar2(Rs)
 nichevars = rownames(predtypes)[predtypes$type=='FH']
 resvars = rownames(predtypes)[predtypes$type %in% c('FM','L')]
 resvars = resvars[-grep('soil',resvars)] # Don't include soil
+resvars = subset(resvars, resvars != 'totalCirc')
 
 niche_mod = glm.nb(richness~., data=use_data_test[,c('richness', nichevars, colnames(sq_df)[sq_vars %in% nichevars])])
 res_mod = glm.nb(richness~., data=use_data_test[,c('richness', resvars, colnames(sq_df)[sq_vars %in% resvars])])
 
-AIC(forest_mod, reg_mod, env_mod, pol_mod, region_mod, local_mod, niche_mod, res_mod) # region_mod is best
+AIC(region_mod, local_mod, niche_mod, res_mod) # region_mod is best
 
 # Make a list of predictors
 predlist = list(Heterogeneity=names(niche_mod$coefficients[-1]),
@@ -264,12 +268,12 @@ predlist = list(Heterogeneity=names(niche_mod$coefficients[-1]),
 )
 
 # Define null model
-null_mod = glm.nb(richness~1, data=use_data_test)
+null_mod = glm.nb(richness~1, link='log', data=use_data_test)
 
 # Calculate pseudo R2 for each model containing successive subsets of variables
 apply(combos(2)$ragged, 1, function(x){
 	use_vars = unlist(predlist[x])
-	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)])
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)], link='log')
 	r2 = r.squaredLR(this_mod, null=null_mod)
 	attr(r2, 'adj.r.squared')
 })->Rs
@@ -299,7 +303,7 @@ niche_res_partition_fric = partvar2(Rs)
 
 
 # Plot variation vartitioning
-barwide = .5
+barwide = .6
 use_part = local_regional_partition
 
 svg('./Figures/partition variance among local vs regional include quadratic effects.svg', height=6, width=6*barwide)
@@ -351,7 +355,7 @@ dev.off()
 
 
 # Plot variation vartitioning in black and white
-barwide = .5
+barwide = .6
 use_part = local_regional_partition
 
 svg('./Figures/partition variance among local vs regional include quadratic effects bw.svg', height=6, width=6*barwide)
@@ -364,10 +368,10 @@ svg('./Figures/partition variance among local vs regional include quadratic effe
 	rect(0,sum(use_part[1:3]),barwide,1, lwd=3, col='white')
 	
 	# Add rectangle for regional model
-	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, density=10, angle=45)
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col="#00000050")
 
 	# Add rectangle for local model
-	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, density=10, angle=-45)
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col="#00000050")
 
 	# Add axis
 	axis(2, las=1, cex.axis=2, lwd=3)
@@ -388,10 +392,10 @@ svg('./Figures/partition variance among heterogeneity vs optimality include quad
 	plot(1,1, xlim=c(0,barwide), ylim=c(0,sum(use_part[1:3])), axes=F, xlab='', ylab='', type='n')
 	
 	# Add rectangle for regional model
-	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, density=10, angle=20)
+	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col="#00000050")
 
 	# Add rectangle for local model
-	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, density=10, angle=-20)
+	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col="#00000050")
 
 	# Add axis
 	axis(4, las=1, cex.axis=2, lwd=3)
@@ -402,6 +406,9 @@ svg('./Figures/partition variance among heterogeneity vs optimality include quad
 dev.off()
 
 
+
+##################################################################
+### Old Code
 
 
 ## Variation partitioning by variable type

@@ -18,7 +18,7 @@ predtypes = subset(predtypes, !(rownames(predtypes) %in% c('FM','FH')))
 # Full path model with measurement error model on lichen.rich_log
 # 1/3/2014: Decided to use standardized data because the model will not fit to unscaled data and I did not want to apply an arbitrary scaling.
 #           Standardized data is in working_data dataframe. Note that the response variables are also standardized.     
-# I modified covariances and played with using log richness and adding abundace with this model before fitting the final model below.
+# I played with using log richness and adding abundace with this model before fitting the final model below.
 path_measerr = '
 
 	# Latent variables
@@ -76,6 +76,147 @@ problem_parms[order(problem_parms$mi),]
 res = resid(fit_measerr)
 which(abs(res$cov)>.2, arr.ind=T)
 
+## Model without abundance
+
+## Define model that will calculate indirect and total effects
+noabun_mod = '
+
+	# Latent variables
+	lichen_rich =~ sqrt(0.75)*lichen.rich_log
+
+	# Climate and local environment effects on forest
+	bark_moist_pct.rao.ba ~ FH1a*wetness + FH1b*rain_lowRH + FH1c*iso + FH1d*pseas + FH1e*mat + FH1f*radiation
+	wood_SG.rao.ba ~ FH2a*wetness + FH2b*rain_lowRH + FH2c*iso + FH2d*pseas + FH2e*mat +  FH2f*radiation
+	LogSeed.rao.ba ~ FH3a*wetness + FH3b*rain_lowRH + FH3c*iso + FH3d*pseas + FH3e*mat + FH3f*radiation
+	PIE.ba.tree ~ FH4a*wetness + FH4b*rain_lowRH + FH4c*iso + FH4d*pseas + FH4e*mat + FH4f*radiation
+	propDead ~ FH5a*wetness + FH5b*rain_lowRH + FH5c*iso + FH5d*pseas + FH5e*mat + FH5f*radiation
+	lightDist.mean ~ FH6a*wetness + FH6b*rain_lowRH + FH6c*iso + FH6d*pseas + FH6e*mat + FH6f*radiation
+	diamDiversity ~ FH7a*wetness + FH7b*rain_lowRH + FH7c*iso + FH7d*pseas + FH7e*mat + FH7f*radiation
+	bark_moist_pct.ba ~ FM1a*wetness + FM1b*rain_lowRH + FM1c*iso + FM1d*pseas + FM1e*mat + FM1f*radiation
+	wood_SG.ba ~ FM2a*wetness + FM2b*rain_lowRH + FM2c*iso + FM2d*pseas + FM2e*mat + FM2f*radiation
+	LogSeed.ba ~ FM3a*wetness + FM3b*rain_lowRH + FM3c*iso + FM3d*pseas + FM3e*mat + FM3f*radiation
+	#totalCirc ~ FM4a*wetness + FM4b*rain_lowRH + FM4c*iso + FM4d*pseas + FM4e*mat + FM4f*radiation
+	bigTrees ~ FM5a*wetness + FM5b*rain_lowRH + FM5c*iso + FM5d*pseas + FM5e*mat + FM5f*radiation
+	light.mean  ~ FM6a*wetness + FM6b*rain_lowRH + FM6c*iso + FM6d*pseas + FM6e*mat + FM6f*radiation
+	PC1 ~ FM7a*wetness + FM7b*rain_lowRH + FM7c*iso + FM7d*pseas + FM7e*mat + FM7f*radiation
+
+	# Climate effects on regional richness
+	regS ~ R1*wetness + R2*rain_lowRH + R3*iso + R4*pseas + R5*mat
+
+	# Climate effects on pollution
+	totalNS ~ P1*wetness + P2*rain_lowRH
+
+	# Lichen richness regression
+	lichen_rich ~ FH1*bark_moist_pct.rao.ba + FH2*wood_SG.rao.ba + FH3*LogSeed.rao.ba +
+		FH4*PIE.ba.tree + FH5*propDead + FH6*lightDist.mean + FH7*diamDiversity +
+		FM1*bark_moist_pct.ba + FM2*wood_SG.ba + FM3*LogSeed.ba + FM5*bigTrees + FM6*light.mean + FM7*PC1 + 
+		C1*wetness + C2*rain_lowRH + C3*iso + C4*pseas + C5*mat + C6*radiation + R*regS + P*totalNS
+
+	# Indirect effects of climate and local environment on lichen richness
+	IE_wetness_FH := FH1a*FH1 + FH2a*FH2 + FH3a*FH3 + FH4a*FH4 + FH5a*FH5 + 
+		FH6a*FH6 + FH7a*FH7
+	IE_wetness_FM := FM1a*FM1 + FM2a*FM2 + FM3a*FM3 + FM5a*FM5 + 
+		FM6a*FM6 + FM7a*FM7
+	IE_wetness_R := R1*R
+	IE_wetness_P := P1*P
+	IE_wetness := IE_wetness_FH + IE_wetness_FM + IE_wetness_R + IE_wetness_P
+
+	IE_rain_lowRH_FH := FH1b*FH1 + FH2b*FH2 +	FH3b*FH3 + FH4b*FH4 + 
+		FH5b*FH5 + FH6b*FH6 + FH7b*FH7 
+	IE_rain_lowRH_FM := FM1b*FM1 + FM2b*FM2 + FM3b*FM3 + FM5b*FM5 + 
+		FM6b*FM6 + FM7b*FM7
+	IE_rain_lowRH_R := R2*R
+	IE_rain_lowRH_P := P2*P
+	IE_rain_lowRH := IE_rain_lowRH_FH + IE_rain_lowRH_FM + IE_rain_lowRH_R + IE_rain_lowRH_P
+
+	IE_iso_FH := FH1c*FH1 + FH2c*FH2 + FH3c*FH3 + FH4c*FH4 + FH5c*FH5 +
+		FH6c*FH6 + FH7c*FH7 
+	IE_iso_FM := FM1c*FM1 + FM2c*FM2 + FM3c*FM3 + FM5c*FM5 + 
+		FM6c*FM6 +  FM7c*FM7
+	IE_iso_R := R3*R
+	IE_iso := IE_iso_FH + IE_iso_FM + IE_iso_R
+
+	IE_pseas_FH := FH1d*FH1 + FH2d*FH2 + FH3d*FH3 + FH4d*FH4 + FH5d*FH5 + 
+		FH6d*FH6 + FH7d*FH7
+	IE_pseas_FM := FM1d*FM1 + FM2d*FM2 + FM3d*FM3 + FM5d*FM5 + 
+		FM6d*FM6 + FM7d*FM7
+	IE_pseas_R := R4*R
+	IE_pseas := IE_pseas_FH + IE_pseas_FM + IE_pseas_R
+	
+	IE_mat_FH := FH1e*FH1 + FH2e*FH2 + FH3e*FH3 + FH4e*FH4 + FH5e*FH5 + 
+		FH6e*FH6 + FH7e*FH7
+	IE_mat_FM := FM1e*FM1 + FM2e*FM2 + FM3e*FM3 + FM5e*FM5 + 
+		FM6e*FM6 + FM7e*FM7
+	IE_mat_R := R5*R
+	IE_mat := IE_mat_FH + IE_mat_FM + IE_mat_R
+
+	IE_radiation_FH := FH1f*FH1 + FH2f*FH2 + FH3f*FH3 + FH4f*FH4 + FH5f*FH5 + 
+		FH6f*FH6 + FH7f*FH7
+	IE_radiation_FM := FM1f*FM1 + FM2f*FM2 + FM3f*FM3 + FM5f*FM5 + 
+		FM6f*FM6 + FM7f*FM7
+	IE_radiation := IE_radiation_FH + IE_radiation_FM
+
+	# Total effects on lichen richness
+	TE_wetness := IE_wetness + C1	
+	TE_rain_lowRH := IE_rain_lowRH + C2
+	TE_iso := IE_iso + C3
+	TE_pseas := IE_pseas + C4
+	TE_mat := IE_mat + C5
+	TE_radiation := IE_radiation + C6
+
+	TE_bark_moist_pct.rao.ba := FH1
+	TE_wood_SG.rao.ba := FH2
+	TE_LogSeed.rao.ba := FH3
+	TE_PIE.ba.tree := FH4
+	TE_propDead := FH5
+	TE_lightDist.mean := FH6
+	TE_diamDiversity := FH7
+	TE_bark_moist_pct.ba := FM1
+	TE_wood_SG.ba := FM2
+	TE_LogSeed.ba := FM3
+	#TE_totalCirc := FM4
+	TE_bigTrees := FM5
+	TE_light.mean := FM6
+	TE_PC1 := FM7	
+
+	TE_FH := TE_bark_moist_pct.rao.ba +	TE_wood_SG.rao.ba + TE_LogSeed.rao.ba +
+		TE_PIE.ba.tree + TE_propDead + TE_lightDist.mean + TE_diamDiversity
+	TE_FM := TE_bark_moist_pct.ba + TE_wood_SG.ba + TE_LogSeed.ba +
+		TE_bigTrees + TE_light.mean + TE_PC1
+
+	TE_totalNS := P
+'
+
+noabun_fit =  sem(noabun_mod, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
+summary(noabun_fit, standardized=T, rsq=TRUE, fit.measures=T)
+
+# Examine model residuals
+res = resid(endfit)
+which(abs(res$cov)>0.2, arr.ind=T)
+
+# Save model output
+save(noabun_fit, file='./SEM models/noabun_mod_testdata.Rdata')
+
+# Examine significance of model paths
+noabun_ests = parameterEstimates(noabun_fit, standardized=T, ci=T, level=0.95)
+subset(noabun_ests, pvalue<0.05)
+noabun_paths = subset(noabun_ests, op=='~')
+noabun_paths[order(noabun_paths$std.all, decreasing=T),]
+
+write.csv(endfit_ests, './SEM models/finalmod_testdata_estimates.csv', row.names=F)
+
+noabun_std = bootstrapLavaan(noabun_fit, R=5, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
+noabun_ests = parameterEstimates(noabun_fit)[,c('label','lhs','op','rhs')]
+nEst = ncol(noabun_std)/2 # number of parameters
+noabun_ests$std.all = apply(noabun_std[,(nEst+1):(2*nEst)], 2, mean)
+noabun_ests$std.se = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) sqrt(var(x)))
+noabun_ests$std.ci.lower = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.025))
+noabun_ests$std.ci.upper = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.975))
+
+
+## Models were run on the cluster using scripts 
+# kure_sem_boot_noabun_[allsp, parm, phys, fric, raoQ].R
+
 ## Define model that will calculate indirect and total effects
 path_measerr = '
 
@@ -93,7 +234,7 @@ path_measerr = '
 	bark_moist_pct.ba ~ FM1a*wetness + FM1b*rain_lowRH + FM1c*iso + FM1d*pseas + FM1e*mat + FM1f*radiation
 	wood_SG.ba ~ FM2a*wetness + FM2b*rain_lowRH + FM2c*iso + FM2d*pseas + FM2e*mat + FM2f*radiation
 	LogSeed.ba ~ FM3a*wetness + FM3b*rain_lowRH + FM3c*iso + FM3d*pseas + FM3e*mat + FM3f*radiation
-	totalCirc ~ FM4a*wetness + FM4b*rain_lowRH + FM4c*iso + FM4d*pseas + FM4e*mat + FM4f*radiation
+	#totalCirc ~ FM4a*wetness + FM4b*rain_lowRH + FM4c*iso + FM4d*pseas + FM4e*mat + FM4f*radiation
 	bigTrees ~ FM5a*wetness + FM5b*rain_lowRH + FM5c*iso + FM5d*pseas + FM5e*mat + FM5f*radiation
 	light.mean  ~ FM6a*wetness + FM6b*rain_lowRH + FM6c*iso + FM6d*pseas + FM6e*mat + FM6f*radiation
 	PC1 ~ FM7a*wetness + FM7b*rain_lowRH + FM7c*iso + FM7d*pseas + FM7e*mat + FM7f*radiation
@@ -125,14 +266,14 @@ path_measerr = '
 	# Lichen richness regression
 	lichen_rich ~ FH1*bark_moist_pct.rao.ba + FH2*wood_SG.rao.ba + FH3*LogSeed.rao.ba +
 		FH4*PIE.ba.tree + FH5*propDead + FH6*lightDist.mean + FH7*diamDiversity +
-		FM1*bark_moist_pct.ba + FM2*wood_SG.ba + FM3*LogSeed.ba + FM4*totalCirc + FM5*bigTrees + FM6*light.mean + FM7*PC1 +
+		FM1*bark_moist_pct.ba + FM2*wood_SG.ba + FM3*LogSeed.ba + FM5*bigTrees + FM6*light.mean + FM7*PC1 + 
 		C1*wetness + C2*rain_lowRH + C3*iso + C4*pseas + C5*mat + C6*radiation + R*regS + P*totalNS +
 		A*tot_abun_log
 
 	# Lichen abundance regression
 	tot_abun_log ~ AFH1*bark_moist_pct.rao.ba + AFH2*wood_SG.rao.ba + AFH3*LogSeed.rao.ba +
 		AFH4*PIE.ba.tree + AFH5*propDead + AFH6*lightDist.mean + AFH7*diamDiversity +
-		AFM1*bark_moist_pct.ba + AFM2*wood_SG.ba + AFM3*LogSeed.ba + AFM4*totalCirc + AFM5*bigTrees + AFM6*light.mean + AFM7*PC1 +
+		AFM1*bark_moist_pct.ba + AFM2*wood_SG.ba + AFM3*LogSeed.ba+ AFM5*bigTrees + AFM6*light.mean + AFM7*PC1 +
 		AC1*wetness + AC2*rain_lowRH + AC3*iso + AC4*pseas + AC5*mat + AC6*radiation + AP*totalNS
 	
 	# Indirect effects of forest structure variables on richness via abundance
@@ -146,7 +287,7 @@ path_measerr = '
 	IE_bark_moist_pct.ba := AFM1*A
 	IE_wood_SG.ba := AFM2*A
 	IE_LogSeed.ba := AFM3*A
-	IE_totalCirc := AFM4*A
+	#IE_totalCirc := AFM4*A
 	IE_bigTrees := AFM5*A
 	IE_light.mean := AFM6*A
 	IE_PC1 := AFM7*A
@@ -159,7 +300,7 @@ path_measerr = '
 		FH3a*(FH3 + IE_LogSeed.rao.ba) + FH4a*(FH4 + IE_PIE.ba.tree) + FH5a*(FH5 + IE_propDead) + 
 		FH6a*(FH6 + IE_lightDist.mean) + FH7a*(FH7 + IE_diamDiversity)
 	IE_wetness_FM := FM1a*(FM1 + IE_bark_moist_pct.ba) + FM2a*(FM2 + IE_wood_SG.ba) + 
-		FM3a*(FM3 + IE_LogSeed.ba) + FM4a*(FM4 + IE_totalCirc) + FM5a*(FM5 + IE_bigTrees) + 
+		FM3a*(FM3 + IE_LogSeed.ba) + FM5a*(FM5 + IE_bigTrees) + 
 		FM6a*(FM6 + IE_light.mean) + FM7a*(FM7 + IE_PC1)
 	IE_wetness_R := R1*R
 	IE_wetness_P := P1*(P + IE_totalNS)
@@ -170,7 +311,7 @@ path_measerr = '
 		FH3b*(FH3 + IE_LogSeed.rao.ba) + FH4b*(FH4 + IE_PIE.ba.tree) + FH5b*(FH5 + IE_propDead) + 
 		FH6b*(FH6 + IE_lightDist.mean) + FH7b*(FH7 + IE_diamDiversity)
 	IE_rain_lowRH_FM := FM1b*(FM1 + IE_bark_moist_pct.ba) + FM2b*(FM2 + IE_wood_SG.ba) + 
-		FM3b*(FM3 + IE_LogSeed.ba) + FM4b*(FM4 + IE_totalCirc) + FM5b*(FM5 + IE_bigTrees) + 
+		FM3b*(FM3 + IE_LogSeed.ba) + FM5b*(FM5 + IE_bigTrees) + 
 		FM6b*(FM6 + IE_light.mean) + FM7b*(FM7 + IE_PC1)
 	IE_rain_lowRH_R := R2*R
 	IE_rain_lowRH_P := P2*(P + IE_totalNS)
@@ -181,7 +322,7 @@ path_measerr = '
 		FH3c*(FH3 + IE_LogSeed.rao.ba) + FH4c*(FH4 + IE_PIE.ba.tree) + FH5c*(FH5 + IE_propDead) + 
 		FH6c*(FH6 + IE_lightDist.mean) + FH7c*(FH7 + IE_diamDiversity)
 	IE_iso_FM := FM1c*(FM1 + IE_bark_moist_pct.ba) + FM2c*(FM2 + IE_wood_SG.ba) + 
-		FM3c*(FM3 + IE_LogSeed.ba) + FM4c*(FM4 + IE_totalCirc) + FM5c*(FM5 + IE_bigTrees) +
+		FM3c*(FM3 + IE_LogSeed.ba) + FM5c*(FM5 + IE_bigTrees) +
 		FM6c*(FM6 + IE_light.mean) +  FM7c*(FM7 + IE_PC1)
 	IE_iso_R := R3*R
 	IE_iso_A := AC3*A
@@ -191,7 +332,7 @@ path_measerr = '
 		FH3d*(FH3 + IE_LogSeed.rao.ba) + FH4d*(FH4 + IE_PIE.ba.tree) + FH5d*(FH5 + IE_propDead) + 
 		FH6d*(FH6 + IE_lightDist.mean) + FH7d*(FH7 + IE_diamDiversity)
 	IE_pseas_FM := FM1d*(FM1 + IE_bark_moist_pct.ba) + FM2d*(FM2 + IE_wood_SG.ba) + 
-		FM3d*(FM3 + IE_LogSeed.ba) + FM4d*(FM4 + IE_totalCirc) + FM5d*(FM5 + IE_bigTrees) + 
+		FM3d*(FM3 + IE_LogSeed.ba) + FM5d*(FM5 + IE_bigTrees) + 
 		FM6d*(FM6 + IE_light.mean) + FM7d*(FM7 + IE_PC1)
 	IE_pseas_R := R4*R
 	IE_pseas_A := AC4*A
@@ -201,7 +342,7 @@ path_measerr = '
 		FH3e*(FH3 + IE_LogSeed.rao.ba) + FH4e*(FH4 + IE_PIE.ba.tree) + FH5e*(FH5 + IE_propDead) + 
 		FH6e*(FH6 + IE_lightDist.mean) + FH7e*(FH7 + IE_diamDiversity)
 	IE_mat_FM := FM1e*(FM1 + IE_bark_moist_pct.ba) + FM2e*(FM2 + IE_wood_SG.ba) + 
-		FM3e*(FM3 + IE_LogSeed.ba) + FM4e*(FM4 + IE_totalCirc) + FM5e*(FM5 + IE_bigTrees) + 
+		FM3e*(FM3 + IE_LogSeed.ba) + FM5e*(FM5 + IE_bigTrees) + 
 		FM6e*(FM6 + IE_light.mean) + FM7e*(FM7 + IE_PC1)
 	IE_mat_R := R5*R
 	IE_mat_A := AC5*A
@@ -211,7 +352,7 @@ path_measerr = '
 		FH3f*(FH3 + IE_LogSeed.rao.ba) + FH4f*(FH4 + IE_PIE.ba.tree) + FH5f*(FH5 + IE_propDead) + 
 		FH6f*(FH6 + IE_lightDist.mean) + FH7f*(FH7 + IE_diamDiversity)
 	IE_radiation_FM := FM1f*(FM1 + IE_bark_moist_pct.ba) + FM2f*(FM2 + IE_wood_SG.ba) + 
-		FM3f*(FM3 + IE_LogSeed.ba) + FM4f*(FM4 + IE_totalCirc) + FM5f*(FM5 + IE_bigTrees) + 
+		FM3f*(FM3 + IE_LogSeed.ba) + FM5f*(FM5 + IE_bigTrees) + 
 		FM6f*(FM6 + IE_light.mean) + FM7f*(FM7 + IE_PC1)
 	IE_radiation_A := AC6*A
 	IE_radiation := IE_radiation_FH + IE_radiation_FM + IE_radiation_A
@@ -234,14 +375,14 @@ path_measerr = '
 	TE_bark_moist_pct.ba := IE_bark_moist_pct.ba + FM1
 	TE_wood_SG.ba := IE_wood_SG.ba + FM2
 	TE_LogSeed.ba := IE_LogSeed.ba + FM3
-	TE_totalCirc := IE_totalCirc + FM4
+	#TE_totalCirc := IE_totalCirc + FM4
 	TE_bigTrees := IE_bigTrees + FM5
 	TE_light.mean := IE_light.mean + FM6
 	TE_PC1 := IE_PC1 +  FM7	
 
 	TE_FH := TE_bark_moist_pct.rao.ba +	TE_wood_SG.rao.ba + TE_LogSeed.rao.ba +
 		TE_PIE.ba.tree + TE_propDead + TE_lightDist.mean + TE_diamDiversity
-	TE_FM := TE_bark_moist_pct.ba + TE_wood_SG.ba + TE_LogSeed.ba + TE_totalCirc +
+	TE_FM := TE_bark_moist_pct.ba + TE_wood_SG.ba + TE_LogSeed.ba +
 		TE_bigTrees + TE_light.mean + TE_PC1
 
 	TE_totalNS := IE_totalNS + P
@@ -331,7 +472,8 @@ names(which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
-
+total[order(abs(total$std.all)),]
+allsp_d[order(abs(allsp_d$std.all)),]
 
 # Examine order of effects among forest structure variables
 allsp_f = subset(allsp, type %in% c('FH','FM'))
@@ -380,7 +522,7 @@ mytypes = expression('C'['R'],'C'['L'],'F'['H'],'F'['O'],'C'['R'],'R','') # symb
 names(mytypes)=c('C','L','FH','FM','P','R','A')
 
 # Total and direct standardized effects on same graph
-svg('./Figures/New Coordinates/Standardized direct total effects on AllSp richness.svg', height=12, width=19)
+svg('./Figures/Standardized direct total effects on AllSp richness.svg', height=12, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
@@ -495,17 +637,17 @@ use_indirectR_sub = indirectR[order_clim,]
 use_indirectF_sub = indirectF[c(paste(order_clim,'FM', sep='_'),paste(order_clim,'FH', sep='_')),]
 
 
-climEff_tab = data.frame(varnames[use_direct_sub$predictor,'displayName'], 
+climEff_tab = data.frame(Predictor=varnames[use_direct_sub$predictor,'displayName'], 
 	direct = use_direct_sub$std.all,
-	directSig = apply(use_direct_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
-	indirectA = use_indirect_sub$std.all,
-	indirectASig = apply(use_indirect_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
-	indirectFH = subset(use_indirectF_sub, Ftype=='FH')$std.all,
-	indirectFHSig = apply(subset(use_indirectF_sub, Ftype=='FH')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
-	indirectFM = subset(use_indirectF_sub, Ftype=='FM')$std.all,
-	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
 	indirectR = use_indirectR_sub$std.all,
-	indirectRSig = apply(use_indirectR_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+	indirectA = use_indirect_sub$std.all,
+	indirectFH = subset(use_indirectF_sub, Ftype=='FH')$std.all,
+	indirectFM = subset(use_indirectF_sub, Ftype=='FM')$std.all,
+	directSig = apply(use_direct_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectRSig = apply(use_indirectR_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectASig = apply(use_indirect_sub[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectFHSig = apply(subset(use_indirectF_sub, Ftype=='FH')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0,
+	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 )
 
 write.csv(climEff_tab, './SEM models/Compare effects climate variables.csv', row.names=F)
@@ -524,7 +666,7 @@ myfact = ifelse(allsp_d[use_vars,'type']=='FH', 1, 2)
 svg('./Figures/compare richness abundance effects forest vars.svg', height=6, width=6 )
 par(mar=c(4,4,1,1))
 plot(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'], type='n', 
-	xlim=c(-.3, .3), ylim=c(-.25,.25), las=1, ylab='Direct Effect on Abundance',
+	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Direct Effect on Abundance',
 	xlab='Direct Effect on Richness', cex.axis=1.2, cex.lab=1.2)
 usr=par('usr')
 polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
@@ -541,12 +683,12 @@ points(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'],
 legend('bottomright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
 	pt.lwd=2, bg='white', box.lwd=1)
 
-text(-.09,.22,'Significant Effect\non Abundance', font=2, adj=1)
+text(-.09,.28,'Significant Effect\non Abundance', font=2, adj=1)
 sigvars_a = names(which(apply(allsp_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
 text(-.09, allsp_da[sigvars_a,'std.all'], labels=varnames[sigvars_a, 'midName'],
 	adj=1)
 
-text(.09,.22,'Significant Effect\non Richness', font=2, adj=0)
+text(.09,.28,'Significant Effect\non Richness', font=2, adj=0)
 sigvars_r = names(which(apply(allsp_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
 text(0.09, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
 
@@ -567,13 +709,16 @@ sigpaths = paths[which(apply(paths[,c('std.ci.lower','std.ci.upper')],1,prod)>0)
 hist(sigpaths$std.all)
 sigpaths$sigcat = cut(abs(sigpaths$std.all), c(0,.2,.4,.6,.8,1))
 
+# Find all variables in the model
+allvars = unique(c(paths$rhs,paths$lhs))
+
 # Find all variables involved in significant relationships
 sigvars  = unique(c(sigpaths$lhs, sigpaths$rhs))
 
 ## Create a matrix of variable locations
-var_locs = matrix(0, nrow=length(sigvars), ncol=2, byrow=T)
+var_locs = matrix(0, nrow=length(allvars), ncol=2, byrow=T)
 colnames(var_locs) = c('X','Y')
-rownames(var_locs) = sigvars
+rownames(var_locs) = allvars
 
 unit = 1
 
@@ -586,13 +731,13 @@ var_locs['totalNS',] = c(-2.5,2.5)
 var_locs['regS',] = c(2.5,2.5)
 
 # Add climate and local environment vars to top and bottom
-c_vars = rownames(subset(predtypes[sigvars,], type=='C'))
+c_vars = rownames(subset(predtypes[allvars,], type=='C'))
 var_locs[c_vars,] = cbind(3/(length(c_vars)-1)*(0:(length(c_vars)-1))-1.5,rep(3,length(c_vars)))
 var_locs['radiation',] = c(0,-2.5)
 
 # Add forest vars to sides
-fh_vars = rownames(subset(predtypes[sigvars,], type=='FH'))
-fm_vars = rownames(subset(predtypes[sigvars,], type=='FM'))
+fh_vars = rownames(subset(predtypes[allvars,], type=='FH'))
+fm_vars = rownames(subset(predtypes[allvars,], type=='FM'))
 
 var_locs[fh_vars,]=cbind(rep(3,length(fh_vars)), 3.5/(length(fh_vars)-1)*(0:(length(fh_vars)-1))-2)
 var_locs[fm_vars,]=cbind(rep(-3,length(fm_vars)), 3.5/(length(fm_vars)-1)*(0:(length(fm_vars)-1))-2)
@@ -633,8 +778,8 @@ dev.off()
 ## Only show variables with significant paths to richness
 
 # Variables to remove
-subset(sigpaths, rhs=='propDead') # Check variables that are difficult to distinguish on path diagram
-remove_vars = c('bigTrees','LogSeed.ba','LogSeed.rao.ba', 'propDead')
+subset(sigpaths, rhs=='bark_moist_pct.rao.ba') # Check variables that are difficult to distinguish on path diagram
+remove_vars = c('diamDiversity','bigTrees','LogSeed.ba','bark_moist_pct.ba','lightDist.mean','LogSeed.rao.ba','wood_SG.rao.ba')
 keep_vars = sigvars[!(sigvars %in% remove_vars)]
 
 sigpaths2 = subset(sigpaths, (lhs %in% keep_vars)&(rhs %in% keep_vars))
@@ -685,10 +830,10 @@ use_allsp = use_allsp[ordered_vars,]
 use_fric = use_fric[ordered_vars,]
 
 # Comparing direct effects on richness and fric
-svg('./Figures/New Coordinates/Standardized direct effects on Fric vs richness.svg', height=13, width=19)
+svg('./Figures/Standardized direct effects on Fric vs richness.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, data=use_allsp, 
 	xlab=list('Standardized Direct Effect',cex=3), ylab='',
-	main='',cex.lab=3,aspect=9/10, xlim=c(-.52,.2),
+	main='',cex.lab=3,aspect=9/10, xlim=c(-.2,.2),
 	panel=function(x,y){
 	
 		# Add horizontal boxes
@@ -713,7 +858,7 @@ dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, 
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
-		panel.text(-.5, y, labels=mytypes[use_allsp$type], cex=2)
+		panel.text(-.19, y, labels=mytypes[use_allsp$type], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
