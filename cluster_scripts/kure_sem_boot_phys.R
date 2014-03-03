@@ -237,6 +237,13 @@ direct_abun = direct_abun[,c('rhs','std.all','std.se','std.ci.lower','std.ci.upp
 names(direct_abun)[1] = 'predictor'
 rownames(direct_abun) = direct_abun$predictor
 
+# Make a table of indirect effect of climate variable via regional richness
+indirect_reg = endfit_ests[grep('IE_[A-za-z._]*_R', endfit_ests$label),]
+indirect_reg = indirect_reg[,c('lhs','std.all','std.se','std.ci.lower','std.ci.upper')]
+names(indirect_reg)[1] = 'predictor'
+indirect_reg$predictor = substring(indirect_reg$predictor, first=4)
+indirect_reg$predictor = sapply(indirect_reg$predictor, function (x) substr(x, 1, nchar(x)-2))
+rownames(indirect_reg) = indirect_reg$predictor
 
 # Make a table of indirect effect of climate and local environment via forest structure
 indirect_for = endfit_ests[grep('IE_[A-za-z._1-9]*_F[MH]', endfit_ests$label),]
