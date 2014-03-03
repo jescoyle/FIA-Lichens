@@ -428,15 +428,15 @@ allsp_ests = read.csv('./SEM models/AllSp_testdata_parameterEstimates.csv')
 
 # Total effects
 allsp = read.csv('./SEM models/AllSp_testdata_totaleffects.csv', row.names=1)
-parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
-phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
+#parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
+#phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
 fric = read.csv('./SEM models/Fric_testdata_totaleffects.csv', row.names=1)
 raoq = read.csv('./SEM models/RaoQ_testdata_totaleffects.csv', row.names=1)
 
 # Direct effecst
 allsp_d = read.csv('./SEM models/AllSp_testdata_directeffects_richness.csv', row.names=1)
-parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
-phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
+#parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
+#phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
 fric_d = read.csv('./SEM models/Fric_testdata_directeffects_richness.csv', row.names=1)
 raoq_d = read.csv('./SEM models/RaoQ_testdata_directeffects_richness.csv', row.names=1)
 
@@ -445,22 +445,22 @@ allsp_da = read.csv('./SEM models/AllSp_testdata_directeffects_abundance.csv', r
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
-phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
+#parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
+#phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
 fric_i = read.csv('./SEM models/Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
 raoq_i = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
 # Indirect effects via regional richness
 allsp_ir = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_regS.csv', row.names=1)
-parm_ir = read.csv('./SEM models/Parm_testdata_indirecteffects_via_regS.csv', row.names=1)
-phys_ir = read.csv('./SEM models/Phys_testdata_indirecteffects_via_regS.csv', row.names=1)
+#parm_ir = read.csv('./SEM models/Parm_testdata_indirecteffects_via_regS.csv', row.names=1)
+#phys_ir = read.csv('./SEM models/Phys_testdata_indirecteffects_via_regS.csv', row.names=1)
 fric_ir = read.csv('./SEM models/Fric_testdata_indirecteffects_via_regS.csv', row.names=1)
 raoq_ir = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_regS.csv', row.names=1)
 
 # Indirect effects via forest structure
 allsp_if = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_forest.csv', row.names=1)
-parm_if = read.csv('./SEM models/Parm_testdata_indirecteffects_via_forest.csv', row.names=1)
-phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', row.names=1)
+#parm_if = read.csv('./SEM models/Parm_testdata_indirecteffects_via_forest.csv', row.names=1)
+#phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', row.names=1)
 fric_if = read.csv('./SEM models/Fric_testdata_indirecteffects_via_forest.csv', row.names=1)
 raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', row.names=1)
 
@@ -490,7 +490,7 @@ allsp_df[order(abs(allsp_df$std.all)),]
 ######################################
 ## Compare direct effects on richness vs abundance
 
-## Compare direct effects vs. indirect effects via abundance vs. total effects
+## Compare direct effects vs. total effects
 
 # Order variables from lowest to highest total effects
 total = allsp # This changes based on what response variable is being analyzed
@@ -510,11 +510,16 @@ myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')],
 myrange[1] = -.8
 
 # Color scheme: http://colorschemedesigner.com/#3341SsYrGvyw0
-mycols = c('#000000','#07395D','#066788','#688e60','#05633B','#902E07','#DD8615')
-names(mycols) = c('A','C','L','FH','FM','P','R')
+#mycols = c('#000000','#07395D','#066788','#688e60','#05633B','#902E07','#DD8615')
+#names(mycols) = c('A','C','L','FH','FM','P','R')
+mycols = c('#2415B0','#00BF32')
+mycolsbw = c('grey80','white')
+names(mycols) = c('R','L')
+names(mycolsbw) = c('R','L')
 mycols_trans = paste(mycols, '50', sep='')
-plot(1:7,1:7, type='n'); text(1:7,1:7,labels=names(mycols), cex=2, col=mycols) # Check colors
-names(mycols_trans) = c('A','C','L','FH','FM','P','R')
+names(mycols_trans) = c('R','L')
+plot(1:length(mycols),1:length(mycols), type='n'); text(1:length(mycols),1:length(mycols),labels=names(mycols), cex=2, col=mycols) # Check colors
+#names(mycols_trans) = c('A','C','L','FH','FM','P','R')
 mypch = c(22,23)
 mypcols = c('white','grey30')
 myadj=.15
@@ -522,7 +527,7 @@ mytypes = expression('C'['R'],'C'['L'],'F'['H'],'F'['O'],'C'['R'],'R','') # symb
 names(mytypes)=c('C','L','FH','FM','P','R','A')
 
 # Total and direct standardized effects on same graph
-svg('./Figures/Standardized direct total effects on AllSp richness.svg', height=12, width=19)
+svg('./Figures/Standardized direct total effects on AllSp richness bw.svg', height=12, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
@@ -530,7 +535,7 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 	
 		# Add horizontal boxes
 		panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
-			col='white', border='grey50')
+			col=mycolsbw[predtypes[ordered_vars,'scale']], border='grey50')
 		
 		# Add vertical line at 0
 		panel.abline(v=0, col='grey30', lty=2, lwd=2)		
@@ -550,7 +555,7 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
-		panel.text(-.75, y, labels=mytypes[use_total$type], cex=2)
+		panel.text(-.75, y, labels=mytypes[predtypes[ordered_vars,'type']], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
@@ -558,7 +563,7 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 		x=list(cex=3, tick.number=8)),
 	key=list(x=1, y=0, corner=c(1,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
 		text=list(c('Total effect','Direct effect')),
-		background='white', cex=3, divide=1, padding.text=5, border='black')
+		background='#FFFFFFCC', cex=3, divide=1, padding.text=5, border='black')
 )
 dev.off()
 
@@ -663,11 +668,11 @@ mypch = c(22,23)
 mycol=c('white','grey30')
 myfact = ifelse(allsp_d[use_vars,'type']=='FH', 1, 2)
 
-svg('./Figures/compare richness abundance effects forest vars.svg', height=6, width=6 )
+svg('./Figures/compare richness abundance effects forest vars.svg', height=5, width=5 )
 par(mar=c(4,4,1,1))
 plot(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'], type='n', 
 	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Direct Effect on Abundance',
-	xlab='Direct Effect on Richness', cex.axis=1.2, cex.lab=1.2)
+	xlab='Direct Effect on Richness', cex.axis=1, cex.lab=1)
 usr=par('usr')
 polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
 	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='grey80')
@@ -680,17 +685,17 @@ arrows(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.ci.lower'],
 	code=3, angle=90, lwd=2, length=0.05)
 points(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'], 
 	pch=mypch[myfact], bg=mycol[myfact], lwd=2, col='black', cex=2)
-legend('bottomright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
-	pt.lwd=2, bg='white', box.lwd=1)
+legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
+	pt.lwd=2, bg='white', box.lwd=1, pt.cex=2)
 
-text(-.09,.28,'Significant Effect\non Abundance', font=2, adj=1)
-sigvars_a = names(which(apply(allsp_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
-text(-.09, allsp_da[sigvars_a,'std.all'], labels=varnames[sigvars_a, 'midName'],
-	adj=1)
+#text(-.09,.28,'Significant Effect\non Abundance', font=2, adj=1)
+#sigvars_a = names(which(apply(allsp_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
+#text(-.09, allsp_da[sigvars_a,'std.all'], labels=varnames[sigvars_a, 'midName'],
+#	adj=1)
 
-text(.09,.28,'Significant Effect\non Richness', font=2, adj=0)
-sigvars_r = names(which(apply(allsp_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
-text(0.09, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
+#text(.09,.28,'Significant Effect\non Richness', font=2, adj=0)
+#sigvars_r = names(which(apply(allsp_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
+#text(0.09, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
 
 dev.off()
 
@@ -1097,9 +1102,6 @@ dotplot(1:nrow(allsp)~std.all, data=allsp,
 		background='#00000033', cex=3, divide=1, padding.text=5)
 )
 dev.off()
-
-
-
 
 
 

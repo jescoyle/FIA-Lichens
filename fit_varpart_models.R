@@ -10,10 +10,9 @@ load('varpart_analysis.Rdata')
 ###################################################################################
 ### Variation Partitioning among climate, forest, regional richness, and pollution
 
-library(hier.part)
-library(MuMIn)
+library(hier.part) # combos
+library(MuMIn) # r.squaredLR
 library(MASS) # glm.nb
-library(Vennerable) 
 
 
 # Read in table of predictor variable types
@@ -28,7 +27,7 @@ other_data = trans_data[,c('lichen.rich','fric','raoQ','Parmeliaceae','Physciace
 	'tot_abun_log','parm_abun_log','phys_abun_log','regS','regParm','regPhys')]
 
 # Define predictor variable and appropriate abundance and regional richness variables
-use_response = 'fric' # This changes based on the analysis
+use_response = 'lichen.rich' # This changes based on the analysis
 use_reg = 'regS'
 use_abun = 'tot_abun_log'
 use_data$richness = other_data[,use_response]
@@ -251,6 +250,37 @@ names(Rs) = names(predlist)
 
 local_regional_partition = partvar2(Rs)
 
+full_mod = glm.nb(richness~., data=use_data_test[,c('richness',unlist(predlist))], link='log')
+
+## Variation Partitioning by Climate / Regional richness
+
+climatevars = rownames(predtypes)[predtypes$type%in%c('C','P')]
+
+regS_mod = glm.nb(richness~reg, data=use_data_test)
+climate_mod = glm.nb(richness~., data=use_data_test[,c('richness', climatevars, colnames(sq_df)[sq_vars %in% climatevars])])
+
+AIC(region_mod, local_mod, regS_mod, climate_mod) # region_mod is best
+
+# Make a list of predictors
+predlist = list(Climate=names(climate_mod$coefficients[-1]),
+	'Regional Richness'=names(regS_mod$coefficients[-1])
+)
+
+# Define null model
+null_mod = glm.nb(richness~1, link='log', data=use_data_test)
+
+# Calculate pseudo R2 for each model containing successive subsets of variables
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_test[,c('richness',use_vars)], link='log')
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
+
+names(Rs) = names(predlist)
+
+regional_partition = partvar2(Rs)
+
 ## Variation Partitioning by Forest Heterogeneity / Mean Conditions
 nichevars = rownames(predtypes)[predtypes$type=='FH']
 resvars = rownames(predtypes)[predtypes$type %in% c('FM','L')]
@@ -301,8 +331,218 @@ names(Rs) = names(predlist)
 
 niche_res_partition_fric = partvar2(Rs)
 
+## Plot variation partioning analysis in three panels
+barwide=1.5
+use_shade = c('FF','55','99','CC')
+use_color = c('#2415B0','#00BF32','#126A71')
 
-# Plot variation vartitioning
+svg('./Figures/variation partitioning figure v3 lines.svg', height=5, width=10)
+	par(mar=c(0,6,0,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,5.5), ylim=c(0,1), axes=F, ylab='', xlab='', type='n', cex.lab=2)
+	
+	## Add background lines
+	usr = par('usr')
+	abline(h=seq(0,1,.1), lwd=2, col='grey70', lty=3)	
+
+	## Background bars
+	rect(2,0,2+barwide,1,col='white', lwd=3)
+	rect(0,0,barwide,sum(regional_partition[1:3]),col='white', lwd=3)	
+	rect(4,local_regional_partition[1],4+barwide,sum(local_regional_partition[1:3]),col='white', lwd=3)
+
+	## Local-Regional Model
+	# Add rectangle for unexplained variation
+	rect(2,sum(local_regional_partition[1:3]), 2+barwide, 1, lwd=3, col='white')	
+	# Add rectangle for first component
+	rect(2,0,2+barwide, sum(local_regional_partition[1]), lwd=3, col=paste(use_color[1],use_shade[4],sep=''))
+	# Add rectangle for second component
+	rect(2,sum(local_regional_partition[1:2]), 2+barwide,sum(local_regional_partition[1:3]), lwd=3, col=paste(use_color[2],use_shade[4],sep=''))
+	# Add rectangle for overlap
+	rect(2,local_regional_partition[1],2+barwide,sum(local_regional_partition[1:2]), lwd=3, col=paste(use_color[3],use_shade[4],sep=''))
+
+	## Regional Model (Climate + RegS)
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(regional_partition[1]), lwd=3, col=paste(use_color[1],use_shade[2],sep=''))
+	# Add rectangle for second component
+	rect(0,sum(regional_partition[1:2]), barwide,sum(regional_partition[1:3]), lwd=3, col=paste(use_color[1],use_shade[3],sep=''))
+	# Add rectangle for overlap
+	rect(0,regional_partition[1], barwide,sum(regional_partition[1:2]), lwd=3, col=paste(use_color[1],use_shade[4],sep=''))
+
+	## Regional Model (Climate + RegS)
+	# Add rectangle for first component
+	rect(4,local_regional_partition[1], 4+barwide, local_regional_partition[1]+niche_res_partition[1], lwd=3, col=paste(use_color[2],use_shade[2],sep=''))
+	# Add rectangle for second component
+	rect(4,local_regional_partition[1]+sum(niche_res_partition[1:2]), 4+barwide, local_regional_partition[1]+sum(niche_res_partition[1:3]), lwd=3, col=paste(use_color[2],use_shade[3],sep=''))
+	# Add rectangle for overlap
+	rect(4,local_regional_partition[1]+niche_res_partition[1], 4+barwide, local_regional_partition[1]+sum(niche_res_partition[1:2]), lwd=3, col=paste(use_color[2],use_shade[4],sep=''))
+
+	## Arrows
+	jit = 0.05
+	arrows(2-jit, c(0,sum(local_regional_partition[1:2])), barwide+jit, c(0,sum(local_regional_partition[1:2])), lwd=3, length=.1, angle=45)
+	arrows(2+barwide+jit, c(local_regional_partition[1],sum(local_regional_partition[1:3])), 4-jit, c(local_regional_partition[1],sum(local_regional_partition[1:3])), lwd=3, length=.1, angle=45)
+
+	## Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	mtext('Variation Explained', 2, 4, cex=2)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(local_regional_partition[0:(x-1)])+local_regional_partition[x]/2)
+	text(2+barwide/2, lablocs, labels=names(local_regional_partition)[1:4], cex=2)
+	lablocs = sapply(1:3, function(x) sum(regional_partition[0:(x-1)])+regional_partition[x]/2)
+	text(barwide/2, lablocs, labels=names(regional_partition)[1:3], cex=2)
+	lablocs = local_regional_partition[1]+sapply(1:3, function(x) sum(niche_res_partition[0:(x-1)])+niche_res_partition[x]/2)
+	text(4+barwide/2, lablocs, labels=names(niche_res_partition)[1:3], cex=2)
+dev.off()
+
+
+# Plot variation vartitioning with unexplained variation
+barwide=.7
+use_part = local_regional_partition
+axis_height = 1
+axis_side = 2
+use_colors = c('#AAAAAAFF','#777777FF','#EEEEEEFF')
+svg('./Figures/partition variance among local vs regional include quadratic effects big.svg', height=6, width=6*barwide)
+	mymar = c(0,0,0,0)
+	mymar[axis_side] = 5
+	par(mar=mymar)
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,axis_height), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for unexplained variation
+	rect(0,sum(use_part[1:3]), barwide, 1, lwd=3, col='white')	
+
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
+
+	# Add rectangle for second component
+	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
+
+	# Add rectangle for overlap
+	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
+
+	# Add axis
+	axis(axis_side, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part)[1:4], cex=2)
+dev.off()
+
+
+# Plot without unexplained variation
+barwide=.7
+use_part = niche_res_partition
+axis_height = ceiling(sum(use_part[1:3])*10)/10
+axis_side = 4
+use_colors = c('#AAAAAAFF','#777777FF','#EEEEEEFF')
+svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp bw.svg', height=6, width=6*barwide)
+	mymar = c(0,0,0,0)
+	mymar[axis_side] = 5
+	par(mar=mymar)
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,axis_height), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
+
+	# Add rectangle for second component
+	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
+
+	# Add rectangle for overlap
+	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
+
+	# Add axis
+	axis(axis_side, las=1, cex.axis=2, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
+dev.off()
+
+
+# Plot without unexplained variation in short bars
+barwide=.55
+use_part = niche_res_partition
+axis_height = ceiling(sum(use_part[1:3])*10)/10
+axis_side = 4
+use_colors = c('#AAAAAAFF','#777777FF','#D8D8D8FF')
+svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects wide-bw.svg', height=6, width=6*barwide)
+	mymar = c(0,0,0,0)
+	mymar[axis_side] = 5
+	par(mar=mymar)
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,barwide), ylim=c(0,1), axes=F, xlab='', ylab='', type='n')
+	
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
+
+	# Add rectangle for second component
+	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
+
+	# Add rectangle for overlap
+	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
+
+	# Add axis
+	axis(axis_side, at = seq(0, axis_height, .2), las=1, cex.axis=1.4, lwd=3)
+	
+	# Add partition labels
+	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
+	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=1.4)
+dev.off()
+
+
+### Overlap of individual forest predictors and regional richness
+
+regS_mod = glm.nb(richness~reg, data=use_data_test)
+
+# Compare each local predictor and regional richness
+sapply(localvars, function(x){
+	full_mod = glm.nb(richness~., data=use_data_test[,c('richness','reg',x,colnames(sq_df)[sq_vars==x])], link='log')
+	loc_mod = update(full_mod, .~.-reg)
+
+	Rs = sapply(list(regS_mod, loc_mod, full_mod), function(m) attr(r.squaredLR(m, null=null_mod),'adj.r.squared') )
+	names(Rs) = c('regS','localvar','Full')
+
+	partvar2(Rs)	
+})-> local_regS_varpart
+local_regS_varpart = data.frame(t(local_regS_varpart))
+
+# Which local variables have the most joint variation with regional richness?
+local_regS_varpart[order(local_regS_varpart$Both),]
+
+
+## Try removing local predictors to see which variable accounts for unique local variance
+remove_pred_eff = rep(NA, length(localvars))
+names(remove_pred_eff) = localvars
+
+new_local = update(local_mod, .~.-propDead-propDead2)
+new_full = update(full_mod, .~.-propDead-propDead2)
+Rs_new = c(region=attr(r.squaredLR(region_mod, null=null_mod), 'adj.r.squared'),
+	local=attr(r.squaredLR(new_local, null=null_mod), 'adj.r.squared'),
+	attr(r.squaredLR(new_full, null=null_mod), 'adj.r.squared'))
+partvar2(Rs_new)['local'] -> remove_pred_eff['propDead']
+
+
+
+
+
+
+
+
+
+
+
+
+##################################################################
+### Old Code
+
+## COLOR FIGURES
+
+# Plot variation partitioning
 barwide = .6
 use_part = local_regional_partition
 
@@ -330,7 +570,7 @@ svg('./Figures/partition variance among local vs regional include quadratic effe
 dev.off()
 
 
-# Plot without unexplained variation
+# Plot forest variable partitioning
 barwide=.6
 use_part = niche_res_partition
 svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp.svg', height=6, width=6*barwide)
@@ -354,61 +594,10 @@ svg('./Figures/partition variance among heterogeneity vs optimality include quad
 dev.off()
 
 
-# Plot variation vartitioning in black and white
-barwide = .6
-use_part = local_regional_partition
-
-svg('./Figures/partition variance among local vs regional include quadratic effects bw.svg', height=6, width=6*barwide)
-	par(mar=c(0,4,0,0))
-
-	# Create plotting window
-	plot(1,1, xlim=c(0,barwide), ylim=c(0,1), axes=F, xlab='', ylab='', type='n')
-	
-	# Add rectangle for unexplained variation
-	rect(0,sum(use_part[1:3]),barwide,1, lwd=3, col='white')
-	
-	# Add rectangle for regional model
-	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col="#00000050")
-
-	# Add rectangle for local model
-	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col="#00000050")
-
-	# Add axis
-	axis(2, las=1, cex.axis=2, lwd=3)
-	
-	# Add partition labels
-	lablocs = sapply(1:4, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
-	text(barwide/2, lablocs, labels=names(use_part), cex=2, bg='white')
-dev.off()
-
-
-# Plot without unexplained variation
-barwide=.6
-use_part = niche_res_partition
-svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp bw.svg', height=6, width=6*barwide)
-	par(mar=c(0,0,0,5))
-
-	# Create plotting window
-	plot(1,1, xlim=c(0,barwide), ylim=c(0,sum(use_part[1:3])), axes=F, xlab='', ylab='', type='n')
-	
-	# Add rectangle for regional model
-	rect(0,0,barwide, sum(use_part[1:2]), lwd=3, col="#00000050")
-
-	# Add rectangle for local model
-	rect(0,use_part[1],barwide,sum(use_part[1:3]), lwd=3, col="#00000050")
-
-	# Add axis
-	axis(4, las=1, cex.axis=2, lwd=3)
-	
-	# Add partition labels
-	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
-	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
-dev.off()
 
 
 
-##################################################################
-### Old Code
+
 
 
 ## Variation partitioning by variable type
