@@ -425,42 +425,46 @@ write.csv(working_data[testplots$yrplot.id,], './SEM models/New Abundance/standa
 ## Read in tables of parameter estimates and effects
 # All parameter estimares
 allsp_ests = read.csv('./SEM models/AllSp_testdata_parameterEstimates.csv')
+parm_ests = read.csv('./SEM models/Parm_testdata_parameterEstimates.csv')
+phys_ests = read.csv('./SEM models/Phys_testdata_parameterEstimates.csv')
 
 # Total effects
 allsp = read.csv('./SEM models/AllSp_testdata_totaleffects.csv', row.names=1)
-#parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
-#phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
+parm = read.csv('./SEM models/Parm_testdata_totaleffects.csv', row.names=1)
+phys = read.csv('./SEM models/Phys_testdata_totaleffects.csv', row.names=1)
 fric = read.csv('./SEM models/Fric_testdata_totaleffects.csv', row.names=1)
 raoq = read.csv('./SEM models/RaoQ_testdata_totaleffects.csv', row.names=1)
 
-# Direct effecst
+# Direct effects
 allsp_d = read.csv('./SEM models/AllSp_testdata_directeffects_richness.csv', row.names=1)
-#parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
-#phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
+parm_d = read.csv('./SEM models/Parm_testdata_directeffects_richness.csv', row.names=1)
+phys_d = read.csv('./SEM models/Phys_testdata_directeffects_richness.csv', row.names=1)
 fric_d = read.csv('./SEM models/Fric_testdata_directeffects_richness.csv', row.names=1)
 raoq_d = read.csv('./SEM models/RaoQ_testdata_directeffects_richness.csv', row.names=1)
 
 # Direct effect on abundance
 allsp_da = read.csv('./SEM models/AllSp_testdata_directeffects_abundance.csv', row.names=1)
+parm_da = read.csv('./SEM models/Parm_testdata_directeffects_abundance.csv', row.names=1)
+phys_da = read.csv('./SEM models/Phys_testdata_directeffects_abundance.csv', row.names=1)
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
+parm_i = read.csv('./SEM models/Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
+phys_i = read.csv('./SEM models/Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
 fric_i = read.csv('./SEM models/Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
 raoq_i = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
 # Indirect effects via regional richness
 allsp_ir = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_regS.csv', row.names=1)
-#parm_ir = read.csv('./SEM models/Parm_testdata_indirecteffects_via_regS.csv', row.names=1)
-#phys_ir = read.csv('./SEM models/Phys_testdata_indirecteffects_via_regS.csv', row.names=1)
+parm_ir = read.csv('./SEM models/Parm_testdata_indirecteffects_via_regS.csv', row.names=1)
+phys_ir = read.csv('./SEM models/Phys_testdata_indirecteffects_via_regS.csv', row.names=1)
 fric_ir = read.csv('./SEM models/Fric_testdata_indirecteffects_via_regS.csv', row.names=1)
 raoq_ir = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_regS.csv', row.names=1)
 
 # Indirect effects via forest structure
 allsp_if = read.csv('./SEM models/AllSp_testdata_indirecteffects_via_forest.csv', row.names=1)
-#parm_if = read.csv('./SEM models/Parm_testdata_indirecteffects_via_forest.csv', row.names=1)
-#phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', row.names=1)
+parm_if = read.csv('./SEM models/Parm_testdata_indirecteffects_via_forest.csv', row.names=1)
+phys_if = read.csv('./SEM models/Phys_testdata_indirecteffects_via_forest.csv', row.names=1)
 fric_if = read.csv('./SEM models/Fric_testdata_indirecteffects_via_forest.csv', row.names=1)
 raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', row.names=1)
 
@@ -626,14 +630,17 @@ dev.off()
 ###########################################
 ## Make table of indirect climate effects
 
-indirect = allsp_i
-indirectR = allsp_ir
-indirectF = allsp_if
+indirect = phys_i
+indirectR = phys_ir
+indirectF = phys_if
+total = phys
+direct = phys_d
 
-use_total_sub = subset(use_total, type %in% c('C','L'))
-use_direct_sub = subset(use_direct, type %in% c('C','L'))
+use_total_sub = subset(total, type %in% c('C','L'))
+use_direct_sub = subset(direct, type %in% c('C','L'))
 use_indirect_sub = subset(indirect, type %in% c('C','L'))
-order_clim = use_direct_sub[order(use_direct_sub$std.all),'predictor']
+
+order_clim = c('iso','rain_lowRH','radiation','mat','pseas','wetness')
 
 use_total_sub = use_total_sub[order_clim,]
 use_direct_sub = use_direct_sub[order_clim,]
@@ -655,7 +662,7 @@ climEff_tab = data.frame(Predictor=varnames[use_direct_sub$predictor,'displayNam
 	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 )
 
-write.csv(climEff_tab, './SEM models/Compare effects climate variables.csv', row.names=F)
+write.csv(climEff_tab, './SEM models/Compare effects climate variables Phys.csv', row.names=F)
 
 
 ################################################
@@ -705,7 +712,7 @@ dev.off()
 ### Draw path diagram for significant paths
 
 # Only look at estimates corresponding to paths
-paths = subset(allsp_ests, op=='~')
+paths = subset(phys_ests, op=='~') # Change based on response variables of interest
 
 # Calculate which paths are significant
 sigpaths = paths[which(apply(paths[,c('std.ci.lower','std.ci.upper')],1,prod)>0),]
@@ -716,6 +723,14 @@ sigpaths$sigcat = cut(abs(sigpaths$std.all), c(0,.2,.4,.6,.8,1))
 
 # Find all variables in the model
 allvars = unique(c(paths$rhs,paths$lhs))
+allvars[allvars=='regPhys'] <-'reg' # Change based on response variables of interest
+allvars[allvars=='phys_abun_log'] <- 'abun_log' # Change based on response variables of interest
+
+# Replace varnames in sigpaths to generic
+sigpaths$lhs[sigpaths$lhs=='phys_abun_log']<-'abun_log'
+sigpaths$lhs[sigpaths$lhs=='regPhys']<-'reg'
+sigpaths$rhs[sigpaths$rhs=='phys_abun_log']<-'abun_log'
+sigpaths$rhs[sigpaths$rhs=='regPhys']<-'reg'
 
 # Find all variables involved in significant relationships
 sigvars  = unique(c(sigpaths$lhs, sigpaths$rhs))
@@ -728,12 +743,12 @@ rownames(var_locs) = allvars
 unit = 1
 
 # Start with richness and abundance in center
-var_locs['tot_abun_log',] = c(-1,0)
+var_locs['abun_log',] = c(-1,0) 
 var_locs['lichen_rich',] = c(1,0)
 
 # Add pollution and regS to corners
 var_locs['totalNS',] = c(-2.5,2.5)
-var_locs['regS',] = c(2.5,2.5)
+var_locs['reg',] = c(2.5,2.5) 
 
 # Add climate and local environment vars to top and bottom
 c_vars = rownames(subset(predtypes[allvars,], type=='C'))
@@ -752,7 +767,7 @@ var_locs=data.frame(var_locs)
 # Make plot
 mycex=1.5
 
-svg('./Figures/full model significant paths.svg', height=5, width=8.5)
+svg('./Figures/full model significant paths Phys.svg', height=5, width=8.5) # Change based on response variable of interest
 par(mar=c(0,0,0,0))
 par(lend="butt")
 plot(var_locs, xlim=c(-6,6), ylim=c(-2.5,6), type='n', axes=F, xlab='', ylab='')
@@ -767,20 +782,21 @@ for(i in order(abs(sigpaths$std.all))){
 text(var_locs[fm_vars,], labels=varnames[fm_vars,'midName'], pos=2, offset=.25)
 text(var_locs[fh_vars,], labels=varnames[fh_vars,'midName'], pos=4, offset=.25)
 text(var_locs[c_vars,], labels=varnames[c_vars,'midName'],adj=-.1, srt=45)
-text(var_locs[c('lichen_rich','tot_abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
+text(var_locs[c('lichen_rich','abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
 text(var_locs['radiation',], labels='Solar radiation', pos=1, offset=.25)
 text(var_locs['totalNS',], labels=varnames['totalNS','midName'], pos=2, offset=.25)
-text(var_locs['regS',], labels=varnames['regS','midName'], pos=4, offset=.25)
+text(var_locs['reg',], labels='Regional richness', pos=4, offset=.25)
 
-legend(x=-5.5, y=5, xjust=0, yjust=1, c('0.0-0.2','0.2-0.4','0.4-0.6','0.6-0.8'), lwd=mycex*(1:4), 
+legend(x=-5.5, y=5, xjust=0, yjust=1, c('0.0-0.2','0.2-0.4','0.4-0.6','0.6-0.8','0.8-1.0'), lwd=mycex*(1:5), 
 	bty='n')
-legend(x=-6, y=5, xjust=0, yjust=1, rep('', 4), lwd=mycex*(1:4), col='red', bty='n')
+legend(x=-6, y=5, xjust=0, yjust=1, rep('', 5), lwd=mycex*(1:5), col='red', bty='n')
 text(-5.5, 5, '+', cex=2, adj=-1)
 text(-6, 5, '-', cex=2, adj=-2.3)
 
 dev.off()
 
 ## Only show variables with significant paths to richness
+## Variables to remove have to be identified by hand
 
 # Variables to remove
 subset(sigpaths, rhs=='bark_moist_pct.rao.ba') # Check variables that are difficult to distinguish on path diagram
@@ -815,6 +831,268 @@ legend(x=-6, y=5, xjust=0, yjust=1, rep('', 4), lwd=mycex*(1:4), col='red', bty=
 text(-5.5, 5, '+', cex=2, adj=-1)
 text(-6, 5, '-', cex=2, adj=-2.3)
 dev.off()
+
+##################################################
+### Compare Parmeliaceae and Physciaceae
+
+
+## Compare paths
+
+physpaths = subset(phys_ests, op=='~') 
+parmpaths = subset(parm_ests, op=='~') 
+
+# Which paths differ by more than 0.1?
+diff_cutoff = .1
+physpaths$diff = abs(parmpaths$std.all - physpaths$std.all)>diff_cutoff
+parmpaths$diff = abs(parmpaths$std.all - physpaths$std.all)>diff_cutoff
+
+physpaths$sigcat = cut(abs(physpaths$std.all), c(0,.2,.4,.6,.8,1))
+parmpaths$sigcat = cut(abs(parmpaths$std.all), c(0,.2,.4,.6,.8,1))
+
+# Find all variables in the model
+allvars = unique(c(parmpaths$rhs,parmpaths$lhs))
+allvars[allvars=='regParm'] <-'reg' # Change based on response variables of interest
+allvars[allvars=='parm_abun_log'] <- 'abun_log' # Change based on response variables of interest
+
+# Subset paths to only those that are significant
+parmpaths = parmpaths[which(apply(parmpaths[,c('std.ci.lower','std.ci.upper')],1,prod)>0),]
+physpaths = physpaths[which(apply(physpaths[,c('std.ci.lower','std.ci.upper')],1,prod)>0),]
+
+# Replace varnames in sigpaths to generic
+physpaths$lhs[physpaths$lhs=='phys_abun_log']<-'abun_log'
+physpaths$lhs[physpaths$lhs=='regPhys']<-'reg'
+physpaths$rhs[physpaths$rhs=='phys_abun_log']<-'abun_log'
+physpaths$rhs[physpaths$rhs=='regPhys']<-'reg'
+parmpaths$lhs[parmpaths$lhs=='parm_abun_log']<-'abun_log'
+parmpaths$lhs[parmpaths$lhs=='regParm']<-'reg'
+parmpaths$rhs[parmpaths$rhs=='parm_abun_log']<-'abun_log'
+parmpaths$rhs[parmpaths$rhs=='regParm']<-'reg'
+
+# make sure var_locs is read-in from above.
+
+# Make plots
+mycex=1.5
+
+svg('./Figures/phys parm model sig paths 0.1 diff.svg', height=10, width=8.5) # Change based on response variable of interest
+par(mar=c(0,0,1.5,0))
+par(mfrow=c(2,1))
+par(lend="butt")
+plot(var_locs, xlim=c(-6,6), ylim=c(-2.5,6), type='n', axes=F, xlab='', ylab='')
+for(i in order(abs(parmpaths$std.all))){
+	if(parmpaths$diff[i]){
+		from = var_locs[parmpaths[i,'rhs'],]
+		to = var_locs[parmpaths[i,'lhs'],]
+		thickness = as.numeric(parmpaths[i,'sigcat'])*mycex
+		col=c('red','black')[(parmpaths[i,'std.all']>0)+1]
+
+		arrows(from$X, from$Y, to$X, to$Y, length=0.15, lwd=thickness, col=col)
+	}
+}
+text(var_locs[fm_vars,], labels=varnames[fm_vars,'midName'], pos=2, offset=.25)
+text(var_locs[fh_vars,], labels=varnames[fh_vars,'midName'], pos=4, offset=.25)
+text(var_locs[c_vars,], labels=varnames[c_vars,'midName'],adj=-.1, srt=45)
+text(var_locs[c('lichen_rich','abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
+text(var_locs['radiation',], labels='Solar radiation', pos=1, offset=.25)
+text(var_locs['totalNS',], labels=varnames['totalNS','midName'], pos=2, offset=.25)
+text(var_locs['reg',], labels='Regional richness', pos=4, offset=.25)
+
+mtext('Parmeliaceae', 3, 0, cex=1.2, font=2, adj=0)
+
+legend(x=-5.5, y=6, xjust=0, yjust=1, c('0.0-0.2','0.2-0.4','0.4-0.6','0.6-0.8','0.8-1.0'), lwd=mycex*(1:5), 
+	bty='n')
+legend(x=-6, y=6, xjust=0, yjust=1, rep('', 5), lwd=mycex*(1:5), col='red', bty='n')
+text(-5.5, 6, '+', cex=2, adj=-1)
+text(-6, 6, '-', font=2, adj=-2.3)
+
+plot(var_locs, xlim=c(-6,6), ylim=c(-2.5,6), type='n', axes=F, xlab='', ylab='')
+for(i in order(abs(physpaths$std.all))){
+	if(physpaths$diff[i]){
+		from = var_locs[physpaths[i,'rhs'],]
+		to = var_locs[physpaths[i,'lhs'],]
+		thickness = as.numeric(physpaths[i,'sigcat'])*mycex
+		col=c('red','black')[(physpaths[i,'std.all']>0)+1]
+
+		arrows(from$X, from$Y, to$X, to$Y, length=0.15, lwd=thickness, col=col)
+	}
+}
+text(var_locs[fm_vars,], labels=varnames[fm_vars,'midName'], pos=2, offset=.25)
+text(var_locs[fh_vars,], labels=varnames[fh_vars,'midName'], pos=4, offset=.25)
+text(var_locs[c_vars,], labels=varnames[c_vars,'midName'],adj=-.1, srt=45)
+text(var_locs[c('lichen_rich','abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
+text(var_locs['radiation',], labels='Solar radiation', pos=1, offset=.25)
+text(var_locs['totalNS',], labels=varnames['totalNS','midName'], pos=2, offset=.25)
+text(var_locs['reg',], labels='Regional richness', pos=4, offset=.25)
+
+mtext('Physciaceae', 3, 0, cex=1.2, font=2, adj=0)
+dev.off()
+
+
+## Plot difference in total effects ordered by magnitude of difference
+
+# Order variables from lowest to highest total effects
+ordered_vars = rownames(parm)[order(abs(parm$std.all - phys$std.all))]
+ordered_vars = ordered_vars[!(ordered_vars %in% c('FH','FM'))] # Drop effects of FM and FH categories (they may be non-sensical)
+
+# Put tables in same order
+use_parm = parm[ordered_vars,]
+use_phys = phys[ordered_vars,]
+
+# Define range limits that will include 95% confidence intervals
+myrange = range(c(use_parm[,c('std.ci.lower','std.ci.upper')],
+	use_phys[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
+myrange[1] = -.8
+
+mycols = c('#2415B0','#00BF32')
+mycolsbw = c('grey80','white')
+names(mycols) = c('R','L')
+names(mycolsbw) = c('R','L')
+mycols_trans = paste(mycols, '50', sep='')
+names(mycols_trans) = c('R','L')
+mypch = c(22,23)
+mypcols = c('white','grey30')
+myadj=.15
+mytypes = expression('C'['R'],'C'['L'],'F'['H'],'F'['O'],'C'['R'],'R','') # symbols used in plot to denote variable types
+names(mytypes)=c('C','L','FH','FM','P','R','A')
+
+# Total and direct standardized effects on same graph
+svg('./Figures/Standardized total effects on Parm Phys richness bw.svg', height=12, width=19)
+dotplot(as.numeric(factor(rownames(use_parm), levels = ordered_vars))~std.all, data=use_phys, 
+	xlab=list('Standardized Total Effect',cex=3), ylab='',
+	main='',cex.lab=3,aspect=9/10, xlim=myrange,
+	panel=function(x,y){
+	
+		# Add horizontal boxes
+		panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
+			col=mycolsbw[predtypes[ordered_vars,'scale']], border='grey50')
+		
+		# Add vertical line at 0
+		panel.abline(v=0, col='grey30', lty=2, lwd=2)		
+		
+		# Add null distribution segments for Parmeliaceae
+		panel.segments(use_parm$std.ci.lower, y+myadj,
+			use_parm$std.ci.upper, y+myadj, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for direct estimated effects
+		panel.points(use_parm$std.all, y+myadj, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+		
+		# Add null distribution segments for Physciaceae
+		panel.segments(use_phys$std.ci.lower, y,
+			use_phys$std.ci.upper, y, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for total estimated effects
+		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
+	
+		# Add text labeling the variable type
+		panel.text(-.75, y, labels=mytypes[predtypes[ordered_vars,'type']], cex=2)
+		
+	},
+	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
+		cex=3, col='black'),
+		x=list(cex=3, tick.number=8)),
+	key=list(x=1, y=0, corner=c(1,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
+		text=list(c('Physciaceae','Parmaliaceae')),
+		background='#FFFFFFCC', cex=3, divide=1, padding.text=5, border='black')
+)
+dev.off()
+
+## Plot direct effects on richness vs abundance for Parm and Phys side-by-side
+
+use_vars = rownames(predtypes)[predtypes$scale=='L']
+use_vars = use_vars[use_vars!='abun_log']
+use_vars = use_vars[-grep('soil', use_vars)]
+
+mypch = c(22,23)
+mycol=c('white','grey30')
+myfact = ifelse(parm_d[use_vars,'type']=='FH', 1, 2)
+
+svg('./Figures/compare richness abundance effects forest vars parm vs phys.svg', height=5, width=5 )
+par(mar=c(4,4,1,1))
+par(mfrow=c(1,2))
+
+sigvars_a = names(which(apply(parm_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
+sigvars_r = names(which(apply(parm_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
+sigvars = unique(c(sigvars_a,sigvars_r))
+sigvars_L = sigvars[parm_d[sigvars,'std.all']<0]
+sigvars_R = sigvars[parm_d[sigvars,'std.all']>0]
+
+plot(parm_d[use_vars,'std.all'], parm_da[use_vars,'std.all'], type='n', 
+	xlim=c(-.3, .3), ylim=c(-.4,.4), las=1, ylab='Direct Effect on Abundance',
+	xlab='Direct Effect on Richness', cex.axis=1, cex.lab=1)
+usr=par('usr')
+polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
+	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='grey80')
+abline(h=0,v=0)
+arrows(parm_d[use_vars,'std.ci.lower'], parm_da[use_vars,'std.all'],
+	parm_d[use_vars,'std.ci.upper'], parm_da[use_vars,'std.all'],
+	code=3, angle=90, lwd=2, length=0.05)
+arrows(parm_d[use_vars,'std.all'], parm_da[use_vars,'std.ci.lower'],
+	parm_d[use_vars,'std.all'], parm_da[use_vars,'std.ci.upper'],
+	code=3, angle=90, lwd=2, length=0.05)
+points(parm_d[use_vars,'std.all'], parm_da[use_vars,'std.all'], 
+	pch=mypch[myfact], bg=mycol[myfact], lwd=2, col='black', cex=2)
+legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
+	pt.lwd=2, bg='white', box.lwd=1, pt.cex=2)
+
+text(parm_d[sigvars_R, 'std.ci.upper']+.02,parm_da[sigvars_R,'std.all'], labels=varnames[sigvars_R, 'midName'], adj=0)
+text(parm_d[sigvars_L, 'std.ci.lower']-.02,parm_da[sigvars_L,'std.all'], labels=varnames[sigvars_L, 'midName'], adj=1)
+
+sigvars_a = names(which(apply(phys_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
+sigvars_r = names(which(apply(phys_d[use_vars,c('std.ci.lower','std.ci.upper')],1,prod)>0))
+sigvars = unique(c(sigvars_a,sigvars_r))
+sigvars_L = sigvars[parm_d[sigvars,'std.all']<0]
+sigvars_R = sigvars[parm_d[sigvars,'std.all']>0]
+
+plot(phys_d[use_vars,'std.all'], phys_da[use_vars,'std.all'], type='n', 
+	xlim=c(-.3, .3), ylim=c(-.3,.4), las=1, ylab='Direct Effect on Abundance',
+	xlab='Direct Effect on Richness', cex.axis=1, cex.lab=1)
+usr=par('usr')
+
+xvals = seq(usr[1],usr[2],length.out=11)
+fun1 = function(x) x
+fun2 = function(x) -x
+polygon(xvals, pmax(fun1(xvals), fun2(xvals)), col='grey80')
+polygon(xvals, pmin(fun1(xvals), fun2(xvals)), col='grey80')
+
+abline(h=0,v=0)
+arrows(phys_d[use_vars,'std.ci.lower'], phys_da[use_vars,'std.all'],
+	phys_d[use_vars,'std.ci.upper'], phys_da[use_vars,'std.all'],
+	code=3, angle=90, lwd=2, length=0.05)
+arrows(phys_d[use_vars,'std.all'], phys_da[use_vars,'std.ci.lower'],
+	phys_d[use_vars,'std.all'], phys_da[use_vars,'std.ci.upper'],
+	code=3, angle=90, lwd=2, length=0.05)
+points(phys_d[use_vars,'std.all'], phys_da[use_vars,'std.all'], 
+	pch=mypch[myfact], bg=mycol[myfact], lwd=2, col='black', cex=2)
+legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
+	pt.lwd=2, bg='white', box.lwd=1, pt.cex=2)
+
+text(phys_d[sigvars_R, 'std.ci.upper']+.02,phys_da[sigvars_R,'std.all'], labels=varnames[sigvars_R, 'midName'], adj=0)
+text(phys_d[sigvars_L, 'std.ci.lower']-.02,phys_da[sigvars_L,'std.all'], labels=varnames[sigvars_L, 'midName'], adj=1)
+
+
+
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ##################################################
