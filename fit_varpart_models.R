@@ -70,7 +70,7 @@ abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit) # Doesn't
 abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_data_fit)
 abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
 
-AIC(abun_pois_log, abun_gaus_log, abun_gaus_iden) 
+AIC(abun_pois_log, abun_nb_log, abun_gaus_iden) 
 
 use_x = seq(min(use_data$abun_log), max(use_data$abun_log), length.out=100)
 pois_y = predict(abun_pois_log, list(abun_log=use_x), type='response')
@@ -97,7 +97,7 @@ gaus_iden = glm(richness~reg, family=gaussian(link='identity'), data=use_data_fi
 
 summary(gaus_iden)
 
-AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_log, gaus_iden) # Ended up using nb_log for consistency with other variables
+AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_iden) # Ended up using nb_log for consistency with other variables
 
 # Plot nb_log and nb_iden
 use_x = seq(0, max(use_data$reg), length.out=200)
@@ -139,7 +139,7 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','line_theta','line_theta_SE',
 	'quad_int','quad_slope','quad_sq','quad_theta','quad_theta_SE','N')
 
-write.csv(unimods, 'univariate_models.csv', row.names=T)
+write.csv(unimods, 'univariate_models_Phys.csv', row.names=T)
 
 # For functional diversity
 unimods = sapply(rownames(predtypes), function(x){
@@ -185,6 +185,8 @@ modcompare = modcompare[order(modcompare$varType, modcompare$deltaAIC),]
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes fric.csv', row.names=T)
+write.csv(modcompare, 'Univariate model shapes GLM-NB Parm.csv', row.names=T)
+write.csv(modcompare, 'Univariate model shapes GLM-NB Phys.csv', row.names=T)
 
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
 modcompare = read.csv('Univariate model shapes fric.csv', row.names=1)
@@ -336,7 +338,7 @@ barwide=1.5
 use_shade = c('FF','55','99','CC')
 use_color = c('#2415B0','#00BF32','#126A71')
 
-svg('./Figures/variation partitioning figure v3 lines.svg', height=5, width=10)
+svg('./Figures/variation partitioning figure v3 lines Phys.svg', height=5, width=10)
 	par(mar=c(0,6,0,0))
 
 	# Create plotting window
@@ -395,109 +397,10 @@ svg('./Figures/variation partitioning figure v3 lines.svg', height=5, width=10)
 	text(4+barwide/2, lablocs, labels=names(niche_res_partition)[1:3], cex=2)
 dev.off()
 
-
-# Plot variation vartitioning with unexplained variation
-barwide=.7
-use_part = local_regional_partition
-axis_height = 1
-axis_side = 2
-use_colors = c('#AAAAAAFF','#777777FF','#EEEEEEFF')
-svg('./Figures/partition variance among local vs regional include quadratic effects big.svg', height=6, width=6*barwide)
-	mymar = c(0,0,0,0)
-	mymar[axis_side] = 5
-	par(mar=mymar)
-
-	# Create plotting window
-	plot(1,1, xlim=c(0,barwide), ylim=c(0,axis_height), axes=F, xlab='', ylab='', type='n')
-	
-	# Add rectangle for unexplained variation
-	rect(0,sum(use_part[1:3]), barwide, 1, lwd=3, col='white')	
-
-	# Add rectangle for first component
-	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
-
-	# Add rectangle for second component
-	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
-
-	# Add rectangle for overlap
-	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
-
-	# Add axis
-	axis(axis_side, las=1, cex.axis=2, lwd=3)
-	
-	# Add partition labels
-	lablocs = sapply(1:4, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
-	text(barwide/2, lablocs, labels=names(use_part)[1:4], cex=2)
-dev.off()
-
-
-# Plot without unexplained variation
-barwide=.7
-use_part = niche_res_partition
-axis_height = ceiling(sum(use_part[1:3])*10)/10
-axis_side = 4
-use_colors = c('#AAAAAAFF','#777777FF','#EEEEEEFF')
-svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects no unexp bw.svg', height=6, width=6*barwide)
-	mymar = c(0,0,0,0)
-	mymar[axis_side] = 5
-	par(mar=mymar)
-
-	# Create plotting window
-	plot(1,1, xlim=c(0,barwide), ylim=c(0,axis_height), axes=F, xlab='', ylab='', type='n')
-	
-	# Add rectangle for first component
-	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
-
-	# Add rectangle for second component
-	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
-
-	# Add rectangle for overlap
-	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
-
-	# Add axis
-	axis(axis_side, las=1, cex.axis=2, lwd=3)
-	
-	# Add partition labels
-	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
-	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=2)
-dev.off()
-
-
-# Plot without unexplained variation in short bars
-barwide=.55
-use_part = niche_res_partition
-axis_height = ceiling(sum(use_part[1:3])*10)/10
-axis_side = 4
-use_colors = c('#AAAAAAFF','#777777FF','#D8D8D8FF')
-svg('./Figures/partition variance among heterogeneity vs optimality include quadratic effects wide-bw.svg', height=6, width=6*barwide)
-	mymar = c(0,0,0,0)
-	mymar[axis_side] = 5
-	par(mar=mymar)
-
-	# Create plotting window
-	plot(1,1, xlim=c(0,barwide), ylim=c(0,1), axes=F, xlab='', ylab='', type='n')
-	
-	# Add rectangle for first component
-	rect(0,0,barwide, sum(use_part[1]), lwd=3, col=use_colors[1])
-
-	# Add rectangle for second component
-	rect(0,sum(use_part[1:2]),barwide,sum(use_part[1:3]), lwd=3, col=use_colors[3])
-
-	# Add rectangle for overlap
-	rect(0,use_part[1],barwide,sum(use_part[1:2]), lwd=3, col=use_colors[2])
-
-	# Add axis
-	axis(axis_side, at = seq(0, axis_height, .2), las=1, cex.axis=1.4, lwd=3)
-	
-	# Add partition labels
-	lablocs = sapply(1:3, function(x) sum(use_part[0:(x-1)])+use_part[x]/2)
-	text(barwide/2, lablocs, labels=names(use_part)[1:3], cex=1.4)
-dev.off()
-
-
 ### Overlap of individual forest predictors and regional richness
 
 regS_mod = glm.nb(richness~reg, data=use_data_test)
+null_mod = glm.nb(richness~1, link='log', data=use_data_test)
 
 # Compare each local predictor and regional richness
 sapply(localvars, function(x){

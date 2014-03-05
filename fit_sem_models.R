@@ -473,10 +473,26 @@ raoq_if = read.csv('./SEM models/RaoQ_testdata_indirecteffects_via_forest.csv', 
 
 # How many predictors have significant total effects?
 names(which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
-tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+names(which(apply(parm[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
+names(which(apply(phys[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 
+tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
-total[order(abs(total$std.all)),]
+
+# Compare significance of total effects across taxa
+tot_sig = data.frame(AllSp = apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Parm = apply(parm[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Phys = apply(phys[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
+data.frame(AllSp = allsp$std.all,
+	Parm = parm$std.all,
+	Phys = phys$std.all)
+
+# Compare significance of direct effects across taxa
+dir_sig = data.frame(AllSp = apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Parm = apply(parm_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Phys = apply(phys_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
+colSums(dir_sig)
+
 allsp_d[order(abs(allsp_d$std.all)),]
 
 # Examine order of effects among forest structure variables
@@ -486,6 +502,16 @@ allsp_df = subset(allsp_d, type %in% c('FH','FM'))
 allsp_f[order(abs(allsp_f$std.all)),]
 allsp_df[order(abs(allsp_df$std.all)),]
 
+
+parm_f = subset(parm, type %in% c('FH','FM'))
+parm_df = subset(parm_d, type %in% c('FH','FM'))
+parm_f[order(abs(parm_f$std.all)),]
+parm_df[order(abs(parm_df$std.all)),]
+
+phys_f = subset(phys, type %in% c('FH','FM'))
+phys_df = subset(phys_d, type %in% c('FH','FM'))
+phys_f[order(abs(phys_f$std.all)),]
+phys_df[order(abs(phys_df$std.all)),]
 
 #######################################################################################
 ### Figures ###
