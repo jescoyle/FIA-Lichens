@@ -6,8 +6,8 @@ library(raster)
 ##########################################################################
 ### Variables ###
 
-#mydir = 'C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen'
-mydir = 'C:/Users/jrcoyle/Documents/Projects/FIA Lichen'
+mydir = 'C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen'
+#mydir = 'C:/Users/jrcoyle/Documents/Projects/FIA Lichen'
 
 my.bio = c(1,3,12,15) # Use mean annual temp, isothermality, annual precip, and precip seasonality from WorldClim
 
@@ -20,10 +20,10 @@ setwd(mydir)
 master_loc = read.csv('./Data/fia_lichen_plot_locations.csv')
 
 # Lichen plot tree data
-master_forest = read.csv('./Data/master_data_forest.csv')
+#master_forest = read.csv('./Data/master_data_forest.csv')
 
 # Previously calculated data
-master = read.csv('./Data/master_data.csv')
+master = read.csv('./Data/fia_lichen_master_data.csv')
 #master = merge(master, master_forest)
 
 # WorldClim  data
@@ -35,49 +35,50 @@ load('../../DBDGS/bioclim.Rdata')
 #setwd('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/Global PET - Annual/PET_he_annual')
 #pet = raster('pet_he_yr')
 
-
 # PRISM Modeled humidity data
-setwd('C:/Users/jrcoyle/Documents/Projects/GIS Data/PRISM')
-#setwd('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/PRISM')
-vp = raster('mean_vapor_pressure_Jan-Dec_1997-2008')
+#setwd('C:/Users/jrcoyle/Documents/Projects/GIS Data/PRISM')
+setwd('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/PRISM')
+#vp = raster('mean_vapor_pressure_Jan-Dec_1997-2008')
 rh = raster('mean_relative_humidity_Jan-Dec_1997-2008.grd')
-hum = stack(vp, rh)
-names(hum) = c('vp','rh')
+#hum = stack(vp, rh)
+#names(hum) = c('vp','rh')
 
 # GSOD Alaska humidity weather station data
-setwd('C:/Users/jrcoyle/Documents/Projects/GIS Data/GSOD/GSOD_SE_AK_1997-2008')
+#setwd('C:/Users/jrcoyle/Documents/Projects/GIS Data/GSOD/GSOD_SE_AK_1997-2008')
 #setwd('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/GSOD/GSOD_SE_AK_1997-2008')
-humidityAK = read.csv('avg_humidity_SE_AK_1997-2008.csv')
-humidityAK = subset(humidityAK, n_years>0)
+#humidityAK = read.csv('avg_humidity_SE_AK_1997-2008.csv')
+#humidityAK = subset(humidityAK, n_years>0)
 
 # Modeled pollution data
-nitsul = raster('C:/Users/jrcoyle/Documents/Projects/GIS Data/Air Pollution/NTN/ntn_NplusS_1997-2008_avg.grd')
-ntn = read.csv('C:/Users/jrcoyle/Documents/Projects/GIS Data/Air Pollution/NTN/ntn_site_data_1997-2008.csv', skip=3)
+nitsul = raster('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/Air Pollution/NTN/ntn_NplusS_1997-2008_avg.grd')
+#ntn = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/GIS Data/Air Pollution/NTN/ntn_site_data_1997-2008.csv', skip=3)
 
 # Shapefiles of US counties
-setwd(mydir)
-county.sh = readOGR('./GIS','counties')
+#setwd(mydir)
+#county.sh = readOGR('./GIS','counties')
 
 # FIA county name data
-setwd(mydir)
-county.names = read.csv('./Data/FIA_county_data_match_shapefiles.csv') # File has been altered from what was originally downloaded from FIA to match county shapefiles.
+#setwd(mydir)
+#county.names = read.csv('./Data/FIA_county_data_match_shapefiles.csv') # File has been altered from what was originally downloaded from FIA to match county shapefiles.
 
 # FIA county codes and state codes
 #setwd('C:/Users/jrcoyle/Documents/UNC/Projects/FIA_Fall2011/Data')
-setwd('C:/Users/jrcoyle/Documents/Projects/FIA_Fall2011/Data')
-fia.stcd = read.csv('FIA_state_codes.csv')
+#setwd('C:/Users/jrcoyle/Documents/Projects/FIA_Fall2011/Data')
+#fia.stcd = read.csv('FIA_state_codes.csv')
 
 
 #########################################################################
 ### Code ###
 
-### Focus data layers only to extent of US data
-bio.stack = crop(bio.stack, extent(county.sh))
-#pet = crop(pet, extent(county.sh))
-
 # Use only WorldClim variables of interest
 bio.stack = stack(bio.stack)
 bio.stack = subset(bio.stack, my.bio)
+
+## Focus data layers only to extent of US data
+#bio.stack = crop(bio.stack, extent(county.sh))
+bigext = extent(c(-135,-50,17,55))
+bio.stack = crop(bio.stack, bigext )# Use this if calculating regional climate variables
+#pet = crop(pet, extent(county.sh))
 
 
 ### Divide dataset into plots with points and plots in counties
@@ -85,11 +86,158 @@ bio.stack = subset(bio.stack, my.bio)
 master.point = subset(master_loc, !is.na(LAT))
 master.county = subset(master_loc, is.na(LAT))
 
-### Extract values for plots with lat/lon
-
 # Convert dataframe to spatial data
 coordinates(master.point) = c('LON','LAT')
 projection(master.point) = CRS("+proj=longlat +datum=NAD83")
+
+# Make sure maps covers 500km radius from plots
+d = distanceFromPoints(bio.stack[[1]], master.point)
+plot(d<500000)
+
+# Aggregate RH raster to grain of WorldClim data
+rhBig = resample(rh, bio.stack, method='bilinear')
+
+# PCA of annual precip and RH to generate 'wetness' and 'rainLowRH' variables
+rh_vals = getValues(rhBig)
+ap_vals = getValues(bio.stack[[3]])
+vals_dat = data.frame(cbind(rh_vals, ap_vals))
+na.rows = which(is.na(rh_vals)|is.na(ap_vals))
+
+pca = prcomp(~rh_vals+ap_vals, data=vals_dat[-na.rows,], center=T, scale=T)
+new_vals = vals_dat
+new_vals[na.rows,] = c(NA,NA)
+new_vals[-na.rows,] = predict(pca)
+
+wetness = setValues(rhBig, -new_vals[,1])
+rain_lowRH = setValues(rhBig, new_vals[,2])
+
+par(mfrow=c(2,2))
+plot(bio.stack[[3]])
+plot(rhBig)
+plot(wetness)
+plot(rain_lowRH)
+
+
+### Extract values for plots with lat/lon
+
+# Stack layers
+clim.stack = stack(bio.stack, rhBig, wetness, rain_lowRH)
+names(clim.stack)[5:7] = c('rh','wetness','rain_lowRH')
+
+# Extract
+clim.pts = extract(clim.stack, master.point)
+
+# Assign NA values to value of nearest cell - Only need to do this for mat (bio.stack[[1]]) #9 plots in ID(5), WY(3), MT(1)
+# Note AK points will be NA- shoud not be used in further analyses
+for(j in 1:nlayers(clim.stack)){
+	nas = which(is.na(clim.pts[,j]))
+
+	if(length(nas)>0){
+	napts = master.point[nas,]
+	napts = spTransform(napts, CRS(projection(clim.stack)))
+	
+	for(i in 1:nrow(napts)){
+		useval = findNearestVals(clim.stack[[j]], napts[i,])
+		clim.pts[nas[i],j]<-useval
+	}
+	}
+}
+
+## Extract from pollution data
+nitsul.pts = extract(nitsul, master.point)
+
+# Assign NA values to value of nearest # 7 plots in ME(4), NC(1), WA(1), and OR(1)
+nas = which(is.na(nitsul.pts))
+napts = master.point[nas,]
+napts = spTransform(napts, CRS(projection(nitsul)))
+
+for(i in 1:nrow(napts)){
+	useval = findNearestVals(nitsul, napts[i,])
+	nitsul.pts[nas[i]]<-useval
+}
+
+# Combine environmental columns into a dataframe
+env.pts = data.frame(yrplot.id = master.point$yrplot.id, clim.pts, totalNS = nitsul.pts) # temp seems low to me!
+
+setwd(mydir)
+write.csv(env.pts, './Data/fia_lichen_env_data_points.csv', row.names=F)
+
+
+
+### Calculate regional climate variables within 500km radii- optimality and heterogeneity
+
+# Remove AK plots
+use_data = merge(master.point, master[,c('yrplot.id','state.abbr')], all.x=T, all.y=F)
+use_data = subset(use_data, state.abbr!='AK')
+
+## For each plot, how many non-NA pixels are within a 500 km radius?
+ncells = sapply(1:nrow(use_data), function(i){
+	s = use_data[i,]
+	
+	d = distanceFromPoints(clim.stack,s)/1000
+	d = d <= 500
+
+	focal_cells = clim.stack$rh*d # Makes all cells outside buffer 0.
+	sum(getValues(focal_cells)>0, na.rm=T) # How many cells have values?
+}) # 507 - 3220 cells with values in buffers around plots
+
+# Regional variables - will use a 500km radius to match that used in calculation of regional richness
+clim_mean = extract(clim.stack, use_data, buffer=500000, fun=mean, na.rm=T)
+clim_var = extract(clim.stack, use_data, buffer=500000, fun=var, na.rm=T)
+
+colnames(clim_mean) = paste(colnames(clim_mean), 'reg_mean',sep='_')
+colnames(clim_var) = paste(colnames(clim_mean), 'reg_var',sep='_')
+
+
+# Combine data and save
+env.reg = data.frame(use_data$yrplot.id, clim_mean, clim_var)
+
+write.csv(env.reg, './Data/fia_lichen_env_data_regional.csv', row.names=F)
+
+
+
+#############################################################
+### Maps
+mymapcolors = c(rgb(69,117,180,maxColorValue=255),rgb(145,191,219,maxColorValue=255),
+rgb(224,243,248,maxColorValue=255),rgb(254,224,144,maxColorValue=255),rgb(252,141,89,maxColorValue=255),
+rgb(215,48,39,maxColorValue=255))
+
+
+
+
+## Relative humidity map
+
+png('Avg annual relative humidity 1997-2008.png', height=1000, width=1000)
+spplot(trim(rh), axes=F, colorkey=list(labels=list(cex=3), title='Avg. annual relative humidity'),
+	col.regions=colorRampPalette(mymapcolors[length(mymapcolors):1])(20), border=F)
+dev.off()
+
+
+
+
+
+
+#####################################################################
+### Functions
+
+# A function that finds the closest non-NA raster cells to a point and calculates their average values
+# Usually this is just on cell
+# May not be the best way to do this
+
+findNearestVals = function(rast, point){
+	ptdist = distanceFromPoints(rast, point)
+	ptdist = mask(ptdist, rast)
+	ptdist_na = ptdist==minValue(ptdist)
+	ptdist_na[ptdist_na==0]<-NA
+	useval = mask(rast, ptdist_na)
+	useval = cellStats(useval, 'mean', na.rm=T)
+}
+
+
+######################################################################
+### Old code no longer used, but previous used for earlier analyses
+
+
 
 ## Extract from WorldClim
 wc.pts = extract(bio.stack, master.point)
@@ -326,42 +474,22 @@ write.csv(master, './Data/master_data.csv', row.names=F)
 
 
 
-#############################################################
-### Maps
-mymapcolors = c(rgb(69,117,180,maxColorValue=255),rgb(145,191,219,maxColorValue=255),
-rgb(224,243,248,maxColorValue=255),rgb(254,224,144,maxColorValue=255),rgb(252,141,89,maxColorValue=255),
-rgb(215,48,39,maxColorValue=255))
-
-
-
-
-## Relative humidity map
-
-png('Avg annual relative humidity 1997-2008.png', height=1000, width=1000)
-spplot(trim(rh), axes=F, colorkey=list(labels=list(cex=3), title='Avg. annual relative humidity'),
-	col.regions=colorRampPalette(mymapcolors[length(mymapcolors):1])(20), border=F)
-dev.off()
 
 
 
 
 
 
-#####################################################################
-### Functions
 
-# A function that finds the closest non-NA raster cells to a point and calculates their average values
-# Usually this is just on cell
-# May not be the best way to do this
 
-findNearestVals = function(rast, point){
-	ptdist = distanceFromPoints(rast, point)
-	ptdist = mask(ptdist, rast)
-	ptdist_na = ptdist==minValue(ptdist)
-	ptdist_na[ptdist_na==0]<-NA
-	useval = mask(rast, ptdist_na)
-	useval = cellStats(useval, 'mean', na.rm=T)
-}
+
+
+
+
+
+
+
+
 
 
 
