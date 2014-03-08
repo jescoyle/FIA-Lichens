@@ -1,0 +1,119 @@
+library(multicore)
+library(sp)
+library(rgdal)
+
+
+# A function that finds all records within a given distance buffer from a points
+find_recs = function(point, recs, buff){
+	dists = spDistsN1(recs, point, longlat=T) # In km
+	userecs = recs[dists<buff,]
+
+	return(userecs)
+}
+
+library(multicore)
+
+# A function that calculates subsampled richness
+# print statement keeps track of parallel process progress
+calc_subrich = function(points, recs, reps, buff, nsamp, siteXsp){
+
+	meds = c()
+
+	for(j in 1:nrow(points)){
+		p = points[j,]
+		these_plots = find_recs(p, recs, buff)
+	
+		mysamples = sapply(1:reps, function(x){
+			plot_subsamp = these_plots[sample(1:nrow(these_plots), nsamp, replace=F),]$yrplot.id
+			sum(colSums(siteXsp[plot_subsamp,])>0)
+		})
+
+		meds = c(meds, median(mysamples))
+
+		if(j%%10==0) print(paste(j,'out of',nrow(points),Sys.time()))
+	}
+
+	names(meds) = points$yrplot.id
+
+	meds
+
+}
+
+
+
+
+# Read in plot data
+plots = read.csv('fia_plots.csv')
+
+# Read in tree data
+siteXsp = read.csv('fia_tree_siteXsp.csv', row.names=1)
+
+# Make unique plot identifier
+plots$yrplot.id = paste(plots$INVYR, plots$STATECD, plots$COUNTYCD, plots$PLOT, sep='_')
+
+# Subset plots to list of those in tree data set
+plots = subset(plots, yrplot.id %in% rownames(siteXsp))
+
+
+# Read in locations of lichen plots
+master = read.csv('fia_lichen_master_data.csv')
+lichen_locs = subset(master, state.abbr != 'AK')[,c('yrplot.id','LAT','LON')]
+lichen_locs = subset(lichen_locs, !is.na(LAT))
+
+
+# Convert to spatial data
+coordinates(lichen_locs) = c('LON','LAT')
+proj4string(lichen_locs) = CRS("+proj=longlat")
+coordinates(plots) = c('LON','LAT')
+proj4string(plots) = CRS("+proj=longlat")
+
+
+# Remove unidentified trees from the tree list
+siteXsp = siteXsp[,!(colnames(siteXsp)%in%c(999,998,299))]
+
+# Split lichen_locs into 6 parts and send each to cluster
+section_breaks = c(0,361,723,1085,1447,1809,2171)
+
+REPS = 500
+NSAMP = 1700
+
+for(i in 1:6){
+
+	these_points = (section_breaks[i]+1):section_breaks[i+1]
+	parallel(calc_subrich(lichen_locs[these_points,], plots, reps=REPS, buff=500, nsamp=NSAMP, siteXsp=siteXsp))
+
+}
+
+allruns_list = collect()
+
+regS_tree = c()
+for(i in 1:length(allruns_list)) regS_tree = c(regS_tree, allruns_list[[i]])
+
+regS_tree = data.frame(regS_tree)
+
+write.csv(regS_tree, 'fia_lichen_tree_regS_par.csv', row.names=T)
+
+
+
+
+## OLD FUNCTION
+
+#regS_tree = mclapply(1:5, function(i){
+#	p = lichen_locs[i,]
+#	these_plots = find_recs(p, plots, 500)
+#	
+#	mysamples = sapply(1:REPS, function(x){
+#		plot_subsamp = these_plots[sample(1:nrow(these_plots), NSAMP, replace=F),]$yrplot.id
+#		
+#		sum(colSums(siteXsp[plot_subsamp,])>0)
+#
+#	})
+#
+#	median(mysamples)
+#	#print(paste(i,'out of',nrow(lichen_locs)))
+#})
+
+
+
+
+
