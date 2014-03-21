@@ -190,7 +190,7 @@ colnames(clim_var) = paste(colnames(clim_mean), 'reg_var',sep='_')
 
 
 # Combine data and save
-env.reg = data.frame(use_data$yrplot.id, clim_mean, clim_var)
+env.reg = data.frame(yrplot.id = use_data$yrplot.id, clim_mean, clim_var)
 
 write.csv(env.reg, './Data/fia_lichen_env_data_regional.csv', row.names=F)
 
