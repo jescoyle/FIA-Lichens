@@ -13,7 +13,6 @@ rownames(master) = master$yrplot.id
 model_data = read.csv('./Data/fia_lichen_model_data.csv', row.names=1)
 trans_data = read.csv('./Data/fia_lichen_trans_data.csv', row.names=1)
 working_data = read.csv('./Data/fia_lichen_working_data.csv', row.names=1)
-#working_data_unstd = read.csv('./Data/fia_lichen_working_data_unstd.csv', row.names=1)
 
 # Read in lists of test and fit plots
 testplots = read.csv('./Data/model test plots.csv')
@@ -22,5 +21,4 @@ fitplots = read.csv('./Data/model fit plots.csv')
 # Subset working data to be in testing or fitting data sets
 working_data_test = working_data[testplots$yrplot.id,]
 working_data_fit = working_data[fitplots$yrplot.id,]
-#working_data_unstd_test = working_data_unstd[testplots$yrplot.id,]
-#working_data_unstd_fit = working_data_unstd[fitplots$yrplot.id,]
+
