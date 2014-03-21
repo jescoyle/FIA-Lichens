@@ -154,7 +154,7 @@ newvars = merge(newvars, diam_vars, all.x=T)
 myvars = c('lichen.rich','Parmeliaceae','Physciaceae','fric','fdiv','raoQ','wetness','rain_lowRH',
 	'mat','iso','pseas','totalNS','radiation','wetness_reg_mean','rain_lowRH_reg_mean',
 	'mat_reg_mean','iso_reg_mean','pseas_reg_mean','wetness_reg_var','rain_lowRH_reg_var',
-	'mat_reg_var','iso_reg_var','pseas_reg_var','regS_tree',
+	'mat_reg_var','iso_reg_var','pseas_reg_var','totalNS_reg','regS_tree',
 	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','PC1',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
@@ -203,13 +203,6 @@ dev.off()
 
 ## Determine which points are outliers and remove.
 
-
-#	bark_moist_pct.rao.ba, wood_SG.ba, 
-#	wood_SG.rao.ba, LogSeed.rao.ba, propDead, light.mean, 
-#	lightDist.mean, diamDiversity, bigTrees, totalCirc
-
-plot(trans_data$PC1~rank(trans_data$PC1))
-
 outliers = working_data[,model_pred$pred]
 outliers[,]<-NA
 for(v in model_pred$pred){
@@ -235,7 +228,7 @@ outliers = subset(outliers, rownames(outliers) %in% rownames(model_data[model_da
 dim(subset(model_data, lichen.rich>2&rownames(model_data) %in% rownames(outliers)[which(outliers$numOut>8)]))
 
 # Used to check outliers in each variable
-i=model_pred$pred[32]
+i=model_pred$pred[33]
 ols = lm(working_data$lichen.rich_log~working_data[,i])
 opar <- par(mfrow = c(2, 2), oma = c(0, 0, 1.1, 0))
 plot(ols, las = 1)

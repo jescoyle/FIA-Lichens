@@ -170,7 +170,9 @@ write.csv(env.pts, './Data/fia_lichen_env_data_points.csv', row.names=F)
 use_data = merge(master.point, master[,c('yrplot.id','state.abbr')], all.x=T, all.y=F)
 use_data = subset(use_data, state.abbr!='AK')
 
-## For each plot, how many non-NA pixels are within a 500 km radius?
+## For worldclim data
+
+# For each plot, how many non-NA pixels are within a 500 km radius?
 ncells = sapply(1:nrow(use_data), function(i){
 	s = use_data[i,]
 	
@@ -188,9 +190,30 @@ clim_var = extract(clim.stack, use_data, buffer=500000, fun=var, na.rm=T)
 colnames(clim_mean) = paste(colnames(clim_mean), 'reg_mean',sep='_')
 colnames(clim_var) = paste(colnames(clim_mean), 'reg_var',sep='_')
 
+## For pollution data
+# Convert plot locations to CRS of nitsul raster
+use_data = spTransform(use_data, CRS(proj4string(nitsul)))
+
+# For each plot, how many non-NA pixels are within a 500 km radius?
+ncells = sapply(1:nrow(use_data), function(i){
+	s = use_data[i,]
+	
+	d = distanceFromPoints(nitsul,s)/1000
+	d = d <= 500
+
+	focal_cells = nitsul*d # Makes all cells outside buffer 0.
+	sum(getValues(focal_cells)>0, na.rm=T) # How many cells have values?
+}) # 19815 - 143674
+
+plot(nitsul)
+points(coordinates(use_data)[ncells<30000,]) # in Maine
+
+totalNS_reg = extract(nitsul, use_data, buffer=50000, fun=mean, na.rm=T)
+
+write.csv(data.frame(yrplot.id = use_data$yrplot.id,totalNS_reg), './Data/regional_pollution.csv')
 
 # Combine data and save
-env.reg = data.frame(yrplot.id = use_data$yrplot.id, clim_mean, clim_var)
+env.reg = data.frame(yrplot.id = use_data$yrplot.id, clim_mean, clim_var, totalNS_reg)
 
 write.csv(env.reg, './Data/fia_lichen_env_data_regional.csv', row.names=F)
 
