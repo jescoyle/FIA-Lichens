@@ -121,44 +121,9 @@ which(abs(res$cov[lower.tri(res$cov)])>.2, arr.ind=T)
 semPaths(fit_measerr, 'std')
 
 ## Model without abundance
+# See sem_boot_noabun_allsp.R script
 
-## Define model that will calculate indirect and total effects
-noabun_mod = "
-
-	
-"
-
-noabun_fit =  sem(noabun_mod, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
-summary(noabun_fit, standardized=T, rsq=TRUE, fit.measures=T)
-
-# Examine model residuals
-res = resid(endfit)
-which(abs(res$cov)>0.2, arr.ind=T)
-
-# Save model output
-save(noabun_fit, file='./SEM models/noabun_mod_testdata.Rdata')
-
-# Examine significance of model paths
-noabun_ests = parameterEstimates(noabun_fit, standardized=T, ci=T, level=0.95)
-subset(noabun_ests, pvalue<0.05)
-noabun_paths = subset(noabun_ests, op=='~')
-noabun_paths[order(noabun_paths$std.all, decreasing=T),]
-
-write.csv(endfit_ests, './SEM models/finalmod_testdata_estimates.csv', row.names=F)
-
-noabun_std = bootstrapLavaan(noabun_fit, R=5, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
-noabun_ests = parameterEstimates(noabun_fit)[,c('label','lhs','op','rhs')]
-nEst = ncol(noabun_std)/2 # number of parameters
-noabun_ests$std.all = apply(noabun_std[,(nEst+1):(2*nEst)], 2, mean)
-noabun_ests$std.se = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) sqrt(var(x)))
-noabun_ests$std.ci.lower = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.025))
-noabun_ests$std.ci.upper = apply(noabun_std[,(nEst+1):(2*nEst)], 2, function(x) quantile(x, p=0.975))
-
-
-## Models were run on the cluster using scripts 
-# kure_sem_boot_noabun_[allsp, parm, phys, fric, raoQ].R
-
-## Define model that will calculate indirect and total effects
+## Define models 
 # Rules for coefficient names:
 # dependent variable first, independent variable second
 # Capital = regional, lowercase = local
