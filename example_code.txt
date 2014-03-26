@@ -1,0 +1,53 @@
+working_data_fit = read.csv('example_data.csv', row.names=1)
+
+
+path_measerr = '
+
+	# Latent variables
+	lichen_rich =~ sqrt(0.75)*lichen.rich_log
+
+	# Local environment/climate effects on forest structure
+	wood_SG.ba + wood_SG.rao.ba + bark_moist_pct.rao.ba + LogSeed.rao.ba + PIE.ba.tree + propDead + lightDist.mean + diamDiversity + bark_moist_pct.ba + LogSeed.ba + bigTrees + light.mean + PC1 ~
+		wetness + rain_lowRH + iso + pseas + mat + radiation
+
+	# Regional climate, pollution, and regional forest heterogeneity effects on regional richness
+	regS ~ wetness_reg_mean + rain_lowRH_reg_mean + iso_reg_mean + pseas_reg_mean + mat_reg_mean +
+		wetness_reg_var + rain_lowRH_reg_var + iso_reg_var + pseas_reg_var + mat_reg_var +
+		regS_tree + totalNS_reg
+
+	# Regional climate effects on regional forest heterogeneity
+	regS_tree ~ wetness_reg_mean + rain_lowRH_reg_mean + iso_reg_mean + pseas_reg_mean + mat_reg_mean +
+		wetness_reg_var + rain_lowRH_reg_var + iso_reg_var + pseas_reg_var + mat_reg_var
+
+	# Local climate effects on pollution
+	totalNS ~ wetness + rain_lowRH
+
+	# Regiona climate effects on pollution
+	totalNS_reg ~ wetness_reg_mean + rain_lowRH_reg_mean
+
+	# Effects on local lichen richness
+	lichen_rich ~ bark_moist_pct.rao.ba + wood_SG.rao.ba + LogSeed.rao.ba +
+		PIE.ba.tree + propDead + lightDist.mean + diamDiversity +
+		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + bigTrees + light.mean + PC1 +
+		wetness + rain_lowRH + iso + pseas + mat + radiation + regS + totalNS +
+		wetness_reg_mean + rain_lowRH_reg_mean + iso_reg_mean + pseas_reg_mean + mat_reg_mean +
+		wetness_reg_var + rain_lowRH_reg_var + iso_reg_var + pseas_reg_var + mat_reg_var +
+		totalNS_reg + tot_abun_log
+	
+	# Efects on local lichen abundance
+	tot_abun_log ~ bark_moist_pct.rao.ba + wood_SG.rao.ba + LogSeed.rao.ba +
+		PIE.ba.tree + propDead + lightDist.mean + diamDiversity +
+		bark_moist_pct.ba + wood_SG.ba + LogSeed.ba + bigTrees + light.mean + PC1 +
+		wetness + rain_lowRH + iso + pseas + mat + radiation + totalNS +
+		wetness_reg_mean + rain_lowRH_reg_mean + iso_reg_mean + pseas_reg_mean + mat_reg_mean +
+		wetness_reg_var + rain_lowRH_reg_var + iso_reg_var + pseas_reg_var + mat_reg_var +
+		totalNS_reg
+
+'
+
+
+fit_measerr = sem(path_measerr, data=working_data_fit, fixed.x=T, estimator='ML', se='robust')
+
+mi1 = modindices(fit_measerr)
+
+subset(mi1, lhs=='tot_abun_log'&rhs=='iso_reg_mean')
