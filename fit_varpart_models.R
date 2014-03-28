@@ -16,11 +16,10 @@ library(MASS) # glm.nb
 
 
 # Read in table of predictor variable types
-predtypes = read.csv('./SEM models/var_types.csv', row.names=1)
-predtypes = subset(predtypes, !(rownames(predtypes) %in% c('FM','FH')))
+predtypes = read.csv('predictors.csv', row.names=1)
 
 # Define dataset- use trans_data where variables have been log or sqrt transformed but not scaled
-use_data = trans_data[,colnames(trans_data)%in% rownames(predtypes)]
+use_data = trans_data[,colnames(trans_data) %in% rownames(predtypes)]
 
 # Add other variables used to analyze FD and restricted taxonomic groups
 other_data = trans_data[,c('lichen.rich','fric','raoQ','Parmeliaceae','Physciaceae',
@@ -48,17 +47,18 @@ use_data_fit = use_data[fitplots$yrplot.id,]
 sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
-use_vars = rownames(predtypes)[predtypes$type!='A'] # Leave out abundance
+# define set of variables to consider in models
+use_vars = rownames(subset(predtypes, !(label %in% c('','a1','r1'))))
 use_vars = use_vars[-grep('soil',use_vars)] # Leave out soil variables
 
 pois_log_mod = glm(richness~., family=poisson(link='log'), data=use_data_fit[,c('richness',use_vars)])
-pois_iden_mod = glm(richness~., family=poisson(link='identity'), start=rep(1,23), data=use_data_fit[,c('richness',use_vars)]) #warnings- may not have fit correctly
+#pois_iden_mod = glm(richness~., family=poisson(link='identity'), start=rep(1,23), data=use_data_fit[,c('richness',use_vars)]) #warnings- may not have fit correctly
 nb_log_mod = glm.nb(richness~., link='log', data=use_data_fit[,c('richness',use_vars)])
-nb_iden_mod = glm.nb(richness~., link='identity', init.theta=10, data=use_data_fit[,c('richness',use_vars)])
+#nb_iden_mod = glm.nb(richness~., link='identity', init.theta=10, data=use_data_fit[,c('richness',use_vars)])
 gaus_log_mod = glm(richness~., family=gaussian(link='log'), data=use_data_fit[,c('richness',use_vars)])
 gaus_iden_mod = glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
 
-AIC(gaus_iden_mod, gaus_log_mod, pois_iden_mod, pois_log_mod, nb_iden_mod, nb_log_mod)
+AIC(gaus_iden_mod, gaus_log_mod, pois_log_mod, nb_log_mod)
 # nb_log mod wins by far for lichen richness
 # gaus_iden wins by far for fric, can't use nb or pois b/c not integer.
 
@@ -113,7 +113,8 @@ r.squaredLR(nb_iden, null=glm.nb(richness~1, data=use_data_fit))
 ### Univariate models ###
 
 # For lichen richness
-unimods = sapply(rownames(predtypes), function(x){
+use_vars = rownames(subset(predtypes, !(label %in% c('','r1'))))
+unimods = sapply(use_vars, function(x){
 	
 	# Define non-NA observations
 	use_obs = rownames(use_data_fit)[!is.na(use_data_fit[,x])]
@@ -139,7 +140,8 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','line_theta','line_theta_SE',
 	'quad_int','quad_slope','quad_sq','quad_theta','quad_theta_SE','N')
 
-write.csv(unimods, 'univariate_models_Phys.csv', row.names=T)
+write.csv(unimods, 'univariate_models_AllSp.csv', row.names=T)
+
 
 # For functional diversity
 unimods = sapply(rownames(predtypes), function(x){
@@ -167,28 +169,76 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 
 write.csv(unimods, 'univariate_models_fric.csv', row.names=T)
 
-# Make a chart of linear vs quadratic and concavity
+## Examine relationships among regional scale variables and regional richness
+use_vars = rownames(subset(predtypes, !(label %in% c('','R1'))&scale=='regional'))
+
+# Plot effects on regional richness
+pdf('./Figures/regional vars vs regS.pdf', height=5, width=5)
+par(mar=c(4,4,1,1))
+for(x in use_vars){
+	plot(use_data$reg~use_data[,x], ylab='Regional richness', xlab=x)
+}	
+dev.off()
+
+unimods_reg = sapply(use_vars, function(x){
+	
+	# Define non-NA observations
+	use_obs = rownames(use_data_fit)[!is.na(use_data_fit[,x])]
+	
+	# By default uses log link function, so coefficients are on log scale
+	linear_mod = lm(use_data_fit[use_obs,'reg']~use_data_fit[use_obs,x])
+	quad_mod = 	lm(use_data_fit[use_obs,'reg']~use_data_fit[use_obs,x]+I(use_data_fit[use_obs,x]^2))
+
+	linear_sum = summary(linear_mod)$coefficients
+	quad_sum = summary(quad_mod)$coefficients
+
+	c(AIC(linear_mod), AIC(quad_mod), 
+		summary(linear_mod)$r.squared, summary(quad_mod)$r.squared,
+		coef(linear_mod),	coef(quad_mod),  
+		length(use_obs)
+	)
+})
+
+unimods_reg = data.frame(t(unimods_reg))
+names(unimods_reg) = c('AIC_line','AIC_quad','R2_line','R2_quad',
+	'line_int','line_slope','quad_int','quad_slope','quad_sq','N')
+
+write.csv(unimods_reg, 'univariate_models_regS_AllSp.csv', row.names=T)
+
+
+## Make a chart of linear vs quadratic and concavity
 
 modcompare = data.frame(deltaAIC = unimods$AIC_line-unimods$AIC_quad) # deltaAIC neg indicates AIC_line < AIC_quad and quadratic term not needed
 rownames(modcompare) = rownames(unimods)
 modcompare$type = ifelse(modcompare$deltaAIC>2, 'quadratic','linear')
 modcompare$coef_sq = unimods$quad_sq
 modcompare$concavity = ifelse(unimods$quad_sq>0, 'up','down')
-modcompare$varType = predtypes[rownames(modcompare),'type']
+modcompare = cbind(modcompare, predtypes[rownames(modcompare),c('type','scale','mode')])
 
 modcompare = data.frame(predictor=varnames[rownames(modcompare),'midName'], modcompare)
+modcompare = modcompare[order(modcompare$scale, modcompare$mode, modcompare$deltaAIC),]
 
-modcompare = modcompare[order(modcompare$varType, modcompare$deltaAIC),]
+modcompare_reg = data.frame(deltaAIC = unimods_reg$AIC_line-unimods_reg$AIC_quad) # deltaAIC neg indicates AIC_line < AIC_quad and quadratic term not needed
+rownames(modcompare_reg) = rownames(unimods_reg)
+modcompare_reg$type = ifelse(modcompare_reg$deltaAIC>2, 'quadratic','linear')
+modcompare_reg$coef_sq = unimods_reg$quad_sq
+modcompare_reg$concavity = ifelse(unimods_reg$quad_sq>0, 'up','down')
+modcompare_reg = cbind(modcompare_reg, predtypes[rownames(modcompare_reg),c('type','scale','mode')])
+
+modcompare_reg = data.frame(predictor=varnames[rownames(modcompare_reg),'midName'], modcompare_reg)
+modcompare_reg = modcompare_reg[order(modcompare_reg$scale, modcompare_reg$mode, modcompare_reg$deltaAIC),]
 
 # Note: even though coefficients are on log scale, the quadratic models will be 
 # concave down whenever the quadratic coefficient is negative- proved using calculus.
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
+write.csv(modcompare_reg, 'Univariate model shapes of regS.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes fric.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes GLM-NB Parm.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes GLM-NB Phys.csv', row.names=T)
 
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
+modcompare_reg = read.csv('Univariate model shapes of regS.csv', row.names=1)
 modcompare = read.csv('Univariate model shapes fric.csv', row.names=1)
 
 # Plotting some models
@@ -210,25 +260,30 @@ lines(y_calcR~x, col='blue')
 
 # Which variables have AIC supported concave-down relationships?
 sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
+sq_vars_reg = rownames(subset(modcompare_reg, concavity=='down'&type=='quadratic'))
 
-# Using quadratic relationships for concave-down AIC supported models in variation partitioning
-sq_df = use_data[,sq_vars]^2
+# Use quadratic relationships for concave-down AIC supported models in variation partitioning
+sq_df = use_data[,unique(c(sq_vars, sq_vars_reg))]^2
 colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
+
+# Add square
 use_data = cbind(use_data, sq_df)
 
 ## Use test plots for model results:
 use_data_test = use_data[testplots$yrplot.id,]
 
-## Variation Partitioning by Local / Regional
+##################################################
+### Variation Partitioning by Local / Regional ###
 
-regionvars = rownames(predtypes)[predtypes$scale=='R']
-localvars = rownames(predtypes)[predtypes$scale=='L']
+# define set of predictors to be used in models
+use_preds = subset(predtypes, !(label %in% c('','r1','a1')))
+
+regionvars = rownames(use_preds)[use_preds$scale=='regional']
+localvars = rownames(use_preds)[use_preds$scale=='local']
 localvars = localvars[-grep('soil', localvars)] # Leave out soil vars
-localvars = subset(localvars, localvars != 'abun_log') # Leave out abundance
-localvars = subset(localvars, localvars != 'totalCirc') # Leave our total circumference
 
-region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, colnames(sq_df)[sq_vars %in% regionvars])])
-local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, colnames(sq_df)[sq_vars %in% localvars])])
+region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, paste(sq_vars[sq_vars %in% regionvars],2,sep=''))])
+local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, paste(sq_vars[sq_vars %in% localvars],2,sep=''))])
 
 AIC(region_mod, local_mod) # region_mod is best
 
@@ -254,18 +309,20 @@ local_regional_partition = partvar2(Rs)
 
 full_mod = glm.nb(richness~., data=use_data_test[,c('richness',unlist(predlist))], link='log')
 
-## Variation Partitioning by Climate / Regional richness
+## Local-regional partitioning without climate variables (which may inflate joint variation explained)
 
-climatevars = rownames(predtypes)[predtypes$type%in%c('C','P')]
+climatevars = rownames(use_preds)[grep('mat|iso|pseas|wetness|rain|totalNS', rownames(use_preds))]
+regNCvars = regionvars[!(regionvars %in% climatevars)]
+locNCvars = localvars[!(localvars %in% climatevars)]
 
-regS_mod = glm.nb(richness~reg, data=use_data_test)
-climate_mod = glm.nb(richness~., data=use_data_test[,c('richness', climatevars, colnames(sq_df)[sq_vars %in% climatevars])])
+regNC_mod = glm.nb(richness~., data=use_data_test[,c('richness', regNCvars, paste(sq_vars[sq_vars %in% regNCvars],2,sep=''))])
+locNC_mod = glm.nb(richness~., data=use_data_test[,c('richness', locNCvars, paste(sq_vars[sq_vars %in% locNCvars],2,sep=''))])
 
-AIC(region_mod, local_mod, regS_mod, climate_mod) # region_mod is best
+AIC(region_mod, local_mod, regNC_mod, locNC_mod) # region_mod is best
 
 # Make a list of predictors
-predlist = list(Climate=names(climate_mod$coefficients[-1]),
-	'Regional Richness'=names(regS_mod$coefficients[-1])
+predlist = list(Regional=names(regNC_mod$coefficients[-1]),
+	'Local'=names(locNC_mod$coefficients[-1])
 )
 
 # Define null model
@@ -281,22 +338,54 @@ apply(combos(2)$ragged, 1, function(x){
 
 names(Rs) = names(predlist)
 
-regional_partition = partvar2(Rs)
+noclimate_partition = partvar2(Rs)
 
-## Variation Partitioning by Forest Heterogeneity / Mean Conditions
-nichevars = rownames(predtypes)[predtypes$type=='FH']
-resvars = rownames(predtypes)[predtypes$type %in% c('FM','L')]
-resvars = resvars[-grep('soil',resvars)] # Don't include soil
-resvars = subset(resvars, resvars != 'totalCirc')
 
-niche_mod = glm.nb(richness~., data=use_data_test[,c('richness', nichevars, colnames(sq_df)[sq_vars %in% nichevars])])
-res_mod = glm.nb(richness~., data=use_data_test[,c('richness', resvars, colnames(sq_df)[sq_vars %in% resvars])])
+### Variation Partitioning by Heterogeneity / Optimality ###
 
-AIC(region_mod, local_mod, niche_mod, res_mod) # region_mod is best
+## At regional scale
+
+# Assess spatial auto-correlation of regional variables
+library(gstat); library(sp)
+fitdata_sp =  use_data[fitplots$yrplot.id,]
+coordinates(fitdata_sp) = master[rownames(fitdata_sp),c('LON','LAT')]
+proj4string(fitdata_sp) = CRS("+proj=longlat")
+## THIS PART IS NOT DONE
+## MAY NEED TO REVISE MODELS TO ACCOUNT FOR SPATIAL STRUCTURE
+
+RHvars = rownames(subset(use_preds, scale=='regional'&mode=='het'))
+ROvars = rownames(subset(use_preds, scale=='regional'&mode=='opt'))
+
+RH_mod = lm(reg~., data=use_data_test[,c('reg', RHvars, paste(sq_vars_reg[sq_vars_reg %in% RHvars],2,sep=''))])
+RO_mod = lm(reg~., data=use_data_test[,c('reg', ROvars, paste(sq_vars_reg[sq_vars_reg %in% ROvars],2,sep=''))])
 
 # Make a list of predictors
-predlist = list(Heterogeneity=names(niche_mod$coefficients[-1]),
-	Optimality=names(res_mod$coefficients[-1])
+predlist = list(Heterogeneity=names(RH_mod$coefficients[-1]),
+	Optimality=names(RO_mod$coefficients[-1])
+)
+
+# Calculate adjusted R2 for each model containing successive subsets of variables
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = lm(reg~., data=use_data_test[,c('reg',use_vars)])
+	summary(this_mod)$adj.r.squared
+})->Rs
+
+names(Rs) = names(predlist)
+
+regional_het_opt_partition = partvar2(Rs)
+
+## At local scale
+LHvars = rownames(subset(use_preds, scale=='local'&mode=='het'))
+LOvars = rownames(subset(use_preds, scale=='local'&mode=='opt'))
+LOvars = LOvars[-grep('soil', LOvars)] # Don't include soil
+
+LH_mod = glm.nb(richness~., data=use_data_test[,c('richness', LHvars, paste(sq_vars[sq_vars %in% LHvars],2,sep=''))])
+LO_mod = glm.nb(richness~., data=use_data_test[,c('richness', LOvars, paste(sq_vars[sq_vars %in% LOvars],2,sep=''))])
+
+# Make a list of predictors
+predlist = list(Heterogeneity=names(LH_mod$coefficients[-1]),
+	Optimality=names(LO_mod$coefficients[-1])
 )
 
 # Define null model
@@ -312,9 +401,10 @@ apply(combos(2)$ragged, 1, function(x){
 
 names(Rs) = names(predlist)
 
-niche_res_partition = partvar2(Rs)
+local_het_opt_partition = partvar2(Rs)
 
-## Variation partitioning for Fric
+
+### Variation partitioning for Fric ###
 niche_mod_fric = lm(richness~., data=use_data_test[,c('richness', nichevars, colnames(sq_df)[sq_vars %in% nichevars])])
 res_mod_fric = lm(richness~., data=use_data_test[,c('richness', resvars, colnames(sq_df)[sq_vars %in% resvars])])
 
@@ -334,6 +424,73 @@ names(Rs) = names(predlist)
 niche_res_partition_fric = partvar2(Rs)
 
 ## Plot variation partioning analysis in three panels
+barwide=1.5
+use_shade = c('FF','55','99','CC')
+use_color = c('#2415B0','#00BF32','#126A71')
+
+svg('./Figures/variation partitioning figure.svg', height=5, width=10)
+	par(mar=c(0,6,1.5,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,5.5), ylim=c(0,1), axes=F, ylab='', xlab='', type='n', cex.lab=2)
+	
+	## Add background lines
+	usr = par('usr')
+	abline(h=seq(0,1,.1), lwd=2, col='grey70', lty=3)	
+
+	## Background bars
+	rect(0,0,barwide,1,col='white', lwd=3)	
+	rect(2,0,2+barwide,1,col='white', lwd=3)
+	rect(4,0,4+barwide,1,col='white', lwd=3)
+
+	## Local-Regional Model
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(local_regional_partition[1]), lwd=3, col=paste(use_color[1],use_shade[4],sep=''))
+	# Add rectangle for second component
+	rect(0,sum(local_regional_partition[1:2]), barwide,sum(local_regional_partition[1:3]), lwd=3, col=paste(use_color[2],use_shade[4],sep=''))
+	# Add rectangle for overlap
+	rect(0,local_regional_partition[1],barwide,sum(local_regional_partition[1:2]), lwd=3, col=paste(use_color[3],use_shade[4],sep=''))
+
+	## Regional Heterogeneity-Optimality
+	# Add rectangle for first component
+	rect(2,0,2+barwide, sum(regional_het_opt_partition[1]), lwd=3, col=paste(use_color[1],use_shade[2],sep=''))
+	# Add rectangle for second component
+	rect(2,sum(regional_het_opt_partition[1:2]), 2+barwide,sum(regional_het_opt_partition[1:3]), lwd=3, col=paste(use_color[1],use_shade[3],sep=''))
+	# Add rectangle for overlap
+	rect(2,regional_het_opt_partition[1], 2+barwide,sum(regional_het_opt_partition[1:2]), lwd=3, col=paste(use_color[1],use_shade[4],sep=''))
+
+	## Local Heterogeneity-Optimality
+	# Add rectangle for first component
+	rect(4,0,4+barwide, sum(local_het_opt_partition[1]), lwd=3, col=paste(use_color[2],use_shade[2],sep=''))
+	# Add rectangle for second component
+	rect(4,sum(local_het_opt_partition[1:2]), 4+barwide,sum(local_het_opt_partition[1:3]), lwd=3, col=paste(use_color[2],use_shade[3],sep=''))
+	# Add rectangle for overlap
+	rect(4,local_het_opt_partition[1], 4+barwide,sum(local_het_opt_partition[1:2]), lwd=3, col=paste(use_color[2],use_shade[4],sep=''))
+
+	## Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	mtext('Variation Explained', 2, 4, cex=2)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(local_regional_partition[0:(x-1)])+local_regional_partition[x]/2)
+	text(barwide/2, lablocs, labels=names(local_regional_partition)[1:4], cex=2)
+	lablocs = sapply(1:4, function(x) sum(regional_het_opt_partition[0:(x-1)])+regional_het_opt_partition[x]/2)
+	text(2+barwide/2, lablocs, labels=names(regional_het_opt_partition)[1:4], cex=2)
+	lablocs = sapply(1:4, function(x) sum(local_het_opt_partition[0:(x-1)])+local_het_opt_partition[x]/2)
+	text(4+barwide/2, lablocs, labels=names(local_het_opt_partition)[1:4], cex=2)
+	
+	# Add panel text A, B, C
+	par(xpd=T)
+	text(c(0,2,4),1.05, c('A','B','C'), cex=2, adj=c(0,0))
+	par(xpd=F)
+dev.off()
+
+
+
+##################################################################
+### Old Code
+
+
 barwide=1.5
 use_shade = c('FF','55','99','CC')
 use_color = c('#2415B0','#00BF32','#126A71')
@@ -430,18 +587,6 @@ Rs_new = c(region=attr(r.squaredLR(region_mod, null=null_mod), 'adj.r.squared'),
 partvar2(Rs_new)['local'] -> remove_pred_eff['propDead']
 
 
-
-
-
-
-
-
-
-
-
-
-##################################################################
-### Old Code
 
 ## COLOR FIGURES
 
