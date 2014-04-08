@@ -276,7 +276,7 @@ use_data_test = use_data[testplots$yrplot.id,]
 ### Variation Partitioning by Local / Regional ###
 
 # define set of predictors to be used in models
-use_preds = subset(predtypes, !(label %in% c('','r1','a1')))
+use_preds = subset(predtypes, !(label %in% c('','r1','a1','p1','P1')))
 
 regionvars = rownames(use_preds)[use_preds$scale=='regional']
 localvars = rownames(use_preds)[use_preds$scale=='local']
@@ -357,7 +357,7 @@ RHvars = rownames(subset(use_preds, scale=='regional'&mode=='het'))
 ROvars = rownames(subset(use_preds, scale=='regional'&mode=='opt'))
 
 RH_mod = lm(reg~., data=use_data_test[,c('reg', RHvars, paste(sq_vars_reg[sq_vars_reg %in% RHvars],2,sep=''))])
-RO_mod = lm(reg~., data=use_data_test[,c('reg', ROvars, paste(sq_vars_reg[sq_vars_reg %in% ROvars],2,sep=''))])
+RO_mod = lm(reg~., data=use_data_test[,c('reg', ROvars)]) # Don't need to add in sq_vars_reg since no longer including total_NS_r
 
 # Make a list of predictors
 predlist = list(Heterogeneity=names(RH_mod$coefficients[-1]),
@@ -374,6 +374,9 @@ apply(combos(2)$ragged, 1, function(x){
 names(Rs) = names(predlist)
 
 regional_het_opt_partition = partvar2(Rs)
+
+regional_full_mod = lm(reg~., data=use_data_test[,c('reg',unlist(predlist))])
+
 
 ## At local scale
 LHvars = rownames(subset(use_preds, scale=='local'&mode=='het'))
