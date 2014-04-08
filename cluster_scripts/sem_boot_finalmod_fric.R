@@ -92,6 +92,11 @@ use_fit = finalmod_fit
 mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 finalmod_boot = mod_boot
 
+# Used to re-calculate tables outside of Kure
+load('finalmod_Fric_testdata_output.RData') 
+mod_boot = finalmod_boot
+use_fit = finalmod_fit 
+
 # Save raw bootstrap output and models
 response = 'Fric'
 modform = 'finalmod'
@@ -138,6 +143,16 @@ direct_abun$std.all = apply(DE_abun_mat, 2, mean)
 direct_abun$std.se = apply(DE_abun_mat, 2, function(x) sqrt(var(x)))
 direct_abun$std.ci.lower = apply(DE_abun_mat, 2, function(x) quantile(x, p=0.025))
 direct_abun$std.ci.upper = apply(DE_abun_mat, 2, function(x) quantile(x, p=0.975))
+
+# Calculate direct effects on regional richness
+use_ests = ests$lhs=='regS'&ests$op=='~'
+DE_reg_mat = stdmat[,use_ests]
+colnames(DE_reg_mat) = ests[use_ests,c('rhs')]
+direct_reg = data.frame(predictor=colnames(DE_reg_mat))
+direct_reg$std.all = apply(DE_reg_mat, 2, mean)
+direct_reg$std.se = apply(DE_reg_mat, 2, function(x) sqrt(var(x)))
+direct_reg$std.ci.lower = apply(DE_reg_mat, 2, function(x) quantile(x, p=0.025))
+direct_reg$std.ci.upper = apply(DE_reg_mat, 2, function(x) quantile(x, p=0.975))
 
 # Calculate total effects for local forest structure variables
 fvars = rownames(predtypes[grep('f',predtypes$label),])
@@ -197,21 +212,25 @@ use_ests = ests$lhs=='regS'&ests$op=='~'
 IE_regS_mat = stdmat[,use_ests]*DE_mat[,'regS'] # var -> regS * regS -> lichen_rich
 colnames(IE_regS_mat) = ests[use_ests, 'rhs']
 
-# Calculate indirect effect of regional pollution via local pollution
+# Calculate indirect path of regional pollution via local pollution
 P_IE_pol_mat = stdmat[,'p1:P1']*TE_p_mat; colnames(P_IE_pol_mat) = 'totalNS_reg'
 
-# Calculate total effect of regional pollution
-TE_P_mat = P_IE_pol_mat + IE_regS_mat[,'totalNS_reg']
+# Calculate total effect/path of regional pollution (effect does not include indirect path via local pollution)
+TP_P_mat = P_IE_pol_mat + IE_regS_mat[,'totalNS_reg']
+colnames(TP_P_mat) = 'totalNS_reg'
+TE_P_mat = matrix(IE_regS_mat[,'totalNS_reg'], nrow=nrow(stdmat))
 colnames(TE_P_mat) = 'totalNS_reg'
 
-# Calculate indirect effect of regional forest via local forest
+# Calculate indirect path of regional forest via local forest
 # ests[grep(':FH1', ests$label),] # only correlated with fh4 (PIE.ba.tree)
 FH_IE_for_mat = stdmat[,'fh4:FH1']*TE_f_mat[,'PIE.ba.tree']
 FH_IE_for_mat = matrix(FH_IE_for_mat, nrow=nrow(stdmat)); colnames(FH_IE_for_mat) = 'regS_tree'
 
-# Calculate total effect of regional forest
-TE_FH_mat = IE_regS_mat[,'regS_tree'] + FH_IE_for_mat
-TE_FH_mat = matrix(TE_FH_mat, nrow=nrow(stdmat)); colnames(TE_FH_mat) = 'regS_tree'
+# Calculate total effect/path of regional forest (effect does not include indirect path via local forest)
+TP_FH_mat = IE_regS_mat[,'regS_tree'] + FH_IE_for_mat 
+colnames(TP_FH_mat) = 'regS_tree'
+TE_FH_mat = matrix(IE_regS_mat[,'regS_tree'], nrow=nrow(stdmat))
+colnames(TE_FH_mat) = 'regS_tree'
 
 ## Calculate indirect effects of regional climate via regional versus local paths 
 # e.g. do or do not go through local predictors
@@ -267,8 +286,8 @@ indirect_reg$std.se = apply(IE_mat, 2, function(x) sqrt(var(x)))
 indirect_reg$std.ci.lower = apply(IE_mat, 2, function(x) quantile(x, p=0.025))
 indirect_reg$std.ci.upper = apply(IE_mat, 2, function(x) quantile(x, p=0.975))
 
-# Calculate total effects of regional climate
-TE_C_mat = sapply(Cvars, function(x){
+# Calculate total paths of regional climate
+TP_C_mat = sapply(Cvars, function(x){
 	if(x %in% colnames(C_IE_P_mat)){
 		IE_regS_mat[,x] + C_IE_FH_mat[,x] + C_IE_P_mat[,x] + C_IE_cm_mat[,x]
 	} else {
@@ -276,23 +295,40 @@ TE_C_mat = sapply(Cvars, function(x){
 	}
 })
 
+# Calculate total effects of regional climate
+TE_C_mat = sapply(Cvars, function(x){
+	if(x %in% colnames(C_IE_P_mat)){
+		IE_regS_mat[,x] + C_IE_FH_mat_reg[,x] + C_IE_P_mat_reg[,x]
+	} else {
+		IE_regS_mat[,x] + C_IE_FH_mat_reg[,x]
+	}
+})
+
 # Make dataframe of total effects
 TE_mat = cbind(TE_C_mat, TE_cm_mat, TE_f_mat, TE_FH_mat, TE_p_mat, TE_P_mat)
-
 total = data.frame(predictor=colnames(TE_mat))
 total$std.all = apply(TE_mat, 2, mean)
 total$std.se = apply(TE_mat, 2, function(x) sqrt(var(x)))
 total$std.ci.lower = apply(TE_mat, 2, function(x) quantile(x, p=0.025))
 total$std.ci.upper = apply(TE_mat, 2, function(x) quantile(x, p=0.975))
 
+# Make dataframe of total paths (include paths through local-regional correlations)
+TP_mat = cbind(TP_C_mat, TE_cm_mat, TE_f_mat, TP_FH_mat, TE_p_mat, TP_P_mat)
+totalp = data.frame(predictor=colnames(TP_mat))
+totalp$std.all = apply(TP_mat, 2, mean)
+totalp$std.se = apply(TP_mat, 2, function(x) sqrt(var(x)))
+totalp$std.ci.lower = apply(TP_mat, 2, function(x) quantile(x, p=0.025))
+totalp$std.ci.upper = apply(TP_mat, 2, function(x) quantile(x, p=0.975))
 
 ## Save tables and matrices
 write.csv(ests, paste(modform,response,'testdata_parameterEstimates.csv', sep='_'), row.names=F)
 write.csv(direct_rich, paste(modform,response,'testdata_directeffects_richness.csv', sep='_'), row.names=F)
 write.csv(direct_abun, paste(modform,response,'testdata_directeffects_abundance.csv', sep='_'), row.names=F)
+write.csv(direct_reg, paste(modform,response,'testdata_directeffects_regS.csv', sep='_'), row.names=F)
 write.csv(indirect_abun, paste(modform,response,'testdata_indirecteffects_via_abundance.csv', sep='_'), row.names=F)
 write.csv(indirect_for, paste(modform,response,'testdata_indirecteffects_via_forest.csv', sep='_'), row.names=F)
 write.csv(indirect_pol, paste(modform,response,'testdata_indirecteffects_via_pollution.csv', sep='_'), row.names=F)
 write.csv(indirect_reg, paste(modform,response,'testdata_regionalvars_indirecteffects.csv', sep='_'), row.names=F)
 write.csv(total, paste(modform,response, 'testdata_totaleffects.csv', sep='_'), row.names=F)
+write.csv(totalp, paste(modform,response, 'testdata_totalpaths.csv', sep='_'), row.names=F)
 
