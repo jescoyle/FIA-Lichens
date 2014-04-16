@@ -4,6 +4,9 @@
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
+library(MuMIn) # r.squaredLR
+library(MASS) # glm.nb
+
 ##############################################################################
 ### Make Univariate plots
 
@@ -19,11 +22,11 @@ regcol = c('cornflowerblue','darkred','orange','forestgreen','purple','cyan3')
 regpch = c(0:5)
 
 # Define variables to be plotted
-use_vars = c('regS','wetness','PIE.ba.tree','wood_SG.ba','totalNS')
+use_vars = c('regS','wetness','PIE.ba.tree','regS_tree','wetness_reg_mean')
 
-# Define plotting ranges for each of the six variables to be plotted
-myranges = data.frame(lower = c(120, -4, 0, 0.3, 0), 
-	upper = c(210, 3, 1, 0.8, 1100), 
+# Define plotting ranges for each of the five variables to be plotted
+myranges = data.frame(lower = c(120, -3.5, 0, 0, -3), 
+	upper = c(210, 5.5, 1, 170, 2), 
 	use.sq = c(F, T, F, T, T), row.names=use_vars)
 
 # Using trans_data for plots b/c has all plots, no outliers, and log/sqrt transformed where necessary
@@ -90,14 +93,13 @@ mtext('Log Abundance',1,7, cex=4)
 mtext('Log Richness',2,8, cex=4)
 dev.off()
 
-### Black and White figures for 4-panel figure
+### Black and White figures for 6-panel figure
 ### Does not automatically fit best model- need to know ahead of time.
-c('regS','wetness','PIE.ba.tree','wood_SG.ba','totalNS')
 trans_data_test = trans_data[testplots$yrplot.id,]
 
-svg('./Figures/univariate models 4-panel.svg', height=6, width=8)
+svg('./Figures/univariate models 6-panel regional.svg', height=9, width=8)
 
-par(mfrow=c(2,2))
+par(mfrow=c(3,2))
 par(mar=c(4,4,1.5,1))
 par(mgp=c(2.4,0.7,0))
 par(cex.axis=1.2)
@@ -106,40 +108,24 @@ par(pch=1)
 par(cex=1)
 par(las=1)
 
-# Wetness
-plot(lichen.rich~wetness, data=trans_data_test,
-	xlab='Wet Climate (PC1)', ylab='Local Species Richness', 
-	las=1, xlim=as.numeric(myranges['wetness',c('lower','upper')]), ylim=c(0,40),
-	col='#00000050', lwd=2)
-use_mod = glm.nb(lichen.rich~wetness+I(wetness^2), data=trans_data_test, link='log')
-use_coef = coef(use_mod)
-use_x = seq(min(trans_data_test$wetness), max(trans_data_test$wetness), length.out=100)
-use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
-lines(use_x, use_y, lwd=5, col='white')
-lines(use_x, use_y, lwd=4, col='black')
-r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
-r2 = attr(r2, 'adj.r.squared')
-use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
-mtext(use_label, 3, adj=0, line=0)
+# Abundance
 
-# Pollution
-plot(lichen.rich~totalNS, data=trans_data_test,
-	xlab='Total N+S Deposition (eq/ha)', ylab='Local Species Richness', 
-	las=1, xlim=as.numeric(myranges['totalNS',c('lower','upper')]), ylim=c(0,40),
-	col='#00000050', lwd=2, axes=F)
-axis(1, at=seq(0,1000,250))
-axis(2)
-box()
-use_mod = glm.nb(lichen.rich~totalNS+I(totalNS^2), data=trans_data_test, link='log')
+plot(log10(lichen.rich)~tot_abun_log, data=trans_data_test,
+	xlab='Log Abundance', ylab='Log Species Richness', 
+	las=1, xlim=c(0,7), ylim=c(-.1,1.6),
+	col='#00000050', lwd=2)		
+use_mod = glm.nb(lichen.rich~tot_abun_log, data=trans_data_test, link='log')
 use_coef = coef(use_mod)
-use_x = seq(min(trans_data_test$totalNS), max(trans_data_test$totalNS), length.out=100)
-use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
-lines(use_x, use_y, lwd=5, col='white')
-lines(use_x, use_y, lwd=4, col='black')
+use_min = max(min(trans_data_test$tot_abun_log),-use_coef[1]/use_coef[2])
+use_x = seq(use_min, max(trans_data_test$tot_abun_log), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
+lines(use_x, log10(use_y), lwd=5, col='white')
+lines(use_x, log10(use_y), lwd=4, col='black')
 r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
 r2 = attr(r2, 'adj.r.squared')
 use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
-mtext(use_label, 3, adj=0, line=0)
+mtext(use_label, 3, adj=1, line=0)
+mtext('A',3,adj=0,line=0, font=2, cex=2)
 
 # Regional richness
 plot(lichen.rich~regS, data=trans_data_test,
@@ -158,7 +144,99 @@ lines(use_x, use_y, lwd=4, col='black')
 r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
 r2 = attr(r2, 'adj.r.squared')
 use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
-mtext(use_label, 3, adj=0, line=0)
+mtext(use_label, 3, adj=1, line=0)
+mtext('B',3,adj=0,line=0, font=2, cex=2)
+
+# Wetness
+plot(lichen.rich~wetness, data=trans_data_test,
+	xlab='Wet Climate (local)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['wetness',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(-3,5,2))
+axis(1, at=seq(-2,4,2))
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~wetness+I(wetness^2), data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$wetness), max(trans_data_test$wetness), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('C',3,adj=0,line=0, font=2, cex=2)
+
+# Regional Mean Wetness
+plot(regS~wetness_reg_mean, data=trans_data_test,
+	xlab='Wet Climate (regional)', ylab='Regional Species Richness', 
+	las=1, xlim=as.numeric(myranges['wetness_reg_mean',c('lower','upper')]), ylim=c(120,220),
+	col='#00000050', lwd=2, axes=F)
+axis(1)
+axis(2)
+box()
+use_mod = lm(regS~wetness_reg_mean, data=trans_data_test)
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$wetness_reg_mean), max(trans_data_test$wetness_reg_mean), length.out=100)
+use_y = use_coef[1]+use_coef[2]*use_x
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = summary(use_mod)$adj.r.squared
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('D',3,adj=0,line=0, font=2, cex=2)
+
+# Tree diversity
+plot(lichen.rich~PIE.ba.tree, data=trans_data_test,
+	xlab='Tree Diversity (local)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['PIE.ba.tree',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2)
+use_mod = glm.nb(lichen.rich~PIE.ba.tree, data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$PIE.ba.tree), max(trans_data_test$PIE.ba.tree), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('E',3,adj=0,line=0, font=2, cex=2)
+
+# Regional Tree Diversity
+plot(regS~regS_tree, data=trans_data_test,
+	xlab='Tree Richness (regional)', ylab='Regional Species Richness', 
+	las=1, xlim=as.numeric(myranges['regS_tree',c('lower','upper')]), ylim=c(120,220),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(0,160,40))
+axis(2)
+box()
+use_mod = lm(regS~regS_tree+I(regS_tree^2), data=trans_data_test)
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$regS_tree), max(trans_data_test$regS_tree), length.out=100)
+use_y = use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2)
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = summary(use_mod)$adj.r.squared
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('F',3,adj=0,line=0, font=2, cex=2)
+
+dev.off()
+
+
+## With local lichen richness as response for all variables
+svg('./Figures/univariate models 6-panel.svg', height=9, width=8)
+
+par(mfrow=c(3,2))
+par(mar=c(4,4,1.5,1))
+par(mgp=c(2.4,0.7,0))
+par(cex.axis=1.2)
+par(cex.lab=1.2)
+par(pch=1)
+par(cex=1)
+par(las=1)
 
 # Abundance
 
@@ -166,17 +244,117 @@ plot(log10(lichen.rich)~tot_abun_log, data=trans_data_test,
 	xlab='Log Abundance', ylab='Log Species Richness', 
 	las=1, xlim=c(0,7), ylim=c(-.1,1.6),
 	col='#00000050', lwd=2)		
-use_mod = glm(lichen.rich~tot_abun_log, family=poisson(link='log'), data=trans_data_test)
+use_mod = glm.nb(lichen.rich~tot_abun_log, data=trans_data_test, link='log')
 use_coef = coef(use_mod)
 use_min = max(min(trans_data_test$tot_abun_log),-use_coef[1]/use_coef[2])
 use_x = seq(use_min, max(trans_data_test$tot_abun_log), length.out=100)
-use_y = predict(use_mod, list(tot_abun_log=use_x), type='response')
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
 lines(use_x, log10(use_y), lwd=5, col='white')
 lines(use_x, log10(use_y), lwd=4, col='black')
-r2 = r.squaredLR(use_mod, null=glm(lichen.rich~1, family=poisson(link='log'), data=trans_data_test))
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
 r2 = attr(r2, 'adj.r.squared')
 use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
-mtext(use_label, 3, adj=0, line=0)
+mtext(use_label, 3, adj=1, line=0)
+mtext('A',3,adj=0,line=0, font=2, cex=2)
+
+
+# Regional richness
+plot(lichen.rich~regS, data=trans_data_test,
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(125,205), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~regS, data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$regS), max(trans_data_test$regS), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('B',3,adj=0,line=0, font=2, cex=2)
+
+# Wetness
+plot(lichen.rich~wetness, data=trans_data_test,
+	xlab='Wet Climate (local)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['wetness',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(-3,5,2))
+axis(1, at=seq(-2,4,2))
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~wetness+I(wetness^2), data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$wetness), max(trans_data_test$wetness), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('C',3,adj=0,line=0, font=2, cex=2)
+
+# Regional Mean Wetness
+plot(lichen.rich~wetness_reg_mean, data=trans_data_test,
+	xlab='Wet Climate (regional)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['wetness_reg_mean',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1)
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~wetness_reg_mean+I(wetness_reg_mean^2), data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$wetness_reg_mean), max(trans_data_test$wetness_reg_mean), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('D',3,adj=0,line=0, font=2, cex=2)
+
+# Tree diversity
+plot(lichen.rich~PIE.ba.tree, data=trans_data_test,
+	xlab='Tree Diversity (local)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['PIE.ba.tree',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2)
+use_mod = glm.nb(lichen.rich~PIE.ba.tree, data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$PIE.ba.tree), max(trans_data_test$PIE.ba.tree), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('E',3,adj=0,line=0, font=2, cex=2)
+
+# Regional Tree Diversity
+plot(lichen.rich~regS_tree, data=trans_data_test,
+	xlab='Tree Richness (regional)', ylab='Local Species Richness', 
+	las=1, xlim=as.numeric(myranges['regS_tree',c('lower','upper')]), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(0,160,40))
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~regS_tree+I(regS_tree^2), data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$regS_tree), max(trans_data_test$regS_tree), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*(use_x^2))
+lines(use_x, use_y, lwd=5, col='white')
+lines(use_x, use_y, lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('F',3,adj=0,line=0, font=2, cex=2)
 
 dev.off()
 

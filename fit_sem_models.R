@@ -390,15 +390,15 @@ allsp = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_totaleffects.cs
 #parm = read.csv('./SEM models/finalmod_Parm_testdata_totaleffects.csv', row.names=1)
 #phys = read.csv('./SEM models/finalmod_Phys_testdata_totaleffects.csv', row.names=1)
 #raoq = read.csv('./SEM models/finalmod_RaoQ_testdata_totaleffects.csv', row.names=1)
-#fric = read.csv('./SEM models/finalmod_Fric_testdata_totaleffects.csv', row.names=1)
+fric = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_totaleffects.csv', row.names=1)
 reg2 = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 noabun = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 
 # Direct effects
 allsp_d = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-#parm_d = read.csv('./SEM models/finalmod_Parm_testdata_directeffects_richness.csv', row.names=1)
-#phys_d = read.csv('./SEM models/finalmod_Phys_testdata_directeffects_richness.csv', row.names=1)
-#fric_d = read.csv('./SEM models/finalmod_Fric_testdata_directeffects_richness.csv', row.names=1)
+parm_d = read.csv('./SEM models/No Pollution/nopol_Parm_testdata_directeffects_richness.csv', row.names=1)
+phys_d = read.csv('./SEM models/No Pollution/nopol_Phys_testdata_directeffects_richness.csv', row.names=1)
+fric_d = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
 #raoq_d = read.csv('./SEM models/finalmod_RaoQ_testdata_directeffects_richness.csv', row.names=1)
 reg2_d = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 noabun_d = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
@@ -416,7 +416,7 @@ reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_dir
 allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 #parm_i = read.csv('./SEM models/finalmod_Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
 #phys_i = read.csv('./SEM models/finalmod_Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#fric_i = read.csv('./SEM models/finalmod_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
+fric_i = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
 #raoq_i = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
@@ -424,7 +424,7 @@ reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indi
 allsp_ir = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 #parm_ir = read.csv('./SEM models/finalmod_Parm_testdata_regionalvars_indirecteffects.csv')
 #phys_ir = read.csv('./SEM models/finalmod_Phys_testdata_regionalvars_indirecteffects.csv')
-#fric_ir = read.csv('./SEM models/finalmod_Fric_testdata_regionalvars_indirecteffects.csv')
+fric_ir = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_regionalvars_indirecteffects.csv')
 #raoq_ir = read.csv('./SEM models/finalmod_RaoQ_testdata_regionalvars_indirecteffects.csv')
 reg2_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 
@@ -454,8 +454,20 @@ names(which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
 
+predtypes[rownames(tot_sig),]
+
 tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
+
+# How many local-scale predictors have significant direct effects on local richness?
+dir_sig = allsp_d[which(apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
+predtypes[rownames(dir_sig),]
+
+# How many regional-scale predictors have significant direct effects on regional richness?
+dir_sig = allsp_dr[which(apply(allsp_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
+predtypes[rownames(dir_sig),]
 
 # Compare significance of total effects across taxa
 tot_sig = data.frame(AllSp = apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
@@ -866,9 +878,9 @@ anova(regTorich_nopol_fit, nopol_fit)
 # Make df of total effects including direct effects of regS and abundance
 
 # Order variables from lowest to highest total effects
-total = noabun # This changes based on what response variable is being analyzed
-#total = rbind(total, reg2_d[c('regS','tot_abun_log'),])
-total = rbind(total, noabun_d['regS',])
+total = allsp # This changes based on what response variable is being analyzed
+total = rbind(total, allsp_d[c('regS','tot_abun_log'),])
+#total = rbind(total, noabun_d['regS',])
 
 ordered_vars = rownames(total[order(total$std.all),])
 
@@ -936,7 +948,7 @@ dev.off()
 ### Direct effects on regional richness
 
 # Define data set to use
-direct_reg = allsp_dr
+direct_reg = reg2_dr
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct_reg[order(direct_reg$std.all),])
@@ -954,7 +966,7 @@ mytypes = expression('C','F','P','','') # symbols used in plot to denote variabl
 names(mytypes)=c('C','F','P','R','A')
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp regional richness nopol.svg', height=9, width=19)
+svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=4/5, xlim=myrange,
@@ -989,11 +1001,9 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = allsp_d
-indirect = allsp_i
-
-direct = subset(direct, rownames(direct)!='regS')
-indirect = subset(indirect, rownames(indirect)!='regS')
+direct = reg2_d
+indirect = reg2_i
+direct = direct[c(rownames(indirect),'tot_abun_log'),]
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct[order(direct$std.all),])
@@ -1003,13 +1013,13 @@ use_direct = direct[ordered_vars,]
 use_indirect = indirect[ordered_vars,]
 
 # Define range limits that will include 95% confidence intervals
-myrange = range(c(use_direct[,c('std.ci.lower','std.ci.upper')],use_indirect[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
-myrange[1] = -.38
+myrange = range(use_direct[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
+myrange[1] = -.34
 
-jitter = 0.15
+jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct indirect effects on AllSp richness nopol.svg', height=13, width=19)
+svg('./Figures/Standardized direct effects on AllSp richness regTorich nopol.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
@@ -1032,23 +1042,23 @@ dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all,
 		panel.points(x, y+jitter, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 
 		# Add null distribution segments for indirect effects
-		panel.segments(use_indirect$std.ci.lower, y-jitter,
-			use_indirect$std.ci.upper, y-jitter, 
-			col='black', lwd=4.5, lend=1)
+		#panel.segments(use_indirect$std.ci.lower, y-jitter,
+		#	use_indirect$std.ci.upper, y-jitter, 
+		#	col='black', lwd=4.5, lend=1)
 		# Add points for indirect estimated effects
-		panel.points(use_indirect$std.all, y-jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+		#panel.points(use_indirect$std.all, y-jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
 		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
-		panel.text(-.34, y, labels=mytypes[vartypes], cex=2)
+		panel.text(myrange[1]+.03, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
 		cex=3, col='black'),
-		x=list(cex=3, tick.number=8)),
-	key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
-		text=list(c('Direct Effect','Indirect Effect')),
-		background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
+		x=list(cex=3, tick.number=8))#,
+	#key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
+	#	text=list(c('Direct Effect','Indirect Effect')),
+	#	background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
 )
 dev.off()
 
@@ -1114,6 +1124,37 @@ climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','
 
 write.csv(climReg_IE_tab, 'Indirect regional climate effects nopol.csv', row.names=F)
 
+# Table for regTorich model which includes direct effect
+indirect_ir = reg2_ir
+direct = reg2_d
+
+order_clim = c('wetness','rain_lowRH','pseas','mat','iso','radiation')
+order_clim_reg = c(paste(order_clim[1:5],'reg_mean', sep='_'), paste(order_clim[1:5], 'reg_var', sep='_'), 'regS_tree')
+
+climReg_IE_tab = data.frame(var = order_clim_reg, predictor = varnames[order_clim_reg,'displayName'])
+use_dir = direct[order_clim_reg,]
+climReg_IE_tab$dir = use_dir$std.all
+use_loc = subset(indirect_ir, IEvar1 %in% c('clim_loc','PIE.ba.tree')); rownames(use_loc) = use_loc$predictor
+climReg_IE_tab$loc = use_loc[order_clim_reg, 'std.all']
+use_regS = subset(indirect_ir, IEvar1=='regS'); rownames(use_regS) = use_regS$predictor
+climReg_IE_tab$regS = use_regS[order_clim_reg,'std.all']
+use_FH = subset(indirect_ir, IEvar1=='regS_tree'&is.na(IEvar2)); rownames(use_FH) = use_FH$predictor
+climReg_IE_tab$FH = use_FH[order_clim_reg, 'std.all']
+
+climReg_IE_tab$dir_sig = apply(use_dir[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+climReg_IE_tab$loc_sig = apply(use_loc[order_clim_reg,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+climReg_IE_tab$regS_sig = apply(use_regS[order_clim_reg,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+climReg_IE_tab$FH_sig = apply(use_FH[order_clim_reg,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+
+sub_vars_FH = subset(indirect_ir, (IEvar1=='regS_tree')&!is.na(IEvar2)); colnames(sub_vars_FH)[1] = 'var'; colnames(sub_vars_FH)[colnames(sub_vars_FH)=='std.all'] <- 'subpath_FH'
+sub_vars_FH$subFH_sig = apply(sub_vars_FH[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+
+climReg_IE_tab = merge(climReg_IE_tab, sub_vars_FH[,c('var','IEvar2','subpath_FH','subFH_sig')])
+climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','dir','loc','regS','FH','subpath_FH',
+	'dir_sig','loc_sig','regS_sig','FH_sig','subFH_sig')]
+
+write.csv(climReg_IE_tab, 'Indirect regional climate effects regTorich nopol.csv', row.names=F)
+
 
 indirect = phys_i
 indirectR = phys_ir
@@ -1146,38 +1187,42 @@ climEff_tab = data.frame(Predictor=varnames[use_direct_sub$predictor,'displayNam
 	indirectFMSig = apply(subset(use_indirectF_sub, Ftype=='FM')[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 )
 
+
 write.csv(climEff_tab, './SEM models/Compare effects climate variables Phys.csv', row.names=F)
 
 
 ################################################
 ## Plot direct vs. indirect effects via abundance for local predictors
-use_vars = rownames(predtypes)[predtypes$scale=='L']
-use_vars = use_vars[use_vars!='abun_log']
-use_vars = use_vars[-grep('soil', use_vars)]
+use_vars = subset(predtypes, scale=='local'&label!=''&type%in%c('env','forest'))
+use_vars = use_vars[-grep('soil', rownames(use_vars)),]
+
+use_d = reg2_d[rownames(use_vars),]
+use_i = reg2_i[rownames(use_vars),]
 
 mypch = c(22,23)
 mycol=c('white','grey30')
-myfact = ifelse(allsp_d[use_vars,'type']=='FH', 1, 2)
 
-svg('./Figures/compare richness abundance effects forest vars.svg', height=5, width=5 )
+svg('./Figures/compare richness abundance effects local vars regTorich.svg', height=5, width=5 )
 par(mar=c(4,4,1,1))
-plot(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'], type='n', 
-	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Direct Effect on Abundance',
+plot(use_d$std.all, use_i$std.all, type='n', 
+	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Indirect Effect via Abundance',
 	xlab='Direct Effect on Richness', cex.axis=1, cex.lab=1)
 usr=par('usr')
 polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
 	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='grey80')
 abline(h=0,v=0)
-arrows(allsp_d[use_vars,'std.ci.lower'], allsp_da[use_vars,'std.all'],
-	allsp_d[use_vars,'std.ci.upper'], allsp_da[use_vars,'std.all'],
+arrows(use_d$std.ci.lower, use_i$std.all,
+	use_d$std.ci.upper, use_i$std.all,
 	code=3, angle=90, lwd=2, length=0.05)
-arrows(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.ci.lower'],
-	allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.ci.upper'],
+arrows(use_d$std.all, use_i$std.ci.lower,
+	use_d$std.all, use_i$std.ci.upper,
 	code=3, angle=90, lwd=2, length=0.05)
-points(allsp_d[use_vars,'std.all'], allsp_da[use_vars,'std.all'], 
-	pch=mypch[myfact], bg=mycol[myfact], lwd=2, col='black', cex=2)
-legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
-	pt.lwd=2, bg='white', box.lwd=1, pt.cex=2)
+points(use_d$std.all, use_i$std.all, 
+	pch=mypch[ifelse(use_vars$type=='env',1,2)], bg=mycol[ifelse(use_vars$mode=='het',1,2)], 
+	lwd=2, col='black', cex=2)
+
+#legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol, 
+#	pt.lwd=2, bg='white', box.lwd=1, pt.cex=2)
 
 #text(-.09,.28,'Significant Effect\non Abundance', font=2, adj=1)
 #sigvars_a = names(which(apply(allsp_da[use_vars,c('std.ci.lower','std.ci.upper')], 1, prod)>0))
@@ -1189,6 +1234,23 @@ legend('topright',c('Heterogeneity','Optimality'), pch=mypch, pt.bg=mycol,
 #text(0.09, allsp_da[sigvars_r,'std.all'], labels=varnames[sigvars_r,'midName'], adj=0)
 
 dev.off()
+
+# Plot legend
+svg('./Figures/direct indirect legend.svg', height=3, width=3)
+par(mar=c(0,0,0,0))
+plot.new()
+points(c(0,.1), rep(.1,2), pch=mypch, bg=mycol[2], cex=2, lwd=2)
+points(.1, 0, pch=mypch[2], bg=mycol[1], cex=2, lwd=2)
+text(rep(.15,2), c(.1,0), labels = c('Optimality','Heterogeneity'), adj=0)
+text(c(0,.1), rep(0.15,2), labels=c('Climate','Forest Structure'), srt=45, adj=0)
+dev.off()
+
+compare_id = data.frame(direct = use_d$std.all, indirect = use_i$std.all)
+rownames(compare_id) = rownames(use_d)
+compare_id$sigD  = apply(use_d[,c('std.ci.lower','std.ci.upper')], 1, prod) >0
+compare_id$sigI  = apply(use_i[,c('std.ci.lower','std.ci.upper')], 1, prod) >0
+compare_id[order(compare_id$direct, decreasing=T),]
+
 
 
 
@@ -1792,22 +1854,34 @@ compare_tab = cbind(predictor=varnames[rownames(allsp_d),'midName'],
 	allsp_d[,use_cols], fric_d[rownames(allsp_d),use_cols])
 compare_tab[order(compare_tab[,2], decreasing=T),]
 
-use_allsp = subset(allsp_d, type %in% c('FH','FM','L'))
-use_fric = fric_d[rownames(use_allsp),]
-ordered_vars = rownames(use_allsp)[order(use_allsp$type,use_allsp$std.all)]
+use_vars = subset(predtypes, scale=='local' & label!='' & type%in%c('env','forest','abundance'))
+use_vars = use_vars[-grep('soil', rownames(use_vars)),]
+
+use_allsp = allsp_d[rownames(use_vars), ]
+use_fric = fric_d[rownames(use_vars),]
+
+# order by largest difference
+ordered_vars = rownames(use_fric)[order(use_fric$std.all)]
 use_allsp = use_allsp[ordered_vars,]
 use_fric = use_fric[ordered_vars,]
 
+myrange = c(-.3,.9)
 # Comparing direct effects on richness and fric
-svg('./Figures/Standardized direct effects on Fric vs richness.svg', height=13, width=19)
+svg('./Figures/Standardized direct effects on Fric vs richness nopol.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, data=use_allsp, 
 	xlab=list('Standardized Direct Effect',cex=3), ylab='',
-	main='',cex.lab=3,aspect=9/10, xlim=c(-.2,.2),
+	main='',cex.lab=3,aspect=9/10, xlim=myrange,
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
-			col='white', border='grey50')
+		shading = myshade[predtypes[ordered_vars, 'mode']]
+		shading[is.na(shading)]<- '99'
+		panel.rect(myrange[1]-0.1,1:length(ordered_vars)-.5, myrange[2]+0.1, 1:length(ordered_vars)+.5,
+			col=paste(mycols[predtypes[ordered_vars,'scale']], shading, sep=''), border='grey50')
+	
+		# Add horizontal boxes
+		#panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
+		#	col='white', border='grey50')
 
 		# Add vertical line at 0
 		panel.abline(v=0, col='grey30', lty=2, lwd=2)		
@@ -1828,6 +1902,10 @@ dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, 
 	
 		# Add text labeling the variable type
 		panel.text(-.19, y, labels=mytypes[use_allsp$type], cex=2)
+
+		# Add text labeling the variable type
+		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
+		panel.text(-.24, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 

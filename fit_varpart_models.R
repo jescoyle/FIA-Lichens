@@ -70,22 +70,30 @@ abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit) # Doesn't
 abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_data_fit)
 abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
 
-AIC(abun_pois_log, abun_nb_log, abun_gaus_iden) 
+AIC(abun_pois_log, abun_nb_log, abun_gaus_iden, abun_gaus_log) 
+
+# calculate correlation coef for abundance
+abun_mod=glm.nb(richness~abun_log, link='log', data=use_data_test)
+summary(abun_mod)
+r.squaredLR(abun_mod)
 
 use_x = seq(min(use_data$abun_log), max(use_data$abun_log), length.out=100)
 pois_y = predict(abun_pois_log, list(abun_log=use_x), type='response')
 gauslog_y = predict(abun_gaus_log, list(abun_log=use_x), type='response')
 gausiden_y = predict(abun_gaus_iden, list(abun_log=use_x), type='response')
+nblog_y = predict(abun_nb_log, list(abun_log=use_x), type='response')
 
 plot(richness~abun_log, data=use_data_fit)
 lines(use_x, pois_y, col='red', lwd=2)
 lines(use_x, gauslog_y, col='blue', lwd=2)
 lines(use_x, gausiden_y, col='green', lwd=2)
+lines(use_x, nblog_y, col='yellow', lwd=2)
 
 plot(log10(richness)~abun_log, data=use_data_fit, ylim=c(0,2))
 lines(use_x, log10(pois_y), col='red', lwd=2)
 lines(use_x, log10(gauslog_y), col='blue', lwd=2)
 lines(use_x, log10(gausiden_y), col='green', lwd=2)
+lines(use_x, log10(nblog_y), col='yellow', lwd=2)
 
 ## Test gaussian, Poisson, NB for regS
 pois_log = glm(richness~reg, family=poisson(link='log'), data=use_data_fit)
