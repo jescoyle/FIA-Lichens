@@ -379,32 +379,32 @@ path_nopol = "
 ## Read in tables of parameter estimates and effects
 # All parameter estimares
 allsp_ests = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_parameterEstimates.csv')
-#parm_ests = read.csv('./SEM models/finalmod_Parm_testdata_parameterEstimates.csv')
-#phys_ests = read.csv('./SEM models/finalmod_Phys_testdata_parameterEstimates.csv')
+parm_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_parameterEstimates.csv')
+phys_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_parameterEstimates.csv')
 #raoq_ests = read.csv('./SEM models/finalmod_RaoQ_testdata_parameterEstimates.csv')
 noabun_ests = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_parameterEstimates.csv')
 reg2rich_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
 
 # Total effects
 allsp = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-#parm = read.csv('./SEM models/finalmod_Parm_testdata_totaleffects.csv', row.names=1)
-#phys = read.csv('./SEM models/finalmod_Phys_testdata_totaleffects.csv', row.names=1)
+parm = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_totaleffects.csv', row.names=1)
+phys = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_totaleffects.csv', row.names=1)
 #raoq = read.csv('./SEM models/finalmod_RaoQ_testdata_totaleffects.csv', row.names=1)
-fric = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_totaleffects.csv', row.names=1)
+fric = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_totaleffects.csv', row.names=1)
 reg2 = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-noabun = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+noabun = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 
 # Direct effects
 allsp_d = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-parm_d = read.csv('./SEM models/No Pollution/nopol_Parm_testdata_directeffects_richness.csv', row.names=1)
-phys_d = read.csv('./SEM models/No Pollution/nopol_Phys_testdata_directeffects_richness.csv', row.names=1)
-fric_d = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
+parm_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_directeffects_richness.csv', row.names=1)
+phys_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_directeffects_richness.csv', row.names=1)
+fric_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
 #raoq_d = read.csv('./SEM models/finalmod_RaoQ_testdata_directeffects_richness.csv', row.names=1)
 reg2_d = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-noabun_d = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 
 # Direct effect on abundance
-allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
+#allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
 #parm_da = read.csv('./SEM models/finalmod_Parm_testdata_directeffects_abundance.csv', row.names=1)
 #phys_da = read.csv('./SEM models/finalmod_Phys_testdata_directeffects_abundance.csv', row.names=1)
 
@@ -414,25 +414,25 @@ reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_dir
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#parm_i = read.csv('./SEM models/finalmod_Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#phys_i = read.csv('./SEM models/finalmod_Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
-fric_i = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
+parm_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
+phys_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
+fric_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
 #raoq_i = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
 # Indirect effects of regional scale predictors
 allsp_ir = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
-#parm_ir = read.csv('./SEM models/finalmod_Parm_testdata_regionalvars_indirecteffects.csv')
-#phys_ir = read.csv('./SEM models/finalmod_Phys_testdata_regionalvars_indirecteffects.csv')
-fric_ir = read.csv('./SEM models/No Pollution/nopol_Fric_testdata_regionalvars_indirecteffects.csv')
+parm_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_regionalvars_indirecteffects.csv')
+phys_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_regionalvars_indirecteffects.csv')
+fric_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_regionalvars_indirecteffects.csv')
 #raoq_ir = read.csv('./SEM models/finalmod_RaoQ_testdata_regionalvars_indirecteffects.csv')
 reg2_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 
 # Indirect effects via forest structure
 allsp_if = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_forest.csv')
-#parm_if = read.csv('./SEM models/finalmod_Parm_testdata_indirecteffects_via_forest.csv')
-#phys_if = read.csv('./SEM models/finalmod_Phys_testdata_indirecteffects_via_forest.csv')
-#fric_if = read.csv('./SEM models/finalmod_Fric_testdata_indirecteffects_via_forest.csv')
+parm_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_indirecteffects_via_forest.csv')
+phys_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_indirecteffects_via_forest.csv')
+fric_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indirecteffects_via_forest.csv')
 #raoq_if = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_forest.csv')
 
 # Indirect effects via local pollution
@@ -460,12 +460,12 @@ tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
 
 # How many local-scale predictors have significant direct effects on local richness?
-dir_sig = allsp_d[which(apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = reg2_d[which(apply(reg2_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
 predtypes[rownames(dir_sig),]
 
 # How many regional-scale predictors have significant direct effects on regional richness?
-dir_sig = allsp_dr[which(apply(allsp_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = reg2_dr[which(apply(reg2_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
 predtypes[rownames(dir_sig),]
 
@@ -484,25 +484,6 @@ dir_sig = data.frame(AllSp = apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 
 colSums(dir_sig)
 
 allsp_d[order(abs(allsp_d$std.all)),]
-
-# Examine order of effects among forest structure variables
-allsp_f = subset(allsp, type %in% c('FH','FM'))
-allsp_df = subset(allsp_d, type %in% c('FH','FM'))
-
-allsp_f[order(abs(allsp_f$std.all)),]
-allsp_df[order(abs(allsp_df$std.all)),]
-
-
-parm_f = subset(parm, type %in% c('FH','FM'))
-parm_df = subset(parm_d, type %in% c('FH','FM'))
-parm_f[order(abs(parm_f$std.all)),]
-parm_df[order(abs(parm_df$std.all)),]
-
-phys_f = subset(phys, type %in% c('FH','FM'))
-phys_df = subset(phys_d, type %in% c('FH','FM'))
-phys_f[order(abs(phys_f$std.all)),]
-phys_df[order(abs(phys_df$std.all)),]
-
 
 
 
@@ -711,7 +692,7 @@ finalmod_fit = sem(path_finalmod, data=working_data_fit, fixed.x=T, estimator='M
 nopol_fit = sem(path_nopol, data=working_data_fit, fixed.x=T, estimator='ML', se='robust.sem')
 
 # Assess model fit
-examine_mod = nopol_fit 
+examine_mod = regTorich_nopol_fit 
 
 summary(examine_mod, standardized=T, rsq=TRUE, fit.measures=T)
 fitMeasures(examine_mod)
@@ -727,7 +708,7 @@ resdf = data.frame(residual=res[res_order],
 	var1=matrix(rownames(res), nrow=nrow(res), ncol=ncol(res))[res_order],
 	var2=matrix(colnames(res), nrow=nrow(res), ncol=ncol(res), byrow=T)[res_order])
 
-subset(resdf, abs(residual)>0.1)
+subset(resdf, abs(residual)>0.1)[]
 subset(resdf, var1=='lichen.rich_log')
 subset(resdf, var1=='regS')
 
@@ -742,22 +723,26 @@ corrplot(cortab, method='square', type='upper', diag=F,
 dev.off()
 
 # What are the residuals? Obs - Exp covariances
-obscov = inspectSampleCov(path_noabun_nopol, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
+obscov = inspectSampleCov(path_regTorich_nopol, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
 modcov = fitted(examine_mod)$cov 
 covdiff =  obscov - modcov 
+solid = abs(covdiff)>0.1
+mypch = c(1,16)
+color = 
 
-svg('./Figures/nopol noabun covariance residuals.svg', height=6, width=6)
+
+svg('./Figures/nopol regTorich covariance residuals.svg', height=6, width=6)
 plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
-	ylab='Model Covariances', las=1)
+	ylab='Model Covariances', las=1, pch = mypch[solid[covdiff!=0]+1])
 abline(0,1)
 abline(h=0,v=0)
-points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=16, col=2, cex=1.5)
-points(obscov['regS',], modcov['regS',], pch=16, col='blue', cex=1.1)
+points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=mypch[solid['lichen.rich_log',]+1], col=2, cex=1.5)
+points(obscov['regS',], modcov['regS',], pch=mypch[solid['regS',]+1], col='blue', cex=1.1)
 legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
 	pch=16, pt.cex=c(1.5,1.1), bty='n')
 #points(obscov[c('totalNS','totalNS_reg'),], modcov[c('totalNS','totalNS_reg'),], pch=16, col='green', cex=1)
 #legend('bottomright', 'Pollution', col='green', pch=16, bty='n')
-mtext('No Abundance Model', 3, 0.5) 
+#mtext('No Abundance Model', 3, 0.5) 
 dev.off()
 
 cbind(obscov['lichen.rich_log',], modcov['lichen.rich_log',])
@@ -1847,28 +1832,32 @@ dev.off()
 ## Functional Richness
 
 ## A table comparing direct effects of local variables on species richness vs functional richness
-allsp_d$sig = apply(allsp_d[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
+reg2_d$sig = apply(reg2_d[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 fric_d$sig = apply(fric_d[,c('std.ci.lower','std.ci.upper')], 1, prod)>0
 use_cols = c('std.all','std.se','sig')
-compare_tab = cbind(predictor=varnames[rownames(allsp_d),'midName'],
-	allsp_d[,use_cols], fric_d[rownames(allsp_d),use_cols])
+compare_tab = cbind(predictor=varnames[rownames(reg2_d),'midName'],
+	reg2_d[,use_cols], fric_d[rownames(reg2_d),use_cols])
 compare_tab[order(compare_tab[,2], decreasing=T),]
 
 use_vars = subset(predtypes, scale=='local' & label!='' & type%in%c('env','forest','abundance'))
 use_vars = use_vars[-grep('soil', rownames(use_vars)),]
 
-use_allsp = allsp_d[rownames(use_vars), ]
+use_reg2 = reg2_d[rownames(use_vars), ]
 use_fric = fric_d[rownames(use_vars),]
 
 # order by largest difference
-ordered_vars = rownames(use_fric)[order(use_fric$std.all)]
-use_allsp = use_allsp[ordered_vars,]
+ordered_vars = rownames(use_fric)[order(abs(use_fric$std.all) - abs(use_reg2$std.all))]
+
+
+order(abs(use_fric$std.all - use_reg2$std.all)*ifelse(abs(use_fric$std.all)>abs(use_reg2$std.all), 1, -1))]
+use_reg2 = use_reg2[ordered_vars,]
 use_fric = use_fric[ordered_vars,]
 
 myrange = c(-.3,.9)
+
 # Comparing direct effects on richness and fric
-svg('./Figures/Standardized direct effects on Fric vs richness nopol.svg', height=13, width=19)
-dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, data=use_allsp, 
+svg('./Figures/Standardized direct effects on Fric vs richness regTorich nopol.svg', height=13, width=19)
+dotplot(as.numeric(factor(rownames(use_reg2), levels = ordered_vars))~std.all, data=use_reg2, 
 	xlab=list('Standardized Direct Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
 	panel=function(x,y){
@@ -1894,8 +1883,8 @@ dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, 
 		panel.points(use_fric$std.all, y+myadj, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
 		
 		# Add null distribution segments for richness
-		panel.segments(use_allsp$std.ci.lower, y,
-			use_allsp$std.ci.upper, y, 
+		panel.segments(use_reg2$std.ci.lower, y,
+			use_reg2$std.ci.upper, y, 
 			col='black', lwd=4.5, lend=1)
 		# Add points for total estimated effects
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
@@ -1918,6 +1907,7 @@ dotplot(as.numeric(factor(rownames(use_allsp), levels = ordered_vars))~std.all, 
 dev.off()
 
 
+order(abs(use_fric$std.all) - abs(use_reg2$std.all))
 
 
 

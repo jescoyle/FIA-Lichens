@@ -65,7 +65,7 @@ AIC(gaus_iden_mod, gaus_log_mod, pois_log_mod, nb_log_mod)
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs for abundance
 abun_pois_log = glm(richness~abun_log, family=poisson(link='log'), data=use_data_fit)
 #abun_pois_iden = glm(richness~abun_log, family=poisson(link='identity'), start=rep(1,2), data=use_data_fit) 
-abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit) # Doesn't fit b/c data is basically Poisson distributed
+abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit) 
 #abun_nb_iden = glm.nb(richness~abun_log, link='identity', init.theta=1, data=use_data_fit)
 abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_data_fit)
 abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
