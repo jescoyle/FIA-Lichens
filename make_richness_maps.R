@@ -1,7 +1,7 @@
 # This script create maps of lichen richness in plots used in the analysis.
 
 
-source('load_data.R')
+source('C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 
 
 #######################################################################
@@ -41,7 +41,7 @@ coordinates(sp_data) = c('LON','LAT')
 proj4string(sp_data) = CRS("+proj=longlat")
 sp_data = spTransform(sp_data, CRS(plot_prj))
 
-pdf('./Figures/New Coordinates/Map lichen richness white.pdf', height=8, width=12)
+pdf('./Figures/Map lichen richness white.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
 colcuts = c(1,4,8,11,15,19,22,26,29,33,37) #c(1,2,3,4,5,7,8,9,10,11,13) #c(1,3,6,9,11,14,17,19,22,25,28)  
 spplot(sp_data, 'lichen.rich', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
@@ -54,7 +54,7 @@ key=list(x=1,y=.3, corner=c(1,.5), title='Species\nRichness',
 )
 dev.off()
 
-pdf('./Figures/New Coordinates/Map lichen richness with forest.pdf', height=8, width=12)
+pdf('./Figures/Map lichen richness with forest.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
 spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 	panel=function(x,y,z,subscripts,...){
@@ -69,7 +69,7 @@ spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 dev.off()
 
 colcuts =  c(1,3,6,9,11,14,17,19,22,25,28)  #c(1,2,3,4,5,7,8,9,10,11,13) 
-pdf('./Figures/New Coordinates/Map Parmeliaceae richness with forest.pdf', height=8, width=12)
+pdf('./Figures/Map Parmeliaceae richness with forest.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
 spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 	panel=function(x,y,z,subscripts,...){
@@ -82,4 +82,20 @@ spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 		text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
 )
 dev.off()
+
+## regional richness
+mycolramp100 = colorRampPalette(mycol)(100)
+
+pdf('./Figures/Map regional lichen richness white.pdf', height=8, width=12)
+trellis.par.set(axis.line=list(col=NA))
+colcuts = seq(120,220,10)  
+spplot(sp_data, 'regS', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
+	sp.polygons(OUTLINES.laea, fill='white')
+	panel.pointsplot(x,y,...)
+}, cuts=100, cex=1.5, col.regions = mycolramp100, auto.key=F)
+
+dev.off()
+
+
+
 
