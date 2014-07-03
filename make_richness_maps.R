@@ -90,9 +90,13 @@ pdf('./Figures/Map regional lichen richness white.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
 colcuts = seq(120,220,10)  
 spplot(sp_data, 'regS', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
-	sp.polygons(OUTLINES.laea, fill='white')
-	panel.pointsplot(x,y,...)
-}, cuts=100, cex=1.5, col.regions = mycolramp100, auto.key=F)
+		sp.polygons(OUTLINES.laea, fill='white')
+		panel.pointsplot(x,y,...)
+	}, cuts=100, cex=1.5, col.regions = mycolramp100, auto.key=F,
+	key=list(x=1,y=.3, corner=c(1,.5), title='Species\nRichness',
+		rectangles=list(col=mycolramp, size=3, border='transparent'),
+		text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
+)
 
 dev.off()
 
