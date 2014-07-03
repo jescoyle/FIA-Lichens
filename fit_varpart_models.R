@@ -4,8 +4,13 @@
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
-save.image('varpart_analysis.Rdata')
+#save.image('varpart_analysis.Rdata')
 load('varpart_analysis.Rdata')
+
+# Color ramp
+mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
+mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
+mycol = mycol[10:1]
 
 ###################################################################################
 ### Variation Partitioning among climate, forest, regional richness, and pollution
@@ -58,8 +63,8 @@ nb_log_mod = glm.nb(richness~., link='log', data=use_data_fit[,c('richness',use_
 gaus_log_mod = glm(richness~., family=gaussian(link='log'), data=use_data_fit[,c('richness',use_vars)])
 gaus_iden_mod = glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
 
-AIC(gaus_iden_mod, gaus_log_mod, pois_log_mod, nb_log_mod)
-# nb_log mod wins by far for lichen richness
+AIC(gaus_iden_mod, pois_log_mod, nb_log_mod) #gaus_log_mod,
+# nb_log mod wins by far for lichen richness, Parmeliaceae, Physcaceae
 # gaus_iden wins by far for fric, can't use nb or pois b/c not integer.
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs for abundance
@@ -70,10 +75,15 @@ abun_nb_log = glm.nb(richness~abun_log, link='log', data=use_data_fit)
 abun_gaus_log = glm(richness~abun_log, family=gaussian(link='log'), data=use_data_fit)
 abun_gaus_iden = glm(richness~abun_log, family=gaussian(link='identity'), data=use_data_fit)
 
-AIC(abun_pois_log, abun_nb_log, abun_gaus_iden, abun_gaus_log) 
+AIC(abun_pois_log, abun_nb_log, abun_gaus_iden) #, abun_gaus_log
 
-# calculate correlation coef for abundance
+# calculate correlation coef for abundance for AllSp and Parm
 abun_mod=glm.nb(richness~abun_log, link='log', data=use_data_test)
+summary(abun_mod)
+r.squaredLR(abun_mod)
+
+# calculate correlation coef for abundance for Phys
+abun_mod=glm(richness~abun_log, family=poisson(link='log'), data=use_data_test)
 summary(abun_mod)
 r.squaredLR(abun_mod)
 
@@ -106,6 +116,7 @@ gaus_iden = glm(richness~reg, family=gaussian(link='identity'), data=use_data_fi
 summary(gaus_iden)
 
 AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_iden) # Ended up using nb_log for consistency with other variables
+AIC(pois_log, nb_log, gaus_iden)
 
 # Plot nb_log and nb_iden
 use_x = seq(0, max(use_data$reg), length.out=200)
@@ -148,7 +159,7 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','line_theta','line_theta_SE',
 	'quad_int','quad_slope','quad_sq','quad_theta','quad_theta_SE','N')
 
-write.csv(unimods, 'univariate_models_AllSp.csv', row.names=T)
+write.csv(unimods, 'univariate_models_Phys.csv', row.names=T)
 
 
 # For functional diversity
@@ -211,7 +222,7 @@ unimods_reg = data.frame(t(unimods_reg))
 names(unimods_reg) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','quad_int','quad_slope','quad_sq','N')
 
-write.csv(unimods_reg, 'univariate_models_regS_AllSp.csv', row.names=T)
+write.csv(unimods_reg, 'univariate_models_regS_Phys.csv', row.names=T)
 
 
 ## Make a chart of linear vs quadratic and concavity
@@ -242,12 +253,20 @@ modcompare_reg = modcompare_reg[order(modcompare_reg$scale, modcompare_reg$mode,
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
 write.csv(modcompare_reg, 'Univariate model shapes of regS.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes fric.csv', row.names=T)
-write.csv(modcompare, 'Univariate model shapes GLM-NB Parm.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes GLM-NB Phys.csv', row.names=T)
+write.csv(modcompare_reg, 'Univariate model shapes of regS Phys.csv', row.names=T)
 
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
 modcompare_reg = read.csv('Univariate model shapes of regS.csv', row.names=1)
 modcompare = read.csv('Univariate model shapes fric.csv', row.names=1)
+modcompare = read.csv('Univariate model shapes GLM-NB Phys.csv', row.names=1)
+modcompare_reg = read.csv('Univariate model shapes of regS Phys.csv', row.names=1)
+
+
+## Calculate r for local ~ regional richness and richness~abundance
+cor(use_data_test$richness,use_data_test$reg)
+cor(use_data_test$richness,use_data_test$abun_log)
+
 
 # Plotting some models
 mod2 = glm.nb(richness~wetness+I(wetness^2), data=use_data_fit)
@@ -439,7 +458,7 @@ barwide=1.5
 use_shade = c('FF','55','99','CC')
 use_color = c('#2415B0','#00BF32','#126A71')
 
-svg('./Figures/variation partitioning figure.svg', height=5, width=10)
+svg('./Figures/variation partitioning figure phys.svg', height=5, width=10)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -495,6 +514,119 @@ svg('./Figures/variation partitioning figure.svg', height=5, width=10)
 	text(c(0,2,4),1.05, c('A','B','C'), cex=2, adj=c(0,0))
 	par(xpd=F)
 dev.off()
+
+
+## Plot local-regional varition partitioning without climate variables.
+svg('./Figures/variation partitioning local-regional no climate.svg', height=5, width=4)
+	par(mar=c(0,6,1.5,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,2), ylim=c(0,1), axes=F, ylab='', xlab='', type='n', cex.lab=2)
+	
+	## Background bars
+	rect(0,0,barwide,1,col='white', lwd=3)
+
+	## Local-Regional Model
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(noclimate_partition[1]), lwd=3, col=paste(use_color[1],use_shade[4],sep=''))
+	# Add rectangle for second component
+	rect(0,sum(noclimate_partition[1:2]), barwide,sum(noclimate_partition[1:3]), lwd=3, col=paste(use_color[2],use_shade[4],sep=''))
+	# Add rectangle for overlap
+	rect(0,noclimate_partition[1],barwide,sum(noclimate_partition[1:2]), lwd=3, col=paste(use_color[3],use_shade[4],sep=''))
+
+	## Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	mtext('Variation Explained', 2, 4, cex=2)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(noclimate_partition[0:(x-1)])+noclimate_partition[x]/2)
+	text(barwide/2, lablocs, labels=names(noclimate_partition)[1:4], cex=2)
+
+dev.off()
+
+###################################################################
+### Interaction between regional environment and local control of local richness
+
+## How does regional heterogeneity affect regional control of local richness?
+reghet_vars = rownames(subset(predtypes, scale=='regional'&mode=='het'&label!=''&type=='env'))
+
+fullmod = glm.nb(richness~mat_reg_var*reg + iso_reg_var*reg + 
+	pseas_reg_var*reg + wetness_reg_var*reg + rain_lowRH_reg_var*reg +
+	regS_tree*reg, data = use_data_test, link='log')
+
+# Using PCA of heterogeneity variables
+reghet_pca  = prcomp(use_data[,reghet_vars], center=T, scale=T)
+reghet_pc1 = predict(reghet_pca)[,'PC1']
+reghet_pc1 = reghet_pc1[rownames(use_data_test)]
+
+pcamod = glm.nb(richness~reg*reghet_pc1, data=use_data_test)
+
+# Plot local-regional richness colored by regional heterogeneity PC1
+colorvec = mycol[cut(reghet_pc1, 10, include.lowest=T)]
+
+plot(richness~reg, data=use_data_test, pch=16, col=colorvec)
+
+
+## How does regional heterogeneity affect local control of local richness
+
+use_modstring = paste('richness', paste(paste(localvars, '*reghet_pc1', sep=''), collapse='+'), sep='~')
+
+## Opposite interaction for regional heterogeneity on strength of local filters?
+reghetloc_mod = glm.nb(use_modstring, data=use_data_test, link='log')
+cbind(coef(reghetloc_mod)[c(2,4:21)], coef(reghetloc_mod)[22:40], coef(summary(reghetloc_mod))[22:40,4])
+
+# Probably should only do this for local scale variables that have significant effects.
+# Decide using sem?
+use_locvars = c('pseas','wetness','bark_moist_pct.rao.ba','PIE.ba.tree','wood_SG.ba','light.mean','PC1')
+
+interactionmods = sapply(use_locvars, function(x){
+	
+	# Define non-NA observations
+	use_obs = rownames(use_data_test)[!is.na(use_data_test[,x])]
+	
+	# By default uses log link function, so coefficients are on log scale
+	linear_mod = glm.nb(use_data_test[use_obs,'richness']~use_data_test[use_obs,x]*reghet_pc1[use_obs])
+	#quad_mod = glm.nb(use_data_fit[use_obs,'richness']~use_data_fit[use_obs,x]+I(use_data_fit[use_obs,x]^2))
+	null_mod = glm.nb(richness~1, data=use_data_test[use_obs,])	
+
+	linear_sum = summary(linear_mod)$coefficients
+	#quad_sum = summary(quad_mod)$coefficients
+
+	c(AIC(linear_mod),
+		r.squaredLR(linear_mod, null=null_mod),
+		coef(linear_mod),linear_sum[2:4,4],linear_mod$theta, linear_mod$SE.theta,
+		length(use_obs)
+	)
+})
+
+interactionmods = data.frame(t(interactionmods))
+names(interactionmods) = c('AIC_line','R2_line',
+	'line_int','line_slope','line_heteffect','line_interaction',
+	'line_slope_P','line_heteffect_P','line_interaction_P',
+	'line_theta','line_theta_SE','N')
+
+
+
+
+reghetloc_mod = glm.nb(richness~wetness*reghet_pc1 + pseas*reghet_pc1 + PIE.ba.tree*reghet_pc1 + 
+	bark_moist_pct.rao.ba*reghet_pc1 + wood_SG.ba*reghet_pc1 + light.mean*reghet_pc1 + 
+	PC1*reghet_pc1, data=use_data_test, link='log')
+
+
+
+
+## Negative interaction between regional heterogeneity and local abundance?
+
+reghetabun_mod = glm.nb(richness~abun_log*reghet_pc1, data=use_data_test)
+reghetregS_mod = glm.nb(richness~abun_log*reg, data=use_data_test)
+
+
+
+
+
+
+
+
 
 
 
