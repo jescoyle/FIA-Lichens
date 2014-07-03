@@ -164,6 +164,24 @@ plot(master$LON, master$LAT, cex=.7,
 )
 
 
+## NOTE: in the code above solar irradiance (W/m2) is summed rather than solar irradiation (J/m2).
+## To get actual isolation/irradiation we need to multiply by the time-step used to integrate: 30 min = 1800 sec.
+## Therefore radiation values should be multiplied by 1800 to get total annual insolation in J / m2.
+## This quantity can then be divided by 3.6 E 6 to get insolation in kWh / m2 (for comparison).
+## Since all values are multiplied by a constant, models will not be affected because variables were standardized prior to inclusion.
+
+
+## Range in insolation at plots:
+use_plots = rownames(working_data)
+range(master[use_plots, 'radiation'])*1800/3600000
+
+
+
+
+
+
+
+
 
 
 

@@ -36,6 +36,8 @@ for(i in rownames(siteXsp)){
 names(tot_abun) = rownames(siteXsp)
 
 
+
+# We are no longer using this calculation of abundance.
 # NOTE: 1/24/2014 Actually this is the abundance that has been used in all of the analyses.
 # Old calculation based on exponentiating abundance classes
 tot_abun_exp = apply(siteXsp, 1, function(x){

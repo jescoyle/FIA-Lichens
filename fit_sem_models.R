@@ -382,7 +382,7 @@ allsp_ests = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_parameterE
 parm_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_parameterEstimates.csv')
 phys_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_parameterEstimates.csv')
 #raoq_ests = read.csv('./SEM models/finalmod_RaoQ_testdata_parameterEstimates.csv')
-noabun_ests = read.csv('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_parameterEstimates.csv')
+noabun_ests = read.csv('./SEM models/No Pollution/noabun_regToRich_nopol_AllSp_testdata_parameterEstimates.csv')
 reg2rich_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
 
 # Total effects
@@ -411,6 +411,7 @@ noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_test
 # Direct effects on regional richness
 allsp_dr = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+noabun_dr = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
@@ -481,6 +482,12 @@ data.frame(AllSp = allsp$std.all,
 dir_sig = data.frame(AllSp = apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
 	Parm = apply(parm_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
 	Phys = apply(phys_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
+colSums(dir_sig)
+
+# Compare significance of direct effects on regional richness across taxa
+dir_sig = data.frame(AllSp = apply(allsp_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Parm = apply(parm_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Phys = apply(phys_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
 colSums(dir_sig)
 
 allsp_d[order(abs(allsp_d$std.all)),]
@@ -728,16 +735,17 @@ modcov = fitted(examine_mod)$cov
 covdiff =  obscov - modcov 
 solid = abs(covdiff)>0.1
 mypch = c(1,16)
-color = 
 
+richVar = 'Phys_log'#'lichen.rich_log'
+regVar = 'regPhys'#'regS'
 
-svg('./Figures/nopol regTorich covariance residuals.svg', height=6, width=6)
+svg('./Figures/nopol regTorich covariance residuals Physciaceae.svg', height=6, width=6)
 plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
 	ylab='Model Covariances', las=1, pch = mypch[solid[covdiff!=0]+1])
 abline(0,1)
 abline(h=0,v=0)
-points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=mypch[solid['lichen.rich_log',]+1], col=2, cex=1.5)
-points(obscov['regS',], modcov['regS',], pch=mypch[solid['regS',]+1], col='blue', cex=1.1)
+points(obscov[richVar,], modcov[richVar,], pch=mypch[solid[richVar,]+1], col=2, cex=1.5)
+points(obscov[regVar,], modcov[regVar,], pch=mypch[solid[regVar,]+1], col='blue', cex=1.1)
 legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
 	pch=16, pt.cex=c(1.5,1.1), bty='n')
 #points(obscov[c('totalNS','totalNS_reg'),], modcov[c('totalNS','totalNS_reg'),], pch=16, col='green', cex=1)
@@ -863,9 +871,9 @@ anova(regTorich_nopol_fit, nopol_fit)
 # Make df of total effects including direct effects of regS and abundance
 
 # Order variables from lowest to highest total effects
-total = allsp # This changes based on what response variable is being analyzed
+total = noabun # This changes based on what response variable is being analyzed
 total = rbind(total, allsp_d[c('regS','tot_abun_log'),])
-#total = rbind(total, noabun_d['regS',])
+total = rbind(total, noabun_d['regS',])
 
 ordered_vars = rownames(total[order(total$std.all),])
 
@@ -897,7 +905,7 @@ mytypes = expression('C','F','P','','') # symbols used in plot to denote variabl
 names(mytypes)=c('C','F','P','R','A')
 
 # Make plot
-svg('./Figures/Standardized total effects on AllSp richness noabun nopol.svg', height=20, width=19)
+svg('./Figures/Standardized total effects on AllSp richness noabun nopol regTorich.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/3, xlim=myrange,
@@ -933,7 +941,7 @@ dev.off()
 ### Direct effects on regional richness
 
 # Define data set to use
-direct_reg = reg2_dr
+direct_reg = noabun_dr
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct_reg[order(direct_reg$std.all),])
@@ -951,7 +959,7 @@ mytypes = expression('C','F','P','','') # symbols used in plot to denote variabl
 names(mytypes)=c('C','F','P','R','A')
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol.svg', height=9, width=19)
+svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol noabun.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=4/5, xlim=myrange,
@@ -986,9 +994,10 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = reg2_d
+direct = noabun_d
 indirect = reg2_i
 direct = direct[c(rownames(indirect),'tot_abun_log'),]
+direct = direct[rownames(indirect),] # Use for plotting noabun model
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct[order(direct$std.all),])
@@ -1004,7 +1013,7 @@ myrange[1] = -.34
 jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp richness regTorich nopol.svg', height=13, width=19)
+svg('./Figures/Standardized direct effects on AllSp richness regTorich nopol noabun.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
@@ -1909,6 +1918,43 @@ dev.off()
 
 order(abs(use_fric$std.all) - abs(use_reg2$std.all))
 
+
+######################################################################
+### Effect of removing abundance from model
+
+
+## Plot total effects of No Abundance model vs Direct Regional Paths model (Reg2Rich)
+
+# Make sure tables are in same order
+rownames(noabun) == rownames(reg2)
+noabun = noabun[rownames(reg2),]
+
+
+plot(reg2$std.all, noabun$std.all, xlim=c(-1.3,1.3), ylim=c(-1.3,1.3))
+abline(0,1)
+abline(h=0,v=0)
+
+use_x = reg2
+use_y = noabun
+
+use_vars = rownames(use_x)[abs(use_x$std.all - use_y$std.all) > 0.1]
+use_x = use_x[use_vars,]
+use_y = use_y[use_vars,]
+
+par(mar=c(4,4,1,1))
+plot(use_x$std.all, use_y$std.all, type='n', 
+	xlim=c(-.7, 1.4), ylim=c(-.7,1.4), las=1, ylab='Total Effect (No Abundance)',
+	xlab='Total Effect (Direct Regional Paths)', cex.axis=1, cex.lab=1)
+abline(h=0,v=0)
+abline(0,1)
+abline(0,-1)
+arrows(use_x$std.ci.lower, use_y$std.all,
+	use_x$std.ci.upper, use_y$std.all,
+	code=3, angle=90, lwd=2, length=0.05)
+arrows(use_x$std.all, use_y$std.ci.lower,
+	use_x$std.all, use_y$std.ci.upper,
+	code=3, angle=90, lwd=2, length=0.05)
+points(use_x$std.all, use_y$std.all)#
 
 
 
