@@ -234,10 +234,10 @@ highhet = quantile(reghet_pc1, 0.75)
 medhet = median(reghet_pc1)
 
 
-svg('./Figures/univariate models 2-panel.svg', height=7, width=4)
+svg('./Figures/univariate models 2-panel.svg', height=7, width=5)
 
 par(mfrow=c(2,1))
-par(mar=c(4,4,1.5,1))
+par(mar=c(4,4,1.5,6))
 par(mgp=c(2.4,0.7,0))
 par(cex.axis=1.2)
 par(cex.lab=1.2)
@@ -249,7 +249,7 @@ par(las=1)
 # Both richness and abundance are log(x+1) transformed
 plot(log(lichen.rich+1)~tot_abun_log, data=trans_data_test,
 	xlab='Ln( Abundance + 1 )', ylab='Ln( Species Richness + 1 )', 
-	las=1, xlim=c(0,7), col='#00000050', lwd=2)		
+	las=1, xlim=c(0,7), col='#00000050', lwd=2, pch=1)		
 use_mod = glm.nb(lichen.rich~tot_abun_log, data=trans_data_test, link='log')
 use_coef = coef(use_mod)
 use_min = max(min(trans_data_test$tot_abun_log),-use_coef[1]/use_coef[2])
@@ -265,27 +265,48 @@ mtext('A',3,adj=0,line=0, font=2, cex=2)
 
 
 # Regional richness with heterogeneity interaction
+#par(lend=1)
+#plot(lichen.rich~regS, data=trans_data_test,
+#	xlab='Regional Species Richness', ylab='Local Species Richness', 
+#	las=1, xlim=c(125,205), ylim=c(0,40),
+#	col='#00000050', lwd=2, axes=F)
+#axis(1, at=seq(125,200,25))
+#axis(2)
+#box()
+#use_mod = glm.nb(lichen.rich~regS*reghet_pc1, data=trans_data_test, link='log')
+#use_coef = coef(use_mod)
+#use_x = seq(min(trans_data_test$regS), max(trans_data_test$regS), length.out=100)
+#use_ylow = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*lowhet+use_coef[4]*lowhet*use_x) 
+#use_yhigh = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*highhet+use_coef[4]*highhet*use_x) 
+#use_ymed = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*0+use_coef[4]*0*use_x) 
+#lines(use_x, use_ylow, lwd=5, col='white')
+#lines(use_x, use_ymed, lwd=5, col='white')
+#lines(use_x, use_yhigh, lwd=5, col='black')
+#lines(use_x, use_ylow, lwd=4, col='black', lty=2)
+#lines(use_x, use_ymed, lwd=4, col='black')
+#lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
 
-par(lend=1)
+# Regional richness with heterogeneity colored
+mycolbw = c('grey80','black')
+colorvecbw = colorRampPalette(mycolbw)(100)[cut(reghet_pc1, 100, include.lowest=T)]
 plot(lichen.rich~regS, data=trans_data_test,
 	xlab='Regional Species Richness', ylab='Local Species Richness', 
 	las=1, xlim=c(125,205), ylim=c(0,40),
-	col='#00000050', lwd=2, axes=F)
+	col=colorvecbw, lwd=2, axes=F)
 axis(1, at=seq(125,200,25))
 axis(2)
 box()
-use_mod = glm.nb(lichen.rich~regS*reghet_pc1, data=trans_data_test, link='log')
+use_mod = glm.nb(lichen.rich~regS, data=trans_data_test, link='log')
 use_coef = coef(use_mod)
 use_x = seq(min(trans_data_test$regS), max(trans_data_test$regS), length.out=100)
-use_ylow = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*lowhet+use_coef[4]*lowhet*use_x) 
-use_yhigh = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*highhet+use_coef[4]*highhet*use_x) 
-use_ymed = exp(use_coef[1]+use_coef[2]*use_x+use_coef[3]*0+use_coef[4]*0*use_x) 
-lines(use_x, use_ylow, lwd=5, col='white')
-lines(use_x, use_ymed, lwd=5, col='white')
-lines(use_x, use_yhigh, lwd=5, col='black')
-lines(use_x, use_ylow, lwd=4, col='black', lty=2)
-lines(use_x, use_ymed, lwd=4, col='black')
-lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+use_y = exp(use_coef[1]+use_coef[2]*use_x) 
+lines(use_x, use_y, lwd=4, col='black')
+
+usr = par('usr')
+plotColorRamp(cols = mycolbw, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(-2.5,3.5,.5), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
+	mycex=1)
+
 
 r2 = r.squaredLR(glm.nb(lichen.rich~regS, data=trans_data_test, link='log'), null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
 r2 = attr(r2, 'adj.r.squared')
