@@ -563,8 +563,16 @@ pcamod = glm.nb(richness~reg*reghet_pc1, data=use_data_test)
 
 # Plot local-regional richness colored by regional heterogeneity PC1
 colorvec = mycol[cut(reghet_pc1, 10, include.lowest=T)]
+mycolbw = c('grey80','black')
+colorvecbw = colorRampPalette(mycolbw)(100)[cut(reghet_pc1, 100, include.lowest=T)]
 
-plot(richness~reg, data=use_data_test, pch=16, col=colorvec)
+par(mar=c(5,5,1,6))
+plot(richness~reg, data=use_data_test, pch=16, col=colorvecbw)
+
+usr = par('usr')
+plotColorRamp(cols = mycolbw, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(-2.5,3.5,.5), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)')
+
 
 
 ## How does regional heterogeneity affect local control of local richness
