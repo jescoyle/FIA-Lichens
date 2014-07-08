@@ -129,13 +129,20 @@ polyfunc = function(x,a){
 # barends : location of whole bar c(xleft, ybottom, xright, ytop)
 # labels    : vector of labels for bar, assumes 1st and last numbers correspond to 1st and last colors
 # title   : title to print above bar
-plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneven.lab = F, labrange = NA){
+# mycex   : size of label and title text
+# uneven.lab : TRUE when numeric labels are not evenly spaced along length of color bar
+# labrange : use when uneven.lab=T to specify minimum and maximum values of color range c(min, max)
+# ndig    : number of digits beyond decimal placeto print for numeric labels 
+plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneven.lab = F, labrange = NA, ndig=1){
 	dX = barends[3] - barends[1]
 	dY = barends[4] - barends[2]
 	dy = dY/n
 	
 	xpd.old = par('xpd')
 	par(xpd=T)
+
+	lend.old = par('lend')
+	par(lend=1)
 
 	usecols = colorRampPalette(cols)(n)
 
@@ -145,6 +152,7 @@ plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneve
 
 	if(!is.na(labels)){
 		if(is.numeric(labels)){
+			labels.round = format(round(labels, ndig), nsmall=ndig)
 
 			if(uneven.lab){
 				dz = dY/diff(labrange)
@@ -155,9 +163,10 @@ plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneve
 				Yposition = barends[2] + dz*(labels-labels[1])
 			}
 
-			text(barends[3]+dX*0.5, Yposition, round(labels,2), pos=4, cex=mycex)
+			text(barends[3]+dX*0.5, Yposition, labels.round, pos=4, cex=mycex)
 
 		} else {
+			labels.round = labels
 			dz = dY/length(labels)
 			Yposition = barends[2] + dz*(0:(length(labels)-1))
 
@@ -167,19 +176,19 @@ plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneve
 		segments(barends[3], Yposition, barends[3]+dX*0.5, Yposition)	
 	}
 	if(!is.na(title)){
-		labels.round = round(labels, 2)
+		
 		
 		## Determine how many characters away to place title
-		digits = max(nchar(round(labels, 2))) # Maximum number of digits in a label
+		digits = max(nchar(labels.round)) # Maximum number of digits in a label
 		largest = labels.round[which(nchar(labels.round)==digits)] # Which labels are longest
-		no.decimal = sum(largest == floor(largest))>0 # Does one largest label lack a decimal?
-			if(!no.decimal) digits = digits-0.6 # Discount the size of the largest label by 0.6 a character
-		no.negative = sum(largest >= 0)>0 # Does one largest label lack a negative sign?
-			if(!no.negative) digits = digits-0.6 # Discount the size of the largest label by 0.6 a character
+		
+		small.chars = grep('[-.]', largest) # Does the largest label have a small character?
+			if(length(small.chars)==length(largest)) digits = digits-0.6 # Discount the size of the largest label by 0.6 a character
 		
 		text(barends[3]+dX*0.5+par('cxy')[1]*mycex*(digits+.5), barends[2]+0.5*dY, labels=title, srt=-90, cex=mycex)
 	}
 	par(xpd=xpd.old)
+	par(lend=lend.old)
 }
 
 

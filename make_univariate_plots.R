@@ -10,6 +10,17 @@ library(MASS) # glm.nb
 ##############################################################################
 ### Make Univariate plots
 
+# Make dataframe used for plotting
+trans_data_test = trans_data[testplots$yrplot.id,]
+
+# Read in table of predictor variable types
+predtypes = read.csv('predictors.csv', row.names=1)
+
+# Read in blue-red color ramp
+mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
+mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
+mycol = mycol[10:1]
+
 # Read in a list of state codes categorized by regions
 regions = read.csv('fia_lichen_regions.csv', row.names=1)
 
@@ -95,7 +106,7 @@ dev.off()
 
 ### Black and White figures for 4 or 6-panel figure
 ### Does not automatically fit best model- need to know ahead of time.
-trans_data_test = trans_data[testplots$yrplot.id,]
+
 
 svg('./Figures/univariate models 4-panel.svg', height=7, width=8)
 
@@ -226,7 +237,7 @@ dev.off()
 
 ## Two panels- richness (with regional heterogeneity interaction) and abundance
 reghet_vars = rownames(subset(predtypes, scale=='regional'&mode=='het'&label!=''&type=='env'))
-reghet_pca  = prcomp(use_data[,reghet_vars], center=T, scale=T)
+reghet_pca  = prcomp(trans_data[,reghet_vars], center=T, scale=T)
 reghet_pc1 = predict(reghet_pca)[,'PC1']
 reghet_pc1 = reghet_pc1[rownames(trans_data_test)]
 lowhet = quantile(reghet_pc1, 0.25)
@@ -234,16 +245,18 @@ highhet = quantile(reghet_pc1, 0.75)
 medhet = median(reghet_pc1)
 
 
-svg('./Figures/univariate models 2-panel.svg', height=7, width=5)
+svg('./Figures/univariate models 2-panel color.svg', height=7, width=4.8)
+text.cex = 1.2
 
 par(mfrow=c(2,1))
 par(mar=c(4,4,1.5,6))
 par(mgp=c(2.4,0.7,0))
-par(cex.axis=1.2)
-par(cex.lab=1.2)
+par(cex.axis=text.cex)
+par(cex.lab=text.cex)
 par(pch=1)
 par(cex=1)
 par(las=1)
+par(lend=1)
 
 # Abundance
 # Both richness and abundance are log(x+1) transformed
@@ -287,12 +300,14 @@ mtext('A',3,adj=0,line=0, font=2, cex=2)
 #lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
 
 # Regional richness with heterogeneity colored
-mycolbw = c('grey80','black')
+mycolbw = c('grey90','black')
 colorvecbw = colorRampPalette(mycolbw)(100)[cut(reghet_pc1, 100, include.lowest=T)]
+colorvec = colorRampPalette(mycol)(100)[cut(reghet_pc1, 100, include.lowest=T)]
+
 plot(lichen.rich~regS, data=trans_data_test,
 	xlab='Regional Species Richness', ylab='Local Species Richness', 
 	las=1, xlim=c(125,205), ylim=c(0,40),
-	col=colorvecbw, lwd=2, axes=F)
+	col=colorvec, lwd=2, axes=F)
 axis(1, at=seq(125,200,25))
 axis(2)
 box()
@@ -303,9 +318,9 @@ use_y = exp(use_coef[1]+use_coef[2]*use_x)
 lines(use_x, use_y, lwd=4, col='black')
 
 usr = par('usr')
-plotColorRamp(cols = mycolbw, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
-	labels = seq(-2.5,3.5,.5), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
-	mycex=1)
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(-2,3,1), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
+	mycex=text.cex, ndig=1)
 
 
 r2 = r.squaredLR(glm.nb(lichen.rich~regS, data=trans_data_test, link='log'), null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
