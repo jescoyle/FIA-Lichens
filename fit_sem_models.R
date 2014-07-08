@@ -1059,6 +1059,63 @@ dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all,
 )
 dev.off()
 
+
+
+
+
+### Indirect effects via abundance on local richness
+
+# Define datasets to use
+indirect = reg2_i
+
+# Order variables from lowest to highest direct effects
+ordered_vars = rownames(indirect[order(indirect$std.all),])
+
+# Put tables in same order
+use_indirect = indirect[ordered_vars,]
+
+# Define range limits that will include 95% confidence intervals
+myrange = range(use_indirect[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
+myrange[1] = -.34
+
+jitter = 0
+
+# Make plot
+svg('./Figures/Standardized indirect effects on AllSp richness regTorich nopol.svg', height=13, width=19)
+dotplot(as.numeric(factor(rownames(use_indirect), levels = ordered_vars))~std.all, data=use_indirect, 
+	xlab=list('Standardized Effect',cex=3), ylab='',
+	main='',cex.lab=3,aspect=5/4, xlim=myrange,
+	panel=function(x,y){
+	
+		# Add horizontal boxes
+		combos = predtypes[ordered_vars, c('mode','scale')]
+		colororder = apply(combos, 1, function(x) mycols[x[1],x[2]])
+
+		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
+			col=colororder, border='grey50')
+
+		# Add vertical line at 0
+		panel.abline(v=c(-.2,0,.2), col='grey30', lty=2, lwd=2)		
+		
+		# Add null distribution segments for indirect effects
+		panel.segments(use_indirect$std.ci.lower, y-jitter,
+			use_indirect$std.ci.upper, y-jitter, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for indirect estimated effects
+		panel.points(use_indirect$std.all, y-jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+
+		# Add text labeling the variable type
+		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
+		panel.text(myrange[1]+.03, y, labels=mytypes[vartypes], cex=2)
+		
+	},
+	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
+		cex=3, col='black'),
+		x=list(cex=3, tick.number=8))
+)
+dev.off()
+
+
 ###########################################
 ### Are total effects at regional scale larger than total effects at local scale?
 cvars = c('wetness','rain_lowRH','pseas','iso','mat')
