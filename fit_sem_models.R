@@ -886,10 +886,11 @@ library(lattice)
 myrange = range(use_total[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
 myrange[1] = -1 #-.8
 
-# Color scheme: http://colorschemedesigner.com/#3341SsYrGvyw0
-mycols = c('#2415B0','#00BF32')
+# Color scheme
+mycols = matrix(c('#b3b5ffff','#6b6dd7ff','#8dff94ff','#38af4fff'), nrow=2)
 mycolsbw = c('grey80','white')
-names(mycols) = c('regional','local')
+colnames(mycols) = c('regional','local')
+rownames(mycols) = c('het','opt')
 names(mycolsbw) = c('regional','local')
 mycols_trans = paste(mycols, '50', sep='')
 names(mycols_trans) = c('regional','local')
@@ -904,7 +905,7 @@ names(myshade) = c('het','opt','')
 mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
 names(mytypes)=c('C','F','P','R','A')
 
-# Make plot
+# Make plot - need to fix to conform with new mycols matrix.
 svg('./Figures/Standardized total effects on AllSp richness noabun nopol regTorich.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
@@ -953,12 +954,12 @@ use_df = direct_reg[ordered_vars,]
 myrange = range(use_df[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
 myrange[1] = -1.8
 
-myshade = c('55','99','')
-names(myshade) = c('het','opt','')
+#myshade = c('55','99','')
+#names(myshade) = c('het','opt','')
 mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
 names(mytypes)=c('C','F','P','R','A')
 
-# Make plot
+# Make plot - need to fix to conform with new mycols matrix 
 svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol noabun.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
@@ -994,10 +995,10 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = noabun_d
+direct = reg2_d
 indirect = reg2_i
 direct = direct[c(rownames(indirect),'tot_abun_log'),]
-direct = direct[rownames(indirect),] # Use for plotting noabun model
+#direct = direct[rownames(indirect),] # Use for plotting noabun model
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct[order(direct$std.all),])
@@ -1007,41 +1008,43 @@ use_direct = direct[ordered_vars,]
 use_indirect = indirect[ordered_vars,]
 
 # Define range limits that will include 95% confidence intervals
-myrange = range(use_direct[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
+myrange = range(rbind(use_direct,use_indirect)[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
 myrange[1] = -.34
 
 jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp richness regTorich nopol noabun.svg', height=13, width=19)
+svg('./Figures/Standardized direct and indirect effects on AllSp richness regTorich nopol.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		shading = myshade[predtypes[ordered_vars, 'mode']]
-		shading[is.na(shading)]<- '99'
-		panel.rect(myrange[1]-0.1,1:length(ordered_vars)-.5, myrange[2]+0.1, 1:length(ordered_vars)+.5,
-			col=paste(mycols[predtypes[ordered_vars,'scale']], shading, sep=''), border='grey50')
+		combos = predtypes[ordered_vars, c('mode','scale')]
+		colororder = apply(combos, 1, function(x) mycols[x[1],x[2]])
+
+		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
+			col=colororder, border='grey50')
 
 		# Add vertical line at 0
 		panel.abline(v=c(-.2,0,.2), col='grey30', lty=2, lwd=2)		
 		
+		# Add null distribution segments for indirect effects
+		panel.segments(use_indirect$std.ci.lower, y-jitter,
+			use_indirect$std.ci.upper, y-jitter, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for indirect estimated effects
+		panel.points(use_indirect$std.all, y-jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+
 		# Add null distribution segments for direct effects
 		panel.segments(use_direct$std.ci.lower, y+jitter,
 			use_direct$std.ci.upper, y+jitter, 
 			col='black', lwd=4.5, lend=1)
 		# Add points for direct estimated effects
 		panel.points(x, y+jitter, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
-
-		# Add null distribution segments for indirect effects
-		#panel.segments(use_indirect$std.ci.lower, y-jitter,
-		#	use_indirect$std.ci.upper, y-jitter, 
-		#	col='black', lwd=4.5, lend=1)
-		# Add points for indirect estimated effects
-		#panel.points(use_indirect$std.all, y-jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
 	
+
 		# Add text labeling the variable type
 		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
 		panel.text(myrange[1]+.03, y, labels=mytypes[vartypes], cex=2)
@@ -1049,10 +1052,10 @@ dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all,
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
 		cex=3, col='black'),
-		x=list(cex=3, tick.number=8))#,
-	#key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
-	#	text=list(c('Direct Effect','Indirect Effect')),
-	#	background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
+		x=list(cex=3, tick.number=8)),
+	key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
+		text=list(c('Direct Effect','Indirect Effect')),
+		background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
 )
 dev.off()
 
