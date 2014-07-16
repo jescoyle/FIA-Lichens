@@ -336,6 +336,21 @@ local_regional_partition = partvar2(Rs)
 
 full_mod = glm.nb(richness~., data=use_data_test[,c('richness',unlist(predlist))], link='log')
 
+# For variation partitioning with soil vars
+use_plots = !is.na(use_data_test$soilPC1)
+region_mod = glm.nb(richness~., data=use_data_test[use_plots,c('richness', regionvars, paste(sq_vars[sq_vars %in% regionvars],2,sep=''))])
+local_mod = glm.nb(richness~., data=use_data_test[use_plots,c('richness', localvars, paste(sq_vars[sq_vars %in% localvars],2,sep=''))])
+null_mod = glm.nb(richness~1, link='log', data=use_data_test[use_plots,])
+predlist = list(Regional=names(region_mod$coefficients[-1]),
+	Local=names(local_mod$coefficients[-1])
+)
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_test[use_plots,c('richness',use_vars)], link='log')
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
+
 ## Local-regional partitioning without climate variables (which may inflate joint variation explained)
 
 climatevars = rownames(use_preds)[grep('mat|iso|pseas|wetness|rain|totalNS', rownames(use_preds))]
@@ -366,7 +381,6 @@ apply(combos(2)$ragged, 1, function(x){
 names(Rs) = names(predlist)
 
 noclimate_partition = partvar2(Rs)
-
 
 ### Variation Partitioning by Heterogeneity / Optimality ###
 
@@ -432,6 +446,19 @@ apply(combos(2)$ragged, 1, function(x){
 names(Rs) = names(predlist)
 
 local_het_opt_partition = partvar2(Rs)
+
+# For variation partitioning with soil vars
+LH_mod = glm.nb(richness~., data=use_data_test[use_plots, c('richness', LHvars, paste(sq_vars[sq_vars %in% LHvars],2,sep=''))])
+LO_mod = glm.nb(richness~., data=use_data_test[use_plots, c('richness', LOvars, paste(sq_vars[sq_vars %in% LOvars],2,sep=''))])
+predlist = list(Heterogeneity=names(LH_mod$coefficients[-1]),
+	Optimality=names(LO_mod$coefficients[-1])
+)
+apply(combos(2)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_test[use_plots,c('richness',use_vars)], link='log')
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
 
 
 ### Variation partitioning for Fric ###
@@ -514,6 +541,63 @@ svg('./Figures/variation partitioning figure phys.svg', height=5, width=10)
 	text(c(0,2,4),1.05, c('A','B','C'), cex=2, adj=c(0,0))
 	par(xpd=F)
 dev.off()
+
+
+## Plot variation partioning analysis for models with soil variables
+## models fit to 291 plots in testing data set with soil data
+barwide=1.5
+mycols = matrix(c('#b3b5ffff','#6b6dd7ff','#8dff94ff','#38af4fff'), nrow=2)
+colnames(mycols) = c('regional','local')
+rownames(mycols) = c('het','opt')
+
+
+svg('./Figures/variation partitioning figure soil.svg', height=5, width=8)
+	par(mar=c(0,6,1.5,0))
+
+	# Create plotting window
+	plot(1,1, xlim=c(0,3.5), ylim=c(0,1), axes=F, ylab='', xlab='', type='n', cex.lab=2)
+	
+	## Add background lines
+	usr = par('usr')
+	abline(h=seq(0,1,.1), lwd=2, col='grey70', lty=3)	
+
+	## Background bars
+	rect(0,0,barwide,1,col='white', lwd=3)	
+	rect(2,0,2+barwide,1,col='white', lwd=3)
+
+	## Local-Regional Model
+	# Add rectangle for first component
+	rect(0,0,barwide, sum(local_regional_partition[1]), lwd=3, col=mycols['opt','regional'])
+	# Add rectangle for second component
+	rect(0,sum(local_regional_partition[1:2]), barwide,sum(local_regional_partition[1:3]), lwd=3, col=mycols['opt','local'])
+	# Add rectangle for overlap
+	rect(0,local_regional_partition[1],barwide,sum(local_regional_partition[1:2]), lwd=3, col='#116870cc')
+
+	## Local Heterogeneity-Optimality
+	# Add rectangle for first component
+	rect(2,0,2+barwide, sum(local_het_opt_partition[1]), lwd=3, col=mycols['het','local'])
+	# Add rectangle for second component
+	rect(2,sum(local_het_opt_partition[1:2]), 2+barwide,sum(local_het_opt_partition[1:3]), lwd=3, col=mycols['opt','local'])
+	# Add rectangle for overlap
+	rect(2,local_het_opt_partition[1], 2+barwide,sum(local_het_opt_partition[1:2]), lwd=3, col='#00bd30cc')
+
+	## Add axis
+	axis(2, las=1, cex.axis=2, lwd=3)
+	mtext('Variation Explained', 2, 4, cex=2)
+	
+	# Add partition labels
+	lablocs = sapply(1:4, function(x) sum(local_regional_partition[0:(x-1)])+local_regional_partition[x]/2)
+	text(barwide/2, lablocs, labels=names(local_regional_partition)[1:4], cex=2)
+	lablocs = sapply(1:4, function(x) sum(local_het_opt_partition[0:(x-1)])+local_het_opt_partition[x]/2)
+	text(2+barwide/2, lablocs, labels=names(local_het_opt_partition)[1:4], cex=2)
+	
+	# Add panel text A, B
+	par(xpd=T)
+	text(c(0,2),1.05, c('A','B'), cex=2, adj=c(0,0))
+	par(xpd=F)
+dev.off()
+
+
 
 
 ## Plot local-regional varition partitioning without climate variables.
@@ -630,10 +714,82 @@ reghetregS_mod = glm.nb(richness~abun_log*reg, data=use_data_test)
 
 
 
+## Does regional richness env heterogeneity interaction result from pollution differences between east vs west?
+
+plot(totalNS~totalNS_reg, data=use_data_test)
+
+west = master[rownames(use_data_test),'LON'] < -100
 
 
+## Pollution may alter local-regional richness relationships
+svg('./Figures/pollution and reg het effect on local-regional richness.svg', height=6, width=7)
+text.cex=1.2
+
+par(mfrow=c(2,2))
+par(las=1)
+par(lend=1)
+par(cex.axis=text.cex)
+par(cex.lab=text.cex)
+par(mgp=c(2.4,0.7,0))
+
+# color by regional heterogeneity
+colorvec = mycol[cut(reghet_pc1, 10, include.lowest=T)]
+par(mar=c(2,7,3,2))
+plot(richness~reg, data=use_data_test[west,], pch=16, col=colorvec[west], xlim=c(120,210), ylim=c(0,40), 
+	axes=F, xlab='', ylab='Local Species Richness')
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+mtext('West',3,font=1, cex=text.cex, line=.5)
+
+par(mar=c(2,1,3,8))
+plot(richness~reg, data=use_data_test[!west,], pch=16, col=colorvec[!west], xlim=c(120,210), ylim=c(0,40),
+	axes=F, xlab='', ylab='')
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+mtext('East',3,font=1, cex=text.cex, line=.5)
+
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(-2,3,1), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
+	mycex=text.cex)
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+
+# color by local pollution
+colorvec = mycol[cut(master[rownames(use_data_test),'totalNS'], breaks=seq(0,1000,100), include.lowest=T)]
+par(mar=c(4,7,1,2))
+plot(richness~reg, data=use_data_test[west,], pch=16, col=colorvec[west], xlim=c(120,210), ylim=c(0,40),
+	axes=F, xlab='Regional Species Richness', ylab='Local Species Richness')
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+
+par(mar=c(4,1,1,8))
+plot(richness~reg, data=use_data_test[!west,], pch=16, col=colorvec[!west], xlim=c(120,210), ylim=c(0,40),
+	axes=F, xlab='Regional Species Richness', ylab='')
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(0,1000,200), ndig=0, title='Total N+S Deposition (eq/ha)',
+	mycex=text.cex)
+axis(1, at=seq(125,200,25))
+axis(2)
+box()
+
+dev.off()
+
+polmod1 = glm.nb(richness~reg*totalNS, data=use_data_test)
+polmod2 = glm.nb(richness~reg*reghet_pc1+totalNS, data=use_data_test)
 
 
+colorvec = mycol[cut(master[rownames(use_data_test),'totalNS'], breaks=seq(0,1000,100), include.lowest=T)]
+plot(reg~reghet_pc1, data=use_data_test, pch=16, col=colorvec, ylim=c(120,210),
+	axes=T, xlab='Regional Heterogeneity', ylab='Regional Species Richness')
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(0,1000,100), ndig=0, title='Total N+S Deposition (eq/ha)')
 
 
 

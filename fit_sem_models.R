@@ -384,6 +384,7 @@ phys_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_pa
 #raoq_ests = read.csv('./SEM models/finalmod_RaoQ_testdata_parameterEstimates.csv')
 noabun_ests = read.csv('./SEM models/No Pollution/noabun_regToRich_nopol_AllSp_testdata_parameterEstimates.csv')
 reg2rich_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
+soil_ests = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
 
 # Total effects
 allsp = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
@@ -393,6 +394,8 @@ phys = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_totalef
 fric = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_totaleffects.csv', row.names=1)
 reg2 = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 noabun = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+soil = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+
 
 # Direct effects
 allsp_d = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
@@ -402,6 +405,7 @@ fric_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_direc
 #raoq_d = read.csv('./SEM models/finalmod_RaoQ_testdata_directeffects_richness.csv', row.names=1)
 reg2_d = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+soil_d = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 
 # Direct effect on abundance
 #allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
@@ -412,6 +416,7 @@ noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_test
 allsp_dr = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 noabun_dr = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+soil_dr = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
@@ -420,6 +425,7 @@ phys_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_indir
 fric_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
 #raoq_i = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+soil_i = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
 # Indirect effects of regional scale predictors
 allsp_ir = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
@@ -428,6 +434,8 @@ phys_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_regi
 fric_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_regionalvars_indirecteffects.csv')
 #raoq_ir = read.csv('./SEM models/finalmod_RaoQ_testdata_regionalvars_indirecteffects.csv')
 reg2_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+noabun_ir = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+soil_ir = read.csv('./SEM models/No Pollution/soil_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 
 # Indirect effects via forest structure
 allsp_if = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_forest.csv')
@@ -451,19 +459,29 @@ names(which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(parm[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(phys[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
+names(which(apply(soil[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+tot_sig = soil[which(apply(soil[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
 
 predtypes[rownames(tot_sig),]
 
-tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
-tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
-
 # How many local-scale predictors have significant direct effects on local richness?
 dir_sig = reg2_d[which(apply(reg2_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = soil_d[which(apply(soil_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+
 dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
 predtypes[rownames(dir_sig),]
+
+# How many local-scale predictors have significant indirect effects on local richness?
+indir_sig = reg2_i[which(apply(reg2_i[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+indir_sig = soil_i[which(apply(soil_i[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+
+indir_sig = indir_sig[order(abs(indir_sig$std.all)),]
+predtypes[rownames(indir_sig),]
 
 # How many regional-scale predictors have significant direct effects on regional richness?
 dir_sig = reg2_dr[which(apply(reg2_dr[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
@@ -492,6 +510,11 @@ colSums(dir_sig)
 
 allsp_d[order(abs(allsp_d$std.all)),]
 
+# Compare significance of total effects between model with and without abundance
+rownames(reg2)==rownames(noabun)
+tot_sig = data.frame(Reg2_sig = apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	NoAbun_sig = apply(noabun[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
+data.frame(predictor = rownames(reg2), Reg2 = reg2$std.all, NoAbun = noabun$std.all, tot_sig)
 
 
 #################################################################################
@@ -871,8 +894,8 @@ anova(regTorich_nopol_fit, nopol_fit)
 # Make df of total effects including direct effects of regS and abundance
 
 # Order variables from lowest to highest total effects
-total = noabun # This changes based on what response variable is being analyzed
-total = rbind(total, allsp_d[c('regS','tot_abun_log'),])
+total = soil # This changes based on what response variable is being analyzed
+total = rbind(total, soil_d[c('regS','tot_abun_log'),])
 total = rbind(total, noabun_d['regS',])
 
 ordered_vars = rownames(total[order(total$std.all),])
@@ -892,31 +915,33 @@ mycolsbw = c('grey80','white')
 colnames(mycols) = c('regional','local')
 rownames(mycols) = c('het','opt')
 names(mycolsbw) = c('regional','local')
-mycols_trans = paste(mycols, '50', sep='')
-names(mycols_trans) = c('regional','local')
-plot(1:length(mycols),1:length(mycols), type='n'); text(1:length(mycols),1:length(mycols),labels=names(mycols), cex=2, col=mycols) # Check colors
+#mycols_trans = paste(mycols, '50', sep='')
+#names(mycols_trans) = c('regional','local')
+#plot(1:length(mycols),1:length(mycols), type='n'); text(1:length(mycols),1:length(mycols),labels=names(mycols), cex=2, col=mycols) # Check colors
 mypcols = c('white','grey30')
 mypch = c(22,23)
 myadj=.15
 #mytypes = expression('C'['H'],'C'['O'],'F'['H'],'F'['O'],'P','','') # symbols used in plot to denote variable types
 #names(mytypes)=c('CH','CM','FH','FM','P','R','A')
-myshade = c('55','99','')
-names(myshade) = c('het','opt','')
+#myshade = c('55','99','')
+#names(myshade) = c('het','opt','')
 mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
 names(mytypes)=c('C','F','P','R','A')
 
-# Make plot - need to fix to conform with new mycols matrix.
-svg('./Figures/Standardized total effects on AllSp richness noabun nopol regTorich.svg', height=20, width=19)
+# Make plot
+svg('./Figures/Standardized total effects on AllSp richness soilmod nopol regTorich.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/3, xlim=myrange,
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		shading = myshade[predtypes[ordered_vars, 'mode']]
-		shading[is.na(shading)]<- '99'
-		panel.rect(myrange[1]-0.1,1:length(ordered_vars)-.5, myrange[2]+0.1, 1:length(ordered_vars)+.5,
-			col=paste(mycols[predtypes[ordered_vars,'scale']], shading, sep=''), border='grey50')
+		colorcombos = predtypes[ordered_vars, c('mode','scale')]
+		colorcombos['regS','mode'] = 'opt'
+		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
+
+		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
+			col=colororder, border='grey50')
 	
 		# Add vertical line at 0
 		panel.abline(v=c(-.2,0,.2), col='grey30', lty=2, lwd=2)		
@@ -959,7 +984,7 @@ myrange[1] = -1.8
 mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
 names(mytypes)=c('C','F','P','R','A')
 
-# Make plot - need to fix to conform with new mycols matrix 
+# Make plot
 svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol noabun.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
@@ -967,9 +992,12 @@ dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, dat
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		panel.rect(myrange[1]-0.1,1:length(ordered_vars)-.5, myrange[2]+0.1, 1:length(ordered_vars)+.5,
-			col=paste(mycols[predtypes[ordered_vars,'scale']], myshade[predtypes[ordered_vars, 'mode']], sep=''),
-			border='grey50')
+		colorcombos = predtypes[ordered_vars, c('mode','scale')]
+		colorcombos['regS','mode'] = 'opt'
+		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
+		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
+			col=colororder, border='grey50')
+	
 
 		# Add vertical line at 0
 		panel.abline(v=c(-.2,0,.2), col='grey30', lty=2, lwd=2)		
@@ -995,8 +1023,8 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = reg2_d
-indirect = reg2_i
+direct = soil_d
+indirect = soil_i
 direct = direct[c(rownames(indirect),'tot_abun_log'),]
 #direct = direct[rownames(indirect),] # Use for plotting noabun model
 
@@ -1014,15 +1042,15 @@ myrange[1] = -.34
 jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct and indirect effects on AllSp richness regTorich nopol.svg', height=13, width=19)
+svg('./Figures/Standardized direct and indirect effects on AllSp richness soilmod regTorich nopol.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		combos = predtypes[ordered_vars, c('mode','scale')]
-		colororder = apply(combos, 1, function(x) mycols[x[1],x[2]])
+		colorcombos = predtypes[ordered_vars, c('mode','scale')]
+		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
 
 		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
 			col=colororder, border='grey50')
@@ -1046,8 +1074,8 @@ dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all,
 	
 
 		# Add text labeling the variable type
-		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
-		panel.text(myrange[1]+.03, y, labels=mytypes[vartypes], cex=2)
+		#vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
+		#panel.text(myrange[1]+.03, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
@@ -1117,7 +1145,7 @@ dev.off()
 
 
 ###########################################
-### Are total effects at regional scale larger than total effects at local scale?
+### Are totaleffects at regional scale larger than total effects at local scale?
 cvars = c('wetness','rain_lowRH','pseas','iso','mat')
 
 lvars = c(cvars, 'PIE.ba.tree')
@@ -1126,27 +1154,36 @@ rvars = c(paste(cvars, 'reg_mean', sep='_'), 'regS_tree')
 # keep track of which model is currently saved as 'total'
 svg('./Figures/compare local-regional total effects regTorich nopol.svg', height=5.5, width=5.5)
 par(mar=c(5,5,1,1))
+par(lwd=2)
+par(lend=1)
+par(cex.lab=1.2)
 plot(total[lvars, 'std.all'], total[rvars, 'std.all'], 	
 	xlab='Local Effect', ylab='Regional Effect', type='n', las=1,
 	xlim=c(-1,1), ylim=c(-1,1))
 usr=par('usr')
+polygon(usr[c(1,1,2,2)],usr[c(3,4,4,3)], col='#8dff94fb')
 polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
-	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='grey80')
-abline(h=0,v=0, lwd=1, col='black')
+	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='#b3b5ffff')
+abline(h=0,v=0,lty=2, col='black')
 arrows(total[lvars,'std.ci.lower'], total[rvars,'std.all'],
-	total[lvars,'std.ci.upper'], total[rvars,'std.all'], code=3, angle=90, length=0.05)
+	total[lvars,'std.ci.upper'], total[rvars,'std.all'], col='black', code=3, angle=90, length=0.05)
 arrows(total[lvars,'std.all'], total[rvars,'std.ci.lower'],
-	total[lvars,'std.all'], total[rvars,'std.ci.upper'], code=3, angle=90, length=0.05)
+	total[lvars,'std.all'], total[rvars,'std.ci.upper'], col='black', code=3, angle=90, length=0.05)
+points(total[lvars, 'std.all'], total[rvars, 'std.all'], pch=15, col='black')
 
 # Labels for regTorich
 text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
-	pos=c(2,2,4,4,2,4), offset=1.3)
+	pos=c(2,2,4,4,2,4), offset=1.5, col='black')
 
 # Labels for finalmod
 #text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
 #	pos=c(3,2,4,3,1,4), offset=.9)
 
 dev.off()
+
+
+
+
 
 ###########################################
 ## Make table of indirect climate effects
@@ -2015,6 +2052,12 @@ arrows(use_x$std.all, use_y$std.ci.lower,
 	use_x$std.all, use_y$std.ci.upper,
 	code=3, angle=90, lwd=2, length=0.05)
 points(use_x$std.all, use_y$std.all)#
+
+
+#############################################################################
+### Soil Models Comparison
+
+
 
 
 

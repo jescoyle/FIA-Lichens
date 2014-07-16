@@ -152,7 +152,7 @@ plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneve
 
 	if(!is.na(labels)){
 		if(is.numeric(labels)){
-			labels.round = format(round(labels, ndig), nsmall=ndig)
+			labels.round = format(round(labels, ndig), nsmall=ndig, trim=F)
 
 			if(uneven.lab){
 				dz = dY/diff(labrange)
