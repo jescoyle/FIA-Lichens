@@ -84,7 +84,7 @@ path_reverse = "
 reverse_fit =  sem(path_reverse, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
 use_fit = reverse_fit
 
-mod_boot = bootstrapLavaan(use_fit, R=3, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
+mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 reverse_boot = mod_boot
 
 # Used to re-calculate tables outside of Kure
