@@ -373,8 +373,6 @@ path_nopol = "
 	light.mean ~~ PC1
 "
 
-
-
 ##################################################################
 ## Read in tables of parameter estimates and effects
 # All parameter estimares
@@ -385,6 +383,7 @@ phys_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_pa
 noabun_ests = read.csv('./SEM models/No Pollution/noabun_regToRich_nopol_AllSp_testdata_parameterEstimates.csv')
 reg2rich_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
 soil_ests = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
+rev_ests = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_parameterEstimates.csv')
 
 # Total effects
 allsp = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
@@ -395,7 +394,7 @@ fric = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_totalef
 reg2 = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 noabun = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
 soil = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-
+rev = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_totaleffects.csv', row.names=1)
 
 # Direct effects
 allsp_d = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
@@ -406,6 +405,7 @@ fric_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_direc
 reg2_d = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 soil_d = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+rev_d = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_directeffects_richness.csv', row.names=1)
 
 # Direct effect on abundance
 #allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
@@ -417,6 +417,7 @@ allsp_dr = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffect
 reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 noabun_dr = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
 soil_dr = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+rev_dr = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_directeffects_regS.csv', row.names=1)
 
 # Indirect effects via abundance
 allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
@@ -426,6 +427,7 @@ fric_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indir
 #raoq_i = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
 reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 soil_i = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+rev_i = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
 
 # Indirect effects of regional scale predictors
 allsp_ir = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
@@ -436,6 +438,7 @@ fric_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_regi
 reg2_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 noabun_ir = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
 soil_ir = read.csv('./SEM models/No Pollution/soil_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+rev_ir = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_regionalvars_indirecteffects.csv')
 
 # Indirect effects via forest structure
 allsp_if = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_forest.csv')
@@ -460,6 +463,7 @@ names(which(apply(parm[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(phys[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(soil[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
+names(which(apply(rev[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
