@@ -468,6 +468,7 @@ names(which(apply(rev[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = soil[which(apply(soil[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+tot_sig = rev[which(apply(rev[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 
 tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
 
@@ -476,6 +477,7 @@ predtypes[rownames(tot_sig),]
 # How many local-scale predictors have significant direct effects on local richness?
 dir_sig = reg2_d[which(apply(reg2_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = soil_d[which(apply(soil_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
+dir_sig = rev_d[which(apply(rev_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 
 dir_sig = dir_sig[order(abs(dir_sig$std.all)),]
 predtypes[rownames(dir_sig),]
@@ -898,9 +900,9 @@ anova(regTorich_nopol_fit, nopol_fit)
 # Make df of total effects including direct effects of regS and abundance
 
 # Order variables from lowest to highest total effects
-total = soil # This changes based on what response variable is being analyzed
-total = rbind(total, soil_d[c('regS','tot_abun_log'),])
-total = rbind(total, noabun_d['regS',])
+total = rev # This changes based on what response variable is being analyzed
+total = rbind(rev, rev_d[c('regS','tot_abun_log'),])
+#total = rbind(total, noabun_d['regS',])
 
 ordered_vars = rownames(total[order(total$std.all),])
 
@@ -933,7 +935,7 @@ mytypes = expression('C','F','P','','') # symbols used in plot to denote variabl
 names(mytypes)=c('C','F','P','R','A')
 
 # Make plot
-svg('./Figures/Standardized total effects on AllSp richness soilmod nopol regTorich.svg', height=20, width=19)
+svg('./Figures/Standardized total effects on AllSp richness reversemod nopol regTorich.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/3, xlim=myrange,
@@ -971,7 +973,7 @@ dev.off()
 ### Direct effects on regional richness
 
 # Define data set to use
-direct_reg = noabun_dr
+direct_reg = rev_dr
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct_reg[order(direct_reg$std.all),])
@@ -989,7 +991,7 @@ mytypes = expression('C','F','P','','') # symbols used in plot to denote variabl
 names(mytypes)=c('C','F','P','R','A')
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol noabun.svg', height=9, width=19)
+svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol reversemod.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=4/5, xlim=myrange,
@@ -997,7 +999,7 @@ dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, dat
 	
 		# Add horizontal boxes
 		colorcombos = predtypes[ordered_vars, c('mode','scale')]
-		colorcombos['regS','mode'] = 'opt'
+		#colorcombos['regS','mode'] = 'opt'
 		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
 		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
 			col=colororder, border='grey50')
@@ -1027,8 +1029,8 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = soil_d
-indirect = soil_i
+direct = rev_d
+indirect = rev_i
 direct = direct[c(rownames(indirect),'tot_abun_log'),]
 #direct = direct[rownames(indirect),] # Use for plotting noabun model
 
@@ -1046,7 +1048,7 @@ myrange[1] = -.34
 jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct and indirect effects on AllSp richness soilmod regTorich nopol.svg', height=13, width=19)
+svg('./Figures/Standardized direct and indirect effects on AllSp richness reversemod regTorich nopol.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
@@ -1156,7 +1158,7 @@ lvars = c(cvars, 'PIE.ba.tree')
 rvars = c(paste(cvars, 'reg_mean', sep='_'), 'regS_tree')
 
 # keep track of which model is currently saved as 'total'
-svg('./Figures/compare local-regional total effects regTorich nopol.svg', height=5.5, width=5.5)
+svg('./Figures/compare local-regional total effects regTorich nopol reversemod.svg', height=5.5, width=5.5)
 par(mar=c(5,5,1,1))
 par(lwd=2)
 par(lend=1)
@@ -1220,8 +1222,8 @@ climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','
 write.csv(climReg_IE_tab, 'Indirect regional climate effects nopol.csv', row.names=F)
 
 # Table for regTorich model which includes direct effect
-indirect_ir = reg2_ir
-direct = reg2_d
+indirect_ir = rev_ir
+direct = rev_d
 
 order_clim = c('wetness','rain_lowRH','pseas','mat','iso','radiation')
 order_clim_reg = c(paste(order_clim[1:5],'reg_mean', sep='_'), paste(order_clim[1:5], 'reg_var', sep='_'), 'regS_tree')
@@ -1248,7 +1250,7 @@ climReg_IE_tab = merge(climReg_IE_tab, sub_vars_FH[,c('var','IEvar2','subpath_FH
 climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','dir','loc','regS','FH','subpath_FH',
 	'dir_sig','loc_sig','regS_sig','FH_sig','subFH_sig')]
 
-write.csv(climReg_IE_tab, 'Indirect regional climate effects regTorich nopol.csv', row.names=F)
+write.csv(climReg_IE_tab, 'Indirect regional climate effects regTorich nopol reversemod.csv', row.names=F)
 
 
 indirect = phys_i
@@ -1291,13 +1293,13 @@ write.csv(climEff_tab, './SEM models/Compare effects climate variables Phys.csv'
 use_vars = subset(predtypes, scale=='local'&label!=''&type%in%c('env','forest'))
 use_vars = use_vars[-grep('soil', rownames(use_vars)),]
 
-use_d = reg2_d[rownames(use_vars),]
-use_i = reg2_i[rownames(use_vars),]
+use_d = rev_d[rownames(use_vars),]
+use_i = rev_i[rownames(use_vars),]
 
 mypch = c(22,23)
 mycol=c('white','grey30')
 
-svg('./Figures/compare richness abundance effects local vars regTorich.svg', height=5, width=5 )
+svg('./Figures/compare richness abundance effects local vars regTorich reversemod.svg', height=5, width=5 )
 par(mar=c(4,4,1,1))
 plot(use_d$std.all, use_i$std.all, type='n', 
 	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Indirect Effect via Abundance',
@@ -2060,6 +2062,26 @@ points(use_x$std.all, use_y$std.all)#
 
 #############################################################################
 ### Soil Models Comparison
+
+
+
+
+
+
+##########################################################################
+### Spatial Autocorrelation
+
+## Need to read in and fit models from cluster scripts
+
+
+# Predict values
+
+reg2_pred = predict(regTorich_nopol_fit) #This doesn't work because of a bug in lavaan 0.5-16
+
+
+
+
+
 
 
 
