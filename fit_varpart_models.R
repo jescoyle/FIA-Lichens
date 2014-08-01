@@ -18,6 +18,9 @@ mycol = mycol[10:1]
 library(hier.part) # combos
 library(MuMIn) # r.squaredLR
 library(MASS) # glm.nb
+library(spdep) # spatial autocorrelation
+library(sp) # spatial data handling
+library(ape) # Moran.I
 
 
 # Read in table of predictor variable types
@@ -336,6 +339,22 @@ local_regional_partition = partvar2(Rs)
 
 full_mod = glm.nb(richness~., data=use_data_test[,c('richness',unlist(predlist))], link='log')
 
+## Spatial autocorrelation in full model residuals of local richness?
+spdata = master[rownames(use_data_test),c('LAT','LON','lichen.rich','regS')]
+spdata$fullmod_res = resid(full_mod)
+coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
+# Generate matrix of inverse distance weights
+invdist_mat = 1/spDists(spdata, longlat=T)
+invdist_mat[is.infinite(invdist_mat)]<-0
+Moran.I(spdata$fullmod_res, invdist_mat)
+plot(spdata$lichen.rich, spdata$fullmod_res)
+
+
+# Plot residuals
+plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
+spdata_prj = spTransform(spdata, CRS(plot_prj))
+spplot(spdata_prj, 'fullmod_res')
+
 # For variation partitioning with soil vars
 use_plots = !is.na(use_data_test$soilPC1)
 region_mod = glm.nb(richness~., data=use_data_test[use_plots,c('richness', regionvars, paste(sq_vars[sq_vars %in% regionvars],2,sep=''))])
@@ -418,6 +437,11 @@ regional_het_opt_partition = partvar2(Rs)
 
 regional_full_mod = lm(reg~., data=use_data_test[,c('reg',unlist(predlist))])
 
+# Autocorrelation in regional richness
+spdata$regmod_res = resid(regional_full_mod)
+Moran.I(spdata$regmod_res, invdist_mat)
+plot(spdata$regS, spdata$regmod_res)
+spplot(spdata_prj, 'regmod_res')
 
 ## At local scale
 LHvars = rownames(subset(use_preds, scale=='local'&mode=='het'))
