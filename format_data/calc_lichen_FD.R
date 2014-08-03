@@ -190,7 +190,7 @@ traitdf = data.frame(
 		'reproduce')
 )
 
-write.csv('lias_trait_types.csv', row.names=F)
+write.csv(traitdf, 'lias_trait_types.csv', row.names=F)
 
 summary(traits[,traitdf$trait])
 
