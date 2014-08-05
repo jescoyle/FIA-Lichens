@@ -21,6 +21,7 @@ library(MASS) # glm.nb
 library(spdep) # spatial autocorrelation
 library(sp) # spatial data handling
 library(ape) # Moran.I
+library(ncf) # correlog - distance-based binning for Moran's I correlogram
 
 
 # Read in table of predictor variable types
@@ -349,6 +350,9 @@ invdist_mat[is.infinite(invdist_mat)]<-0
 Moran.I(spdata$fullmod_res, invdist_mat)
 plot(spdata$lichen.rich, spdata$fullmod_res)
 
+cg = correlog(spdata$LON, spdata$LAT, spdata$fullmod_res, latlon=T, increment=50)
+plot(cg)
+abline(h=0)
 
 # Plot residuals
 plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
