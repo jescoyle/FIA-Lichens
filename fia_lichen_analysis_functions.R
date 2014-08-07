@@ -53,44 +53,6 @@ calc.corrs.null = function(predictors, responses, data, ITERATIONS=1000, interva
 }
 
 
-## A function that partitions variation between three models
-## Assumes same set of observations and same underlying model structure
-## For some reason this function isn't working. It returns the error that it can't find dataB.
-
-partvar3 = function(modlist){
-	#require(MuMIn)
-	modA = modlist[[1]]
-	modB = modlist[[2]]
-	modC = modlist[[3]]
-
-	dataA = as.matrix(modA$model)
-	response = dataA[,1]
-	dataA = dataA[,2:ncol(dataA)]
-	dataB = as.matrix(modB$model)
-	dataB = dataB[,2:ncol(dataB)]	
-	dataC = as.matrix(modC$model)
-	dataC = dataC[,2:ncol(dataC)]
-
-	modAB = update(modA, ~.+dataB)
-	modAC = update(modA, ~.+dataC)
-	modBC = update(modB, ~.+dataC)
-	modABC = update(modAB, ~.+dataC)
-
-	mods = list(modA, modB, modC, modAB, modAC, modBC, modABC)
-	r2s = sapply(mods, r.squaredLR)
-
-	components = r2s[7]-r2s[6:4]
-	components = c(components, -(r2s[4]-r2s[1]-r2s[2]),
-		-(r2s[6]-r2s[2]-r2s[3]), -(r2s[5]-r2s[1]-r2s[3]))
-	components = c(components, -(r2s[7]-sum(components[1:6]))/2)
-	components[4:6] = components[4:6]-components[7]
-	
-	names(components) = c('A','B','C','AplusB','BplusC','AplusC','all')
-	
-	return(components)
-}
-
-
 ## A function that partitions variation between two models
 ## Must be supplied with R2 for [A, B, AB]
 partvar2 = function(R2s){
@@ -106,6 +68,20 @@ partvar2 = function(R2s){
 	this_partition
 }
 
+## A function that partitions variation between three models
+## Must be supplied with R2 for [A, B, C, AB, AC, BC, ABC]
+partvar3 = function(R2s){
+
+	setmat = rbind(c(1,0,0,1,1,0,1),
+		c(0,1,0,1,0,1,1),
+		c(0,0,1,0,1,1,1),
+		c(1,1,0,1,1,1,1),
+		c(1,0,1,1,1,1,1),
+		c(0,1,1,1,1,1,1),
+		c(1,1,1,1,1,1,1)
+	)
+	solve(setmat, R2s) #using matrix algebra
+}
 
 
 
