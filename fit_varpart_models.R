@@ -22,7 +22,8 @@ library(spdep) # spatial autocorrelation
 library(sp) # spatial data handling
 library(ape) # Moran.I
 library(ncf) # correlog - distance-based binning for Moran's I correlogram
-
+library(gstat) # variogram
+library(qpcR) # akaike.weights
 
 # Read in table of predictor variable types
 predtypes = read.csv('predictors.csv', row.names=1)
@@ -302,9 +303,34 @@ use_data = cbind(use_data, sq_df)
 
 ## Use test plots for model results:
 use_data_test = use_data[testplots$yrplot.id,]
+use_data_fit = use_data[fitplots$yrplot.id,]
 
 ##################################################
 ### Variation Partitioning by Local / Regional ###
+
+# Define spatial dataframe for spatial analysis
+spdata = master[rownames(use_data_test),c('LAT','LON','lichen.rich','regS')]
+coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
+
+# Create spatial weight matrix for eigenvector decomposition using inverse-distance weighting
+invdist_mat = 1/spDists(spdata, longlat=T)
+invdist_mat[is.infinite(invdist_mat)]<-0
+
+# Extract eigenvectors from centered spatial weight matrix (from Griffith and Chun 2014)
+B = invdist_mat
+n = nrow(B)
+M = diag(n) - matrix(1,n,n)/n
+MBM = M %*% B %*% M
+eig = eigen(MBM, symmetric=T)
+hist(eig$values/eig$values[1])
+EV = as.data.frame(eig$vectors[,eig$values/eig$values[1]>0.25]) # initial selection of candidate set of vectors 
+#EV = as.data.frame(eig$vectors) 
+colnames(EV) = paste("EV", 1:ncol(EV), sep="")
+
+# Plot candidate set of eigenvectors
+EVsp = EV; coordinates(EVsp) = coordinates(spdata); proj4string(EVsp) = CRS("+proj=longlat")
+spplot(EVsp, c('EV1', 'EV2','EV3','EV4'), col.regions=mycol, cuts=10)
+spplot(EVsp, c('EV42'), col.regions=mycol, cuts=10)
 
 # define set of predictors to be used in models
 use_preds = subset(predtypes, !(label %in% c('','r1','a1','p1','P1')))
@@ -340,16 +366,14 @@ local_regional_partition = partvar2(Rs)
 
 full_mod = glm.nb(richness~., data=use_data_test[,c('richness',unlist(predlist))], link='log')
 
-## Spatial autocorrelation in full model residuals of local richness?
-spdata = master[rownames(use_data_test),c('LAT','LON','lichen.rich','regS')]
+# Add model residuals to spatial data 
 spdata$fullmod_res = resid(full_mod)
-coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
-# Generate matrix of inverse distance weights
-invdist_mat = 1/spDists(spdata, longlat=T)
-invdist_mat[is.infinite(invdist_mat)]<-0
+
+# Calculate Moran's I based on IDW matrix
 Moran.I(spdata$fullmod_res, invdist_mat)
 plot(spdata$lichen.rich, spdata$fullmod_res)
 
+# Correlogram of residuals (long computation time!)
 cg = correlog(spdata$LON, spdata$LAT, spdata$fullmod_res, latlon=T, increment=50)
 plot(cg)
 abline(h=0)
@@ -358,6 +382,70 @@ abline(h=0)
 plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
 spdata_prj = spTransform(spdata, CRS(plot_prj))
 spplot(spdata_prj, 'fullmod_res')
+
+# Selection of eigenvectors to use in spatial variation partitioning
+# Brute-force determination of set of models with no RSA (residual spatial autocorrelation)
+env = use_data_test[,c('richness',unlist(predlist))]
+N = ncol(EV)
+models = expand.grid(lapply(1:N, function(x) 0:1))
+
+modelset = data.frame(mod=c(), AIC=c(), MC.obs=c(), MC.p = c())
+for(i in 1:10){
+	this_spat = EV[,as.logical(models[i,])]
+	this_mod = glm.nb(richness~., data=cbind(env, this_spat), link='log')
+	this_res = resid(this_mod)
+	MC = Moran.I(this_res, B)
+
+	modelset = rbind(modelset, data.frame(mod=i, AIC=AIC(this_mod), MC.obs=MC$observed, MC.p=MC$p.value))
+	i
+}
+
+save(env, EV, B, file='./SpatialAnalysis/fullmod.RData')
+# The loop above was run on Kure and the results are below
+modelset = read.csv('./SpatialAnalysis/fullmod_spatEV.csv')
+
+# models with no significant SA
+noSAset = subset(modelset, MC.p>0.05)
+
+# order by AIC
+noSAset = noSAset[order(noSAset$AIC),]
+min(modelset$AIC) # note that best model is in this set
+
+# AIC weights within this set
+AICwts = akaike.weights(noSAset$AIC)
+AICsum = sapply(1:nrow(noSAset), function(x) sum(AICwts$weights[1:x]))
+best_mods = noSAset[AICsum <= 0.9,]
+
+colSums(models[best_mods$mod,])
+models[noSAset[1:5,'mod'],]
+
+# Choose to use model 82831, has eigenvectors: 2,3,4,8,9,10,15,16
+spatmod_full = models[noSAset$mod[1],]
+
+## Variation partitioning with space
+
+# Add eigenvectors to data
+use_data_fit = cbind(use_data_fit, EV[,as.logical(spatmod_full)])
+
+# Make a list of predictors
+predlist = list(Regional=names(region_mod$coefficients[-1]),
+	Local=names(local_mod$coefficients[-1]),
+	Spatial=names(EV[,as.logical(spatmod_full)])
+)
+
+# Define null model
+null_mod = glm.nb(richness~1, link='log', data=use_data_fit)
+
+# Calculate pseudo R2 for each model containing successive subsets of variables
+apply(combos(3)$ragged, 1, function(x){
+	use_vars = unlist(predlist[x])
+	this_mod = glm.nb(richness~., data=use_data_fit[,c('richness',use_vars)], link='log')
+	r2 = r.squaredLR(this_mod, null=null_mod)
+	attr(r2, 'adj.r.squared')
+})->Rs
+
+names(Rs) = apply(combos(3)$binary, 1, function(x) paste(names(predlist)[as.logical(x)], collapse='+'))
+partvar3(Rs)
 
 # For variation partitioning with soil vars
 use_plots = !is.na(use_data_test$soilPC1)
@@ -409,14 +497,6 @@ noclimate_partition = partvar2(Rs)
 
 ## At regional scale
 
-# Assess spatial auto-correlation of regional variables
-library(gstat); library(sp)
-fitdata_sp =  use_data[fitplots$yrplot.id,]
-coordinates(fitdata_sp) = master[rownames(fitdata_sp),c('LON','LAT')]
-proj4string(fitdata_sp) = CRS("+proj=longlat")
-## THIS PART IS NOT DONE
-## MAY NEED TO REVISE MODELS TO ACCOUNT FOR SPATIAL STRUCTURE
-
 RHvars = rownames(subset(use_preds, scale=='regional'&mode=='het'))
 ROvars = rownames(subset(use_preds, scale=='regional'&mode=='opt'))
 
@@ -439,13 +519,80 @@ names(Rs) = names(predlist)
 
 regional_het_opt_partition = partvar2(Rs)
 
+env = use_data_test[,c('reg',unlist(predlist))]
 regional_full_mod = lm(reg~., data=use_data_test[,c('reg',unlist(predlist))])
 
 # Autocorrelation in regional richness
 spdata$regmod_res = resid(regional_full_mod)
 Moran.I(spdata$regmod_res, invdist_mat)
 plot(spdata$regS, spdata$regmod_res)
-spplot(spdata_prj, 'regmod_res')
+spplot(spdata, 'regmod_res', col.regions=mycol, cuts=10)
+
+EV_reg = as.data.frame(eig$vectors[,eig$values/eig$values[1]>0.035]) 
+EV_reg= data.frame(eig$vectors[,1:150])
+colnames(EV_reg) = paste("EV", 1:ncol(EV_reg), sep="")
+reg_spat = lm(reg~., data=cbind(env, EV_reg))
+Moran.I(resid(reg_spat), B)
+
+plot(regspatmod_res~regS, data=spdata)
+
+spdata$regspatmod_res = resid(reg_spat)
+spplot(spdata, c('regspatmod_res','regmod_res'), col.regions=mycol, cuts=10)
+vg = variogram(regspatmod_res~1, coordinates(spdata), data=spdata)
+plot(vg)
+
+# MCMC exploration of models
+this_vars = rep(T, ncol(EV_reg))
+this_mod = lm(reg~., data=cbind(env, EV_reg[,this_vars]))
+this_MC = Moran.I(resid(this_mod), B)$p.value
+this_AIC = AIC(this_mod)
+vartrace = data.frame(this_MC, this_AIC)
+modtrace = this_vars
+for(i in 1:10){
+	changevar = sample.int(ncol(EV_reg), 1)
+	new_vars = this_vars
+	new_vars[changevar] = ifelse(this_vars[changevar], F, T)
+	
+	this_mod = lm(reg~., data=cbind(env, EV_reg[,this_vars]))
+	this_MC = Moran.I(resid(this_mod), B)$p.value
+	this_AIC = AIC(this_mod)
+	new_mod = lm(reg~., data=cbind(env, EV_reg[,new_vars]))
+	new_MC = Moran.I(resid(new_mod), B)$p.value
+	new_AIC = AIC(new_mod)
+
+	if((new_MC>0.05)&(this_AIC-new_AIC > -2)) this_vars = new_vars
+
+	vartrace=rbind(vartrace, c(MC_p = this_MC, AIC = this_AIC))
+	modtrace= rbind(modtrace, this_vars)
+}
+
+save(EV_reg, env, B, file='./SpatialAnalysis/regmod.RData')
+# Run this on the cluster multiple times
+
+stats1 = read.csv('./SpatialAnalysis/regmodMCMC_stats-run1.csv')
+mods1 = read.csv('./SpatialAnalysis/regmodMCMC_models-run1.csv')
+plot(stats2$this_MC, stats2$this_AIC, type='p')
+plot(stats2$this_AIC, type='l')
+plot(stats2$this_MC, type='l')
+hist(colSums(mods3)/nrow(mods3))
+
+# Set of models with lowest AIC - chose based on models with cumulative weight summing to 0.9
+stats1 = stats1[order(stats1$this_AIC),]
+mods1 = mods1[order(stats1$this_AIC),]
+AICwts = akaike.weights(stats1$this_AIC)
+AICwts$weights[1:30]
+AICsum = sapply(1:nrow(stats1), function(x) sum(AICwts$weights[1:x]))
+best_mods = mods1[AICsum <= 0.9,]
+best_stats = stats1[AICsum <= 0.9,]
+plot(stats1$this_MC, stats1$this_AIC, type='p', col=c(1,2)[as.numeric(AICsum <= 0.9)+1])
+
+# Which variables are in best models?
+best_vars = colSums(best_mods)/nrow(best_mods)
+hist(best_vars)
+use_vars = best_vars>0.5
+try_mod = lm(reg~., data=cbind(env, EV_reg[,use_vars]))
+AIC(try_mod)
+Moran.I(resid(try_mod), B)
 
 ## At local scale
 LHvars = rownames(subset(use_preds, scale=='local'&mode=='het'))
@@ -474,6 +621,18 @@ apply(combos(2)$ragged, 1, function(x){
 names(Rs) = names(predlist)
 
 local_het_opt_partition = partvar2(Rs)
+
+# Spatial-autocorrelation local models
+env = use_data_test[,c('richness',unlist(predlist))]
+
+EV_loc = as.data.frame(eig$vectors[,eig$values/eig$values[1]>0.15]) 
+EV_loc= data.frame(eig$vectors[,1:43])
+colnames(EV_loc) = paste("EV", 1:ncol(EV_loc), sep="")
+loc_spat = glm.nb(richness~., data=cbind(env, EV_loc), link='log')
+Moran.I(resid(loc_spat), B)
+
+# Use script testmodels_locmod.R to use MCMC to explore model sets for best model
+save(EV_loc, env, B, file='./SpatialAnalysis/locmod.RData')
 
 # For variation partitioning with soil vars
 LH_mod = glm.nb(richness~., data=use_data_test[use_plots, c('richness', LHvars, paste(sq_vars[sq_vars %in% LHvars],2,sep=''))])
