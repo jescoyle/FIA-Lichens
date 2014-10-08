@@ -121,5 +121,32 @@ spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 dev.off()
 
 
+png('./Figures/Map lichen richness NC.png', height=800, width=1200)
+trellis.par.set(axis.line=list(col=NA))
+par(bg='transparent')
+spplot(sp_data, 'lichen.rich', ylim=c(-600,100), xlim=c(1000,2500), main='', panel=function(x,y,subscripts,...){
+	sp.polygons(OUTLINES.laea, fill='transparent')
+	panel.pointsplot(x,y,...)
+}, cuts=colcuts, cex=3, col.regions = mycolramp, auto.key=F,
+key=list(x=1,y=.5, corner=c(1,.5), title='Species\nRichness',
+	rectangles=list(col=mycolramp, size=3, border='transparent'),
+	text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
+)
+dev.off()
+
+png('./Figures/Map lichen richness NC no points.png', height=800, width=1200)
+trellis.par.set(axis.line=list(col=NA))
+par(bg='transparent')
+spplot(sp_data, 'lichen.rich', ylim=c(-600,100), xlim=c(1000,2500), main='', panel=function(x,y,subscripts,...){
+	sp.polygons(OUTLINES.laea, fill='transparent')
+	panel.pointsplot(x,y,...)
+}, cuts=colcuts, cex=1.5, col.regions = 'transparent', auto.key=F,
+key=list(x=1,y=.5, corner=c(1,.5), title='Species\nRichness',
+	rectangles=list(col=mycolramp, size=3, border='transparent'),
+	text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
+)
+dev.off()
+
+
 
 

@@ -3,9 +3,10 @@
 
 library(sp)
 library(rgdal)
+library(vegan) # rarefy
 
-#setwd('C:/Users/jrcoyle/Documents/UNC/Projects/CNALH Diversity/')
-setwd('C:/Users/jrcoyle/Documents/Projects/CNALH Diversity/')
+setwd('C:/Users/jrcoyle/Documents/UNC/Projects/CNALH Diversity/')
+#setwd('C:/Users/jrcoyle/Documents/Projects/CNALH Diversity/')
 options(stringsAsFactors=F)
 
 # Read in CNALH records
@@ -196,101 +197,101 @@ records_sp = rbind(records_sp, records_poly) # 148282 records
 # Write out record data
 write.csv(records_sp, '../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv', row.names=F)
 
-### Calculate how many species in Physciaceae and Parmeliaceae in records
-species = unique(records_sp@data[,c('family','scientificName','genus')])
-species = species[order(species$scientificName),]
+
+
+#############################################################
+### Calculate Regional Richness, All Species and Parmeliaceae/Physciaceae
+
+parmphys = read.csv('Parm_Phys_records_2014-09-20.csv')
+allsp = read.csv()
+
+# Subset to genera in FIA data
+parmphys_fia = subset(parmphys, genus %in% target_genera)
+
+# Calculate how many species in Physciaceae and Parmeliaceae in records
+species = unique(parmphys_fia[,c('family','scientificName','genus')])
 
 species = subset(species, family %in% c('Parmeliaceae','Physciaceae'))
 genera = unique(species[,c('family','genus')])
 species = unique(species[,c('family','scientificName')])
 
-table(genera$family) # 45 Parmeliaceae, 9 Physciaceae
-table(species$family) # 698 Parmeliaceae, 193 Physciaceae
+table(genera$family) # 44 Parmeliaceae, 9 Physciaceae
+table(species$family) # 937 Parmeliaceae, 243 Physciaceae
 
-### Calculate regional richness
+## Calculate regional richness for FIA plots using rarefaction
 
-# Read records back in as a dataframe
-records_sp = read.csv('../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv')
-
-
-# When calculating just richness within a family, do this subsetting
-records_sp = subset(records_sp, family=='Parmeliaceae')
+# Subset to the family of interest
+parm = subset(parmphys_fia, family=='Parmeliaceae')
+phys = subset(parmphys_fia, family=='Physciaceae')
 
 # Make records into spatial data
-coordinates(records_sp) = c('decimalLongitude','decimalLatitude')
-proj4string(records_sp) = CRS("+proj=longlat")
+parm_sp = parm
+phys_sp = phys
+coordinates(parm_sp) = c('decimalLongitude','decimalLatitude')
+proj4string(parm_sp) = CRS("+proj=longlat")
+coordinates(phys_sp) = c('decimalLongitude','decimalLatitude')
+proj4string(phys_sp) = CRS("+proj=longlat")
+
+plot(phys_sp)
 
 # Divide FIA data into plots with and without coordinates
-# I am no longer using the code for county-level data
 fia_geo = subset(master_locs, !is.na(LAT))
-fia_county = subset(master_locs, is.na(LAT))
 
-## Calculate for FIA plots with spatial coordinates
+# Calculate for FIA plots with spatial coordinates
 coordinates(fia_geo) = c('LON','LAT')
 proj4string(fia_geo) = CRS("+proj=longlat")
 
-# Calculate the number of records within various buffers
+# Determine which records will be used to calculate regional richness
+recs = parm_sp
+
+# Calculate the number of records within 500 km buffer (Could easily check other buffers)
 dist500 = c()
 for(i in 1:nrow(fia_geo)){
-	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], records_sp, 500)))
+	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], recs, 500)))
 } # min=499 all sp, min=144 Parmeliaceae, min=8 Physciaceae, but used 144 since only 26 plots with fewer than 144.
+names(dist500) = fia_geo$yrplot.id
 
-dist1000 = c()
-for(i in 1:nrow(fia_geo)){
-	dist1000 = c(dist1000, nrow(find_recs(fia_geo[i,], records_sp, 1000)))
-} # min=1865
+min(dist500) # Min num records for all FIA plots 
+# Parm = 598 Phys = 60
+min(dist500[fia_geo$yrplot.id %in% rownames(model_data)]) # Min num records for plots used in analysis
+# Parm = 886 Phys = 374
 
-dist700 = c()
-for(i in 1:nrow(fia_geo)){
-	dist700 = c(dist700, nrow(find_recs(fia_geo[i,], records_sp, 700)))
-} # min=772
 
-dist600 = c()
-for(i in 1:nrow(fia_geo)){
-	dist600 = c(dist600, nrow(find_recs(fia_geo[i,], records_sp, 600)))
-} # min=655
+## Calculate Regional Richness using rarefaction (vegan) only for plots used in analysis
+regS = data.frame(yrplot.id=rownames(model_data))
 
-dist400 = c()
-for(i in 1:nrow(fia_geo)){
-	dist400 = c(dist400, nrow(find_recs(fia_geo[i,], records_sp, 400)))
-} # min=422
+# Define size of subsample (nsamps)
+nsamp = 350
 
-dist200 = c()
-for(i in 1:nrow(fia_geo)){
-	dist200 = c(dist200, nrow(find_recs(fia_geo[i,], records_sp, 200)))
-} # min=12, but used 100
+recs = parm_sp
 
-dist100 = c()
-for(i in 1:nrow(fia_geo)){
-	dist100 = c(dist100, nrow(find_recs(fia_geo[i,], records_sp, 100)))
-} # 12 plots have no nearby records
+richness = c()
 
-dist50 = c()
-for(i in 1:nrow(fia_geo)){
-	dist50 = c(dist50, nrow(find_recs(fia_geo[i,], records_sp, 50)))
-} # Many plots have no nearby records.
-
-# Only calculate for plots that are missing regional richness data
-# This was done after the initial calculation
-#fia_geo = subset(fia_geo, is.na(regS))
-#fia_county = subset(fia_county, is.na(regS))
-
-# Define size of subsample (nsamps) and number of times to resample (reps)
-nsamp = min(dist500)
-reps = 500
-
-regS = c()
-
-for(i in 1:nrow(fia_geo)){
-	userecs = find_recs(fia_geo[i,], records_sp, 500)
-	regS = c(regS, calc_rich_samp(userecs, nsamp, reps))
+for(i in 1:nrow(model_data)){
+	usepoint = fia_geo[fia_geo$yrplot.id==rownames(model_data)[i],]
+	userecs = find_recs(usepoint, recs, 500)
+	comm = tab_species(userecs$scientificName)
+	rich = rarefy(comm, nsamp)
+	richness = c(richness, as.numeric(rich))
 }
 
-fia_geo$regS = regS
-fia_geo$regParm = regS
-fia_geo$regPhys = regS
 
-## Plot 
+# Compare richness with sampling effort (# records)
+png('../FIA Lichen/Figures/ regS Parm (500 record rarefaction) vs sampling effort.png', height=600, width=600)
+par(mar=c(5,6,1,1.5))
+plot(richness~dist500[rownames(model_data)], las=1, xlab='Number of records w/in 500km radius', ylab='Rarefied richness for 350 records', cex=2, cex.lab=1.5, cex.axis=1.5)
+dev.off()
+
+
+# Save data
+regS$regPhys = richness
+regS$regParm = richness
+write.csv(regS, '../FIA Lichen/Data/Regional Richness/ParmPhys_regS_CNALH-2014-09-20.csv', row.names=F)
+
+
+#
+
+# Quick Plot 
 spplot(fia_geo, 'regS', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
 
 # Still biased toward higher richness in more frequently sampled areas
@@ -716,6 +717,19 @@ get_species = function(x){
 	keepgenera = justgenus[!(justgenus %in% spgenera)]
 
 	c(allspecies,keepgenera)
+}
+
+# A function that returns a vector counting the number of records for each species binomial
+tab_species = function(x){
+	splitnames = strsplit(x, " ")
+	justgenus = x[as.numeric(lapply(splitnames, length))==1]
+	allspecies = splitnames[as.numeric(lapply(splitnames, length))>1]
+	allspecies = sapply(allspecies, function(s) paste(s[1],s[2]))
+	spgenera = unique(sapply(strsplit(allspecies, " "), function(y) y[1]))
+	keepgenera = justgenus[!(justgenus %in% spgenera)]
+	allspecies = c(allspecies, keepgenera)
+
+	as.matrix(table(allspecies))
 }
 
 
