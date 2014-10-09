@@ -10,11 +10,14 @@ setwd('C:/Users/jrcoyle/Documents/UNC/Projects/CNALH Diversity/')
 options(stringsAsFactors=F)
 
 # Read in CNALH records
-records_raw = read.csv('CNALH_allrecords_NAm_2013-02-19.csv') #355119 records
+records_raw = read.csv('./Lower48_2014-10-08/occurrences.csv') #355119 records
 
 # Read in master data of FIA plots with plot data and environmental data
 master = read.csv('../FIA Lichen/Data/master_data.csv')
 master_locs = read.csv('../FIA Lichen/Data/fia_lichen_plot_locations.csv')
+
+## NEED TO LOAD MODEL_DATA 
+
 
 # Read in list of lichen species from FIA
 fia_splist = read.csv('../Lichen Traits/fia_lichen_master_list.csv')
@@ -475,28 +478,30 @@ dev.off()
 ### Calculate binned species richness map
 
 setwd('C:/Users/jrcoyle/Documents/UNC/Projects/CNALH Diversity')
-bindata = read.csv('Richness all FIA genera 5 degree bins.csv')
+#bindata = read.csv('Richness all FIA genera 5 degree bins.csv')
 
 # records does not contain 58 records w/o coordinates.  May want to change this.
-records = read.csv('../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv')
+records = read.csv('Parm_Phys_records_2014-09-20.csv')
 
 # Make Lat/lon bins
-binwidth = 5
+binwidth = 2
 mylons = seq(-167, -50, binwidth)
 mylats = seq(15, 80, binwidth)
 
 records$lonbin = cut(records$decimalLongitude, breaks=mylons)
 records$latbin = cut(records$decimalLatitude, breaks=mylats)
 
+# Decide which group to use
+recs = subset(records, family=='Physciaceae')
 
-# Each cell is a list of the species occuring there
-species.distribution = tapply(records[,c('scientificName')], list(records$latbin, records$lonbin), FUN=get_species)
+# Each cell is a list of the community occuring there
+species_distribution = tapply(recs[,c('scientificName')], list(recs$latbin, recs$lonbin), FUN=tab_species)
 
 # Calculate richness
-richness.raw = apply(species.distribution,c(1,2), function(x) length(unlist(x)))
-class(richness.raw) = "table"
+richness_raw = apply(species_distribution, c(1,2), function(x) length(unlist(x)))
+class(richness_raw) = "table"
 
-bindata = as.data.frame(richness.raw)
+bindata = as.data.frame(richness_raw)
 names(bindata) = c('latbin','lonbin','richness.raw')
 bindata$lat = rep(mylats[1:(length(mylats)-1)],length(mylons)-1)
 bindata$lon = rep(mylons[1:(length(mylons)-1)],each=length(mylats)-1)
@@ -511,69 +516,79 @@ mycolorsT = paste(mycolors, "80", sep='')
 
 colorvar = cut(bindata$richness.raw, breaks=c(0,seq(1,max(bindata$richness.raw), length.out=8)), right=F, include.lowest=T)
 
-tiff('fia_genera_species_richness_uncorrected_map.tif', width=800, height=800)
+tiff('physciaceae_species_richness_uncorrected_map_2-deg_CNALH-2014-09-20.tif', width=800, height=800)
 map('world', c('canada','usa','mexico'),col='grey50', xlim=c(-180,-45))
-points(decimalLatitude~decimalLongitude, data=records, pch='.', cex=3)
+points(decimalLatitude~decimalLongitude, data=records, pch='.', cex=1)
 rect(bindata$lon,bindata$lat,bindata$lon+binwidth,bindata$lat+binwidth,
 	col=mycolorsT[colorvar], border='transparent')
 
 legend('bottomleft',levels(colorvar)[2:8], pch=15, col=mycolorsT[2:8], bty='n', cex=2)
-title(main='FIA Genera Species Richness\n(Uncorrected)', cex.main=2)
+title(main='Physciaceae Species Richness\n(Uncorrected)', cex.main=2)
 dev.off()
 
 
-# Calculate richness after subsampling
-ITERATIONS=100
-
-tapply(records[,c('scientificName')], list(records$latbin, records$lonbin), FUN=function(x){
-	if(length(x)>=10){
-	r.dist = c()
-	for(i in 1:ITERATIONS){
-		use.x = sample(x, 10, replace=F) 
-		r.dist = c(r.dist, length(get_species(use.x)))
-	}
-	r.dist
-	} else {
-	r.dist=rep(length(get_species(x)),ITERATIONS)
-	}
-})->subsample
-
-# Calculate the median of the samples
-richness.samp = apply(subsample, c(1,2), function(x) ifelse(is.null(unlist(x)),0,median(unlist(x))))
-class(richness.samp) = 'table'
-richness.samp = as.data.frame(richness.samp)
-names(richness.samp) = c('latbin','lonbin','richness.samp10')
-bindata = merge(bindata, richness.samp)
-
 # Tally number of samples in each bin
-samples = xtabs(~latbin+lonbin, data=records)
+samples = xtabs(~latbin+lonbin, data=recs)
 samples = as.data.frame(samples)
 names(samples) = c('latbin','lonbin','n.obs')
 
+hist(samples$n.obs[samples$n.obs>0], breaks=20)
+
 bindata = merge(bindata, samples)
 
-which(bindata$n.obs==max(bindata$n.obs))
-bindata[order(bindata$n.obs, decreasing=T),]
-plot(richness.samp200~log10(n.obs), data=bindata)
 
-#write.csv(bindata, 'Richness all FIA genera 5 degree bins.csv')
-#write.csv(bindata, 'Richness all FIA genera 2 degree bins.csv')
+# Calculate richness using rarefaction only for samples with at least 100 records
+nsamp = c(25, 50, 100, 200)
+
+richness_rarefy = sapply(nsamp, function(n){
+
+apply(bindata, 1, function(x){
+	latbin = x['latbin']
+	lonbin = x['lonbin']
+	
+	comm = unlist(species_distribution[latbin,lonbin])
+
+	if(length(comm)>0){
+		as.numeric(rarefy(comm, n))
+	} else 0
+})
+
+})
+
+colnames(richness_rarefy) = paste('rich', nsamp, sep='')
+
+bindata = cbind(bindata, richness_rarefy)
+
+head(bindata)
+
+write.csv(bindata, 'Phys_richness_2-deg_CNALH-2014-09-20.csv', row.names=F)
+phys5_bin = bindata
+phys2_bin = bindata
+parm5_bin = bindata
+parm2_bin = bindata
+
 
 # Map subsampled richness
-tiff('fia_genera_species_richness_samp200_map.tif', width=800, height=800)
-#png('parmeliaceae_species_richness_samp200_map.png', height=1200, width=1200, bg="transparent")
+bindata = parm2_bin
 
-bordervar = bindata$n.obs>=200
-colorvar = cut(bindata$richness.samp200, breaks=c(0,seq(min(bindata$richness.samp200[bordervar]),max(bindata$richness.samp200[bordervar]), length.out=8)), right=F, include.lowest=T)
+# Make sure bins are correct size
+
+tiff('parmeliaceae_species_richness_samp50_map.tif', width=800, height=800)
+
+bordervar = bindata$n.obs>=50
+colorvar = cut(bindata$rich50, breaks=c(0,seq(min(bindata$rich50[bordervar]),max(bindata$rich50[bordervar]), length.out=8)), right=F, include.lowest=T)
 colorvar[!bordervar]<-NA
 
 map('world',c('canada','usa','mexico'), col='grey50', xlim=c(-180,-50))
-points(decimalLatitude~decimalLongitude, data=records, pch='.', cex=3)
+points(decimalLatitude~decimalLongitude, data=records, pch='.', cex=3, col='grey50')
 rect(bindata$lon,bindata$lat,bindata$lon+binwidth,bindata$lat+binwidth,
 	col=mycolorsT[colorvar], border="transparent")
 legend('bottomleft',levels(colorvar)[2:8], pch=15, col=mycolorsT[2:8], bty='n', cex=2)
-title(main='FIA Genera Species Richness\n(subsample 200 observations)', cex.main=2)
+title(main='Parmeliaceae Species Richness\n(50 records)', cex.main=2)
 dev.off()
+
+
+
 
 # Map Number of observations
 tiff('fia_genera_nsamps_map.tif', width=800, height=800)
@@ -608,6 +623,196 @@ points(parmelia.laea,pch='.', col=rgb(0,0,.4), cex=2)
 dev.off()
 
 
+######################################################
+### Continuous richness maps based on records within 500km radii
+library(maps)
+library(maptools)
+
+# Map projection - equal area
+plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
+
+# Read records back in as a dataframe
+records_sp = read.csv('Parm_Phys_records_2014-09-20.csv') # this is for parmeliaceae and physciaceae
+records_sp = read.csv() # this is for all fia genera
+
+# Make records into spatial data
+coordinates(records_sp) = c('decimalLongitude','decimalLatitude')
+proj4string(records_sp) = CRS("+proj=longlat")
+
+# Make map of USA 
+usa = map('usa')
+usa_sp = map2SpatialPolygons(usa, IDs=usa$names, proj4string=CRS("+proj=longlat +datum=WGS84"))
+usa_laea = spTransform(usa_sp, CRS(plot_prj))
+
+# Map for north america
+nam_outline = readOGR('C:/Users/jrcoyle/Documents/UNC/GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
+nam_outline = subset(nam_outline, COUNTRY %in% c('USA','MEXICO','CANADA'))
+nam_laea = spTransform(nam_outline,CRS(plot_prj))
+
+# Generate grid of points over which to sample
+mybox = bbox(usa_laea)
+mybox = bbox(nam_laea)
+
+x = seq(mybox[1,1]+50, mybox[1,2], 100)
+y = seq(mybox[2,1]+50, mybox[2,2], 100)
+
+mygrid = expand.grid(x,y)
+plot(nam_laea)
+points(mygrid)
+
+
+
+# Exclude grid not in North America
+nam_poly = SpatialPolygons(nam_laea@polygons, proj4string=CRS(plot_prj))
+nam_poly1 = unionSpatialPolygons(nam_poly, IDs = rep(1,length(nam_poly)))
+
+mygrid_sp = SpatialPoints(mygrid, proj4string=CRS(plot_prj))
+usegrid = over(mygrid_sp, nam_poly1)
+
+mygrid_sp = mygrid_sp[!is.na(usegrid),]
+
+plot(nam_poly1)
+plot(mygrid_sp, add=T)
+
+
+# Covert back to lat lon so that find_recs() works properly
+mygrid_ll = spTransform(mygrid_sp, CRS("+proj=longlat +datum=WGS84"))
+
+# Define data frame where going to store data
+mygrid_data = data.frame(coordinates(mygrid_ll))
+names(mygrid_data) = c('lon','lat')
+
+# Define group for which to calculate richness
+recs = subset(records_sp, family=='Physciaceae') # Parm=89487 Phys=45918
+#recs = subset(records_sp, family=='Parmeliaceae' & genus %in% target_genera)
+
+# Calculate number of records with given radius of each grid point
+# will use this for determining number of records for rarefaction when calculating richness
+rad = 250 # 500 km radius]
+
+nobs = sapply(1:length(mygrid_ll), function(i){
+	userecs = find_recs(mygrid_ll[i,], recs, rad)
+	nrow(userecs)
+})
+
+mygrid_data$nobsParm = nobs
+mygrid_data$nobsPhys = nobs
+
+# Examine maps where pixels are colored by whether number of records is below a certain threshold
+nsamp = 50
+plot(mygrid_sp, col=as.numeric(nobs<nsamp)+1, pch=15, cex=.5)
+
+## Calculate rarefied regional species richness across grid
+
+# Define number of records to use in rarefaction 
+nsamp = c(25, 50, 100, 150, 200, 300, 500)
+
+richness = data.frame()
+for(i in 1:length(mygrid_ll)){
+	userecs = find_recs(mygrid_ll[i,], recs, 500) # 500km radius
+
+	sapply(nsamp, function(n){
+		if(nrow(userecs)>=n){
+			comm = tab_species(userecs$scientificName)
+			as.numeric(rarefy(comm, n))
+		} else {
+			rich = NA
+		}
+	}) ->  rich
+
+	richness = rbind(richness, rich)
+}
+
+names(richness) = paste('regParm',nsamp, sep='') # this changes depending on the taxonomic group
+names(richness) = paste('regPhys',nsamp, sep='')
+
+mygrid_data = cbind(mygrid_data, richness)
+
+#write.csv(mygrid_data, 'grid_map_Parm_Phys_500km_regS.csv', row.names=F)
+write.csv(mygrid_data, 'grid_map_Parm_Phys_250km_regS.csv', row.names=F)
+
+
+# plot
+
+colorvar = cut(mygrid_data$regParm300, breaks=seq(40, 130, length.out=9))
+
+plot(nam_poly1)
+plot(mygrid_sp, col=mycolors[colorvar], add=T, pch=15, cex=.4)
+
+
+windows()
+par(mar=c(0,0,0,0))
+plot(0,0, xlim=c(0,1), ylim=c(-.2,1.2), type='n')
+rect(rep(0,8), seq(0, .7, .1), rep(.1, 8), seq(.1, .8, .1), col=mycolors)
+text(rep(0.1, 9), seq(0,.9,.1), labels=seq(40, 140, length.out=9), pos=4, cex=2)
+
+par('usr')
+
+
+
+### CODE BELOW NOT YET CORRECT FOR THIS SRCIPT
+
+
+
+
+
+
+# Calc  regS for each grid cell 
+
+# Define size of subsample (nsamps) and number of times to resample (reps)
+nsamp = 350
+
+
+regS = c()
+
+for(i in 1:length(mygrid_ll)){
+	userecs = find_recs(mygrid_ll[i,], records_sp, 500)
+
+	
+	regS = c(regS, calc_rich_samp(userecs, nsamp, reps))
+}
+
+
+regS_sp = SpatialPointsDataFrame(mygrid_sp, data.frame(regS))
+
+
+
+#### Map
+
+
+# Color Ramp
+ncuts=10
+
+mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
+mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
+mycol = mycol[10:1]
+mycolramp = colorRampPalette(mycol)(ncuts)
+
+
+usecol = mycolramp[cut(regS, c(100,110,120,130,140,150,160,170,180,190,204))]
+
+png('./Data/Regional Richness/regS_lichen_grid.png', height=800, width=1200)
+par(mar=c(0,0,0,0))
+plot(regS_sp, col=usecol, pch=15, cex=4) 
+dev.off()
+
+png('./Data/Regional Richness/regS_lichen_grid_key.png', height=400, width=200)
+par(mar=c(0,0,0,0))
+plot(0,0, xlim=c(0,1), ylim=c(-.2,1.2), type='n')
+rect(rep(0,10), seq(0, .9, .1), rep(.1, 10), seq(.1, 1, .1), col=mycolramp)
+text(rep(0.1, 11), seq(0,1,.1), labels=seq(100,200,10), pos=4, cex=2)
+dev.off()
+
+
+save.image('./Data/Regional Richness/lichen_regS_grid.RData')
+
+
+
+
+
+
+######################################################
+### Species Ranges
 
 # Map range of one species
 
@@ -650,36 +855,7 @@ dev.off()
 sps = unique(parmelia$scientificName)
 
 sps[order(sps)]
-######################################################################
-### Calculate a few collectors curves
 
-subset(bindata, richness.raw>100)
-
-i=147
-
-i=160
-
-REPS=100
-
-this.bin = subset(parmelia, (latbin==bindata$latbin[i])&(lonbin==bindata$lonbin[i]))
-nrow(this.bin)
-
-sapply(seq(10, nrow(this.bin),50), function(x){
-		
-	sapply(1:REPS, function(t) length(get.species(sample(this.bin$scientificName, x))))	
-
-})->subsamples
-
-
-png(paste('parmeliaceae',bindata$lat[i],bindata$lon[i],'.png',sep='_'), 
-	height=500, width=500, bg='transparent') 
-par(mar=c(5,5.5,1,1))
-plot(rep(seq(10, nrow(this.bin),50), each=REPS), subsamples, las=1, xlab='Number of Samples',
-	ylab='', cex.lab=2,cex.axis=1.8)
-title(ylab='Number of Species', line=4, cex.lab=2)
-text(nrow(this.bin)/2,10,paste('Lat = ',bindata$latbin[i],'  Lon = ',bindata$lonbin[i],sep=''), cex=1.5)
-
-dev.off()
 
 
 
@@ -721,15 +897,22 @@ get_species = function(x){
 
 # A function that returns a vector counting the number of records for each species binomial
 tab_species = function(x){
+	if(length(x)>0){
+
 	splitnames = strsplit(x, " ")
 	justgenus = x[as.numeric(lapply(splitnames, length))==1]
 	allspecies = splitnames[as.numeric(lapply(splitnames, length))>1]
 	allspecies = sapply(allspecies, function(s) paste(s[1],s[2]))
-	spgenera = unique(sapply(strsplit(allspecies, " "), function(y) y[1]))
-	keepgenera = justgenus[!(justgenus %in% spgenera)]
-	allspecies = c(allspecies, keepgenera)
+	if(length(allspecies)>0){
+		spgenera = unique(sapply(strsplit(allspecies, " "), function(y) y[1]))
+		keepgenera = justgenus[!(justgenus %in% spgenera)]
+		allspecies = c(allspecies, keepgenera)
+	} else {
+		allspecies = justgenus
+	}
 
 	as.matrix(table(allspecies))
+	} else NULL	
 }
 
 
