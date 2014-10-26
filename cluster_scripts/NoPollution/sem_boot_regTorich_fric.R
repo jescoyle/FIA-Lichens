@@ -11,9 +11,6 @@ predtypes = read.csv('predictors.csv', row.names=1)
 ## Model with paths from regional variables to local richness
 path_regTorich_nopol = "
 
-	# Latent variables
-	lichen_rich =~ sqrt(0.75)*fric
-	
 	# Local environment/climate effects on forest structure
 	bark_moist_pct.rao.ba ~ fh1cm1*wetness + fh1cm2*rain_lowRH + fh1cm3*iso + fh1cm4*pseas + fh1cm5*mat + fh1cm6*radiation
 	wood_SG.rao.ba ~ fh2cm1*wetness + fh2cm2*rain_lowRH + fh2cm3*iso + fh2cm4*pseas + fh2cm5*mat + fh2cm6*radiation
@@ -39,7 +36,7 @@ path_regTorich_nopol = "
 		FH1CH1*wetness_reg_var + FH1CH2*rain_lowRH_reg_var + FH1CH3*iso_reg_var + FH1CH4*pseas_reg_var + FH1CH5*mat_reg_var
 
 	# Effects on local lichen richness
-	lichen_rich ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
+	fric ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
 		r1fh4*PIE.ba.tree + r1fh5*propDead + r1fh6*lightDist.mean + r1fh7*diamDiversity +
 		r1fm1*bark_moist_pct.ba + r1fm2*wood_SG.ba + r1fm3*LogSeed.ba + r1fm4*bigTrees + r1fm5*light.mean + r1fm6*PC1 +
 		r1cm1*wetness + r1cm2*rain_lowRH + r1cm3*iso + r1cm4*pseas + r1cm5*mat + r1cm6*radiation + r1R1*regS +
@@ -117,7 +114,7 @@ indirect_abun$std.ci.lower = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.0
 indirect_abun$std.ci.upper = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.975))
 
 # Calculate direct effects on local richness
-use_ests = ests$lhs=='lichen_rich'&ests$op=='~'
+use_ests = ests$lhs=='fric'&ests$op=='~'
 DE_mat = stdmat[,use_ests]
 colnames(DE_mat) = ests[use_ests,c('rhs')]
 direct_rich = data.frame(predictor=colnames(DE_mat))

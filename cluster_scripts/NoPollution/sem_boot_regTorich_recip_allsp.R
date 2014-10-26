@@ -1,6 +1,5 @@
-# This script bootstraps parameter estimates for the finalmod model fit to all species richness.
-# No direct paths from regional variables to local richness
-
+# This script bootstraps parameter estimates for the regTorich model fit to all species richness.
+# Direct paths from regional variables to local richness, but not to local abundance
 
 library(lavaan, lib.loc="/nas02/home/j/r/jrcoyle/Rlibs/")
 
@@ -10,8 +9,8 @@ working_data_test = read.csv('standardized_test_dataset.csv', row.names=1)
 predtypes = read.csv('predictors.csv', row.names=1)
 
 ## Model with paths from regional variables to local richness
-path_nopol = "
-	
+path_regTorich_nopol = "
+
 	# Local environment/climate effects on forest structure
 	bark_moist_pct.rao.ba ~ fh1cm1*wetness + fh1cm2*rain_lowRH + fh1cm3*iso + fh1cm4*pseas + fh1cm5*mat + fh1cm6*radiation
 	wood_SG.rao.ba ~ fh2cm1*wetness + fh2cm2*rain_lowRH + fh2cm3*iso + fh2cm4*pseas + fh2cm5*mat + fh2cm6*radiation
@@ -30,17 +29,20 @@ path_nopol = "
 	# Regional climate, pollution, and regional forest heterogeneity effects on regional richness
 	regS ~ R1CM1*wetness_reg_mean + R1CM2*rain_lowRH_reg_mean + R1CM3*iso_reg_mean + R1CM4*pseas_reg_mean + R1CM5*mat_reg_mean +
 		R1CH1*wetness_reg_var + R1CH2*rain_lowRH_reg_var + R1CH3*iso_reg_var + R1CH4*pseas_reg_var + R1CH5*mat_reg_var +
-		R1FH1*regS_tree 
+		R1FH1*regS_tree + R1r1*lichen.rich_log
 
 	# Regional climate effects on regional forest heterogeneity
 	regS_tree ~ FH1CM1*wetness_reg_mean + FH1CM2*rain_lowRH_reg_mean + FH1CM3*iso_reg_mean + FH1CM4*pseas_reg_mean + FH1CM5*mat_reg_mean +
 		FH1CH1*wetness_reg_var + FH1CH2*rain_lowRH_reg_var + FH1CH3*iso_reg_var + FH1CH4*pseas_reg_var + FH1CH5*mat_reg_var
 
 	# Effects on local lichen richness
-	fric ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
+	lichen.rich_log ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
 		r1fh4*PIE.ba.tree + r1fh5*propDead + r1fh6*lightDist.mean + r1fh7*diamDiversity +
 		r1fm1*bark_moist_pct.ba + r1fm2*wood_SG.ba + r1fm3*LogSeed.ba + r1fm4*bigTrees + r1fm5*light.mean + r1fm6*PC1 +
-		r1cm1*wetness + r1cm2*rain_lowRH + r1cm3*iso + r1cm4*pseas + r1cm5*mat + r1cm6*radiation + r1R1*regS + r1a1*tot_abun_log
+		r1cm1*wetness + r1cm2*rain_lowRH + r1cm3*iso + r1cm4*pseas + r1cm5*mat + r1cm6*radiation + r1R1*regS +
+		r1CM1*wetness_reg_mean + r1CM3*rain_lowRH_reg_mean + r1CM3*iso_reg_mean + r1CM4*pseas_reg_mean + r1CM5*mat_reg_mean +
+		r1CH1*wetness_reg_var + r1CH2*rain_lowRH_reg_var + r1CH3*iso_reg_var + r1CH4*pseas_reg_var + r1CH5*mat_reg_var +
+		r1FH1*regS_tree + r1a1*tot_abun_log
 	
 	# Effects on local lichen abundance
 	tot_abun_log ~ a1fh1*bark_moist_pct.rao.ba + a1fh2*wood_SG.rao.ba + a1fh3*LogSeed.rao.ba +
@@ -73,31 +75,24 @@ path_nopol = "
 	light.mean ~~ PC1
 "
 
-nopol_fit =  sem(path_nopol, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
-use_fit = nopol_fit
+regTorich_nopol_fit =  sem(path_regTorich_nopol, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
+use_fit = regTorich_nopol_fit
+
+mod_boot = bootstrapLavaan(use_fit, R=2, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
+regTorich_nopol_boot = mod_boot
 
 # Used to re-calculate tables outside of Kure
-#load('nopol_Fric_testdata_output.RData') 
-#mod_boot = nopol_boot
-#use_fit = nopol_fit
-
-mod_boot = bootstrapLavaan(use_fit, R=4, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
-nopol_boot = mod_boot
+#load('regToRich_nopol_AllSp_testdata_output.RData') 
+#mod_boot = regTorich_nopol_boot
+#use_fit = regTorich_nopol_fit 
 
 # Save raw bootstrap output and models
-response = 'Fric'
-modform = 'nopol'
-save(nopol_fit, nopol_boot, path_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
+response = 'AllSp'
+modform = 'regToRich_nopol_recip'
+save(regTorich_nopol_fit, regTorich_nopol_boot, path_regTorich_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
 
 ## Calculate table of bootstrapped parameter estimates
 ests = parameterEstimates(use_fit)[,c('label','lhs','op','rhs')]
-
-# convert regParm -> regS and parm_abun_log -> tot_abun_log
-ests$rhs[grep('regPhys', ests$rhs)] <- 'regS'
-ests$lhs[grep('regPhys', ests$lhs)] <- 'regS'
-ests$rhs[grep('phys_abun_log', ests$rhs)] <- 'tot_abun_log'
-ests$lhs[grep('phys_abun_log', ests$lhs)] <- 'tot_abun_log'
-
 nEst = ncol(mod_boot)/2 # number of parameters
 estlabs = paste(predtypes[ests$lhs,'label'],predtypes[ests$rhs,'label'], sep=':')
 cbind(estlabs, ests[,c('lhs','op','rhs')]) #checking
@@ -119,7 +114,7 @@ indirect_abun$std.ci.lower = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.0
 indirect_abun$std.ci.upper = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.975))
 
 # Calculate direct effects on local richness
-use_ests = ests$lhs=='fric'&ests$op=='~'
+use_ests = ests$lhs=='lichen.rich_log'&ests$op=='~'
 DE_mat = stdmat[,use_ests]
 colnames(DE_mat) = ests[use_ests,c('rhs')]
 direct_rich = data.frame(predictor=colnames(DE_mat))
@@ -131,7 +126,7 @@ direct_rich$std.ci.upper = apply(DE_mat, 2, function(x) quantile(x, p=0.975))
 # Calculate direct effects on abundance
 use_ests = ests$lhs=='tot_abun_log'&ests$op=='~'
 DE_abun_mat = stdmat[,use_ests]
-colnames(DE_abun_mat) = ests[use_ests,'rhs']
+colnames(DE_abun_mat) = ests[use_ests,c('rhs')]
 direct_abun = data.frame(predictor=colnames(DE_abun_mat))
 direct_abun$std.all = apply(DE_abun_mat, 2, mean)
 direct_abun$std.se = apply(DE_abun_mat, 2, function(x) sqrt(var(x)))
@@ -192,22 +187,24 @@ FH_IE_for_mat = stdmat[,'fh4:FH1']*TE_f_mat[,'PIE.ba.tree']
 FH_IE_for_mat = matrix(FH_IE_for_mat, nrow=nrow(stdmat)); colnames(FH_IE_for_mat) = 'regS_tree'
 
 # Calculate total effect/path of regional forest (effect does not include indirect path via local forest)
-TP_FH_mat = IE_regS_mat[,'regS_tree'] + FH_IE_for_mat 
-colnames(TP_FH_mat) = 'regS_tree'
-TE_FH_mat = matrix(IE_regS_mat[,'regS_tree'], nrow=nrow(stdmat))
-colnames(TE_FH_mat) = 'regS_tree'
+TP_FH_mat = DE_mat[,'regS_tree'] + IE_regS_mat[,'regS_tree'] + FH_IE_for_mat
+TP_FH_mat = matrix(TP_FH_mat, nrow=nrow(stdmat)); colnames(TP_FH_mat) = 'regS_tree'
+TE_FH_mat = DE_mat[,'regS_tree'] + IE_regS_mat[,'regS_tree']
+TE_FH_mat = matrix(TE_FH_mat, nrow=nrow(stdmat)); colnames(TE_FH_mat) = 'regS_tree'
 
 ## Calculate indirect effects of regional climate via regional versus local paths 
 # e.g. do or do not go through local predictors
 Cvars = rownames(predtypes)[grep('C', predtypes$label)]
 
-# Forest (via forest's regional and local effects)
+# Forest (via forest's regional, local, and direct effects)
 use_labs = paste('FH1',predtypes[Cvars, 'label'], sep=':')
 C_IE_FH_mat_reg = stdmat[,use_labs]*IE_regS_mat[,'regS_tree']
 colnames(C_IE_FH_mat_reg) = Cvars
 C_IE_FH_mat_loc = stdmat[,use_labs]*as.numeric(FH_IE_for_mat)
 colnames(C_IE_FH_mat_loc) = Cvars
-C_IE_FH_mat = C_IE_FH_mat_reg + C_IE_FH_mat_loc
+C_IE_FH_mat_dir = stdmat[,use_labs]*DE_mat[,'regS_tree']
+colnames(C_IE_FH_mat_dir) = Cvars
+C_IE_FH_mat = C_IE_FH_mat_reg + C_IE_FH_mat_loc + C_IE_FH_mat_dir
 
 # RegS
 #IE_regS_mat[,Cvars]
@@ -228,24 +225,24 @@ C_IE_cm_mat_ind = array(apply(Cc_mat, 3, function(x) x*TE_cm_mat),dim=c(nrow(std
 C_IE_cm_mat = apply(C_IE_cm_mat_ind, c(1,3), function(x) sum(x))
 
 # Make datatable of indirect effects of regional variables
-IE_mat = cbind(IE_regS_mat, FH_IE_for_mat, C_IE_FH_mat, C_IE_cm_mat, C_IE_FH_mat_reg, C_IE_FH_mat_loc)
+IE_mat = cbind(IE_regS_mat, FH_IE_for_mat, C_IE_FH_mat, C_IE_cm_mat, C_IE_FH_mat_reg, C_IE_FH_mat_loc, C_IE_FH_mat_dir)
 indirect_reg = data.frame(predictor=colnames(IE_mat))
 indirect_reg$IEvar1 = c(rep('regS',ncol(IE_regS_mat)), rep('PIE.ba.tree', ncol(FH_IE_for_mat)), 
 	rep('regS_tree',ncol(C_IE_FH_mat)),
 	rep('clim_loc', ncol(C_IE_cm_mat)),
-	rep('regS_tree',2*ncol(C_IE_FH_mat)))
-indirect_reg$IEvar2 = c(rep(NA, ncol(IE_mat) - 2*ncol(C_IE_FH_mat)),
-	rep(c('regS','loc'),each=ncol(C_IE_FH_mat)))
+	rep('regS_tree',3*ncol(C_IE_FH_mat)))
+indirect_reg$IEvar2 = c(rep(NA, ncol(IE_mat) - 3*ncol(C_IE_FH_mat)),
+	rep(c('regS','loc','dir'),each=ncol(C_IE_FH_mat)))
 indirect_reg$std.all = apply(IE_mat, 2, mean)
 indirect_reg$std.se = apply(IE_mat, 2, function(x) sqrt(var(x)))
 indirect_reg$std.ci.lower = apply(IE_mat, 2, function(x) quantile(x, p=0.025))
 indirect_reg$std.ci.upper = apply(IE_mat, 2, function(x) quantile(x, p=0.975))
 
 # Calculate total paths of regional climate
-TP_C_mat = IE_regS_mat[,Cvars] + C_IE_FH_mat[,Cvars] + C_IE_cm_mat[,Cvars]
+TP_C_mat = DE_mat[,Cvars] + IE_regS_mat[,Cvars] + C_IE_FH_mat[,Cvars] + C_IE_cm_mat[,Cvars]
 
 # Calculate total effects of regional climate
-TE_C_mat = IE_regS_mat[,Cvars] + C_IE_FH_mat_reg[,Cvars]
+TE_C_mat = DE_mat[,Cvars] + IE_regS_mat[,Cvars] + C_IE_FH_mat_reg[,Cvars]
 
 # Make dataframe of total effects
 TE_mat = cbind(TE_C_mat, TE_cm_mat, TE_f_mat, TE_FH_mat)
@@ -262,6 +259,10 @@ totalp$std.all = apply(TP_mat, 2, mean)
 totalp$std.se = apply(TP_mat, 2, function(x) sqrt(var(x)))
 totalp$std.ci.lower = apply(TP_mat, 2, function(x) quantile(x, p=0.025))
 totalp$std.ci.upper = apply(TP_mat, 2, function(x) quantile(x, p=0.975))
+
+
+# Not calculating indirect and total effects of predictors on regS because not needed for analyses
+
 
 ## Save tables and matrices
 write.csv(ests, paste(modform,response,'testdata_parameterEstimates.csv', sep='_'), row.names=F)
