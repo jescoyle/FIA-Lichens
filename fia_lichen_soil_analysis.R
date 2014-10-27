@@ -253,9 +253,6 @@ write.csv(working_soil_test, './Soil/working_soil_test.csv', row.names=T)
 
 path_soilmod = "
 
-	# Latent variables
-	lichen_rich =~ sqrt(0.75)*lichen.rich_log
-	
 	# Local environment/climate effects on forest structure
 	bark_moist_pct.rao.ba ~ fh1cm1*wetness + fh1cm2*rain_lowRH + fh1cm3*iso + fh1cm4*pseas + fh1cm5*mat + fh1cm6*radiation + fh1sm1*soilPC1 + fh1sm2*soilPC2
 	wood_SG.rao.ba ~ fh2cm1*wetness + fh2cm2*rain_lowRH + fh2cm3*iso + fh2cm4*pseas + fh2cm5*mat + fh2cm6*radiation + fh2sm1*soilPC1 + fh2sm2*soilPC2
@@ -287,7 +284,7 @@ path_soilmod = "
 	totalNS_reg ~ P1CM1*wetness_reg_mean + P1CM2*rain_lowRH_reg_mean
 
 	# Effects on local lichen richness
-	lichen_rich ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
+	lichen.rich_log ~ r1fh1*bark_moist_pct.rao.ba + r1fh2*wood_SG.rao.ba + r1fh3*LogSeed.rao.ba +
 		r1fh4*PIE.ba.tree + r1fh5*propDead + r1fh6*lightDist.mean + r1fh7*diamDiversity +
 		r1fm1*bark_moist_pct.ba + r1fm2*wood_SG.ba + r1fm3*LogSeed.ba + r1fm4*bigTrees + r1fm5*light.mean + r1fm6*PC1 +
 		r1cm1*wetness + r1cm2*rain_lowRH + r1cm3*iso + r1cm4*pseas + r1cm5*mat + r1cm6*radiation + r1sm1*soilPC1 + r1sm2*soilPC2 +

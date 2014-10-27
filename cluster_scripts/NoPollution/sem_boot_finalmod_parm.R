@@ -9,6 +9,9 @@ options(stringsAsFactors=F)
 working_data_test = read.csv('standardized_test_dataset.csv', row.names=1)
 predtypes = read.csv('predictors.csv', row.names=1)
 
+response = 'Parm'
+modform = 'nopol'
+
 ## Model with paths from regional variables to local richness
 path_nopol = "
 
@@ -81,12 +84,14 @@ use_fit = nopol_fit
 #mod_boot = nopol_boot
 #use_fit = nopol_fit
 
-mod_boot = bootstrapLavaan(use_fit, R=4, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
+sink(paste(modform, response, 'modsummary.txt', sep='_'))
+summary(use_fit, standardized=T, rsq=TRUE, fit.measures=T)
+sink()
+
+mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 nopol_boot = mod_boot
 
 # Save raw bootstrap output and models
-response = 'Parm'
-modform = 'nopol'
 save(nopol_fit, nopol_boot, path_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
 
 ## Calculate table of bootstrapped parameter estimates

@@ -9,6 +9,9 @@ options(stringsAsFactors=F)
 working_data_test = read.csv('standardized_test_dataset.csv', row.names=1)
 predtypes = read.csv('predictors.csv', row.names=1)
 
+response = 'AllSp'
+modform = 'nopol'
+
 ## Model with paths from regional variables to local richness
 path_nopol = "
 
@@ -76,6 +79,12 @@ path_nopol = "
 nopol_fit =  sem(path_nopol, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
 use_fit = nopol_fit
 
+
+sink(paste(modform, response, 'modsummary.txt', sep='_'))
+summary(use_fit, standardized=T, rsq=TRUE, fit.measures=T)
+sink()
+
+
 # Used to re-calculate tables outside of Kure
 #load('nopol_AllSp_testdata_output.RData') 
 #mod_boot = nopol_boot
@@ -85,8 +94,6 @@ mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimate
 nopol_boot = mod_boot
 
 # Save raw bootstrap output and models
-response = 'AllSp'
-modform = 'nopol'
 save(nopol_fit, nopol_boot, path_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
 
 ## Calculate table of bootstrapped parameter estimates

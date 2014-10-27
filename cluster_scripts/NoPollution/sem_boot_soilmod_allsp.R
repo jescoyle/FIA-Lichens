@@ -9,6 +9,9 @@ options(stringsAsFactors=F)
 working_soil_test = read.csv('working_soil_test.csv', row.names=1)
 predtypes = read.csv('predictors.csv', row.names=1)
 
+response = 'AllSp'
+modform = 'soilmod_nopol'
+
 ## Model with paths from regional variables to local richness
 path_soilmod_nopol = "
 
@@ -78,7 +81,12 @@ path_soilmod_nopol = "
 soilmod_nopol_fit =  sem(path_soilmod_nopol, data=working_soil_test, fixed.x=T, estimator='ML', se='robust.sem')
 use_fit = soilmod_nopol_fit
 
-mod_boot = bootstrapLavaan(use_fit, R=4, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
+sink(paste(modform, response, 'modsummary.txt', sep='_'))
+summary(use_fit, standardized=T, rsq=TRUE, fit.measures=T)
+sink()
+
+
+mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 soilmod_nopol_boot = mod_boot
 
 # Used to re-calculate tables outside of Kure
@@ -87,8 +95,6 @@ soilmod_nopol_boot = mod_boot
 #use_fit = soilmod_nopol_fit 
 
 # Save raw bootstrap output and models
-response = 'AllSp'
-modform = 'soilmod_nopol'
 save(soilmod_nopol_fit, soilmod_nopol_boot, path_soilmod_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
 
 ## Calculate table of bootstrapped parameter estimates

@@ -8,6 +8,9 @@ options(stringsAsFactors=F)
 working_data_test = read.csv('standardized_test_dataset.csv', row.names=1)
 predtypes = read.csv('predictors.csv', row.names=1)
 
+response = 'AllSp'
+modform = 'noabun_regToRich_nopol'
+
 ## Model with paths from regional variables to local richness
 path_regTorich_nopol = "
 
@@ -72,6 +75,10 @@ path_regTorich_nopol = "
 regTorich_nopol_fit =  sem(path_regTorich_nopol, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
 use_fit = regTorich_nopol_fit
 
+sink(paste(modform, response, 'modsummary.txt', sep='_'))
+summary(use_fit, standardized=T, rsq=TRUE, fit.measures=T)
+sink()
+
 mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimates(x)$est,standardizedSolution(x)$est.std))
 regTorich_nopol_boot = mod_boot
 
@@ -81,8 +88,6 @@ regTorich_nopol_boot = mod_boot
 #use_fit = regTorich_nopol_fit 
 
 # Save raw bootstrap output and models
-response = 'AllSp'
-modform = 'noabun_regToRich_nopol'
 save(regTorich_nopol_fit, regTorich_nopol_boot, path_regTorich_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
 
 ## Calculate table of bootstrapped parameter estimates

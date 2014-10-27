@@ -23,12 +23,13 @@ write.csv(working_data[testplots$yrplot.id,], './SEM models/standardized_test_da
 ## SEM models can be found in scripts which were run on the Kure computing cluster
 ## Scripts are in the cluster_scripts folder.
 
-
 ### Create a table of model fit statistics
 
 load('./SEM models/No Pollution/')
-summary(regTorich_fit, standardized=T, rsq=TRUE, fit.measures=T)
 
+sink('./SEM models/test summary.txt')
+summary(noabun_nopol_fit, standardized=T, rsq=TRUE, fit.measures=T)
+sink()
 
 ##################################################################
 ## Read in tables of parameter estimates and effects
