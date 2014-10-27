@@ -245,18 +245,15 @@ parmphys_fia = subset(allsp, family %in% c('Parmeliaceae','Physciaceae'))
 
 # Calculate number of species in records
 species = unique(allsp[,'scientificName'])
-species.binom = get.latinbinom(species)
+species.binom = unique(get.latinbinom(species)) # 1757 species (including just genus)
 
+# Calculate how many species in each family in records
+species_f = unique(allsp[,c('family','scientificName','genus')])
+genera_f = unique(species_f[,c('family','genus')])
+binom_f = unique(data.frame(family=allsp$family, latin_binom = get.latinbinom(allsp$scientificName)))
 
-# Calculate how many species in Physciaceae and Parmeliaceae in records
-species_pp = unique(parmphys_fia[,c('family','scientificName','genus')])
-
-species = subset(species, family %in% c('Parmeliaceae','Physciaceae'))
-genera = unique(species[,c('family','genus')])
-species = unique(species[,c('family','scientificName')])
-
-table(genera$family) # 44 Parmeliaceae, 9 Physciaceae
-table(species$family) # 937 Parmeliaceae, 243 Physciaceae
+table(genera_f$family) # 44 Parmeliaceae, 9 Physciaceae
+table(binom_f$family) # 868 Parmeliaceae, 227 Physciaceae
 
 ## Calculate regional richness for FIA plots using rarefaction
 
@@ -265,33 +262,36 @@ parm = subset(parmphys_fia, family=='Parmeliaceae')
 phys = subset(parmphys_fia, family=='Physciaceae')
 
 # Make records into spatial data
+allsp_sp = allsp
 parm_sp = parm
 phys_sp = phys
+coordinates(allsp_sp) = c('decimalLongitude','decimalLatitude')
+proj4string(allsp_sp) = CRS("+proj=longlat")
 coordinates(parm_sp) = c('decimalLongitude','decimalLatitude')
 proj4string(parm_sp) = CRS("+proj=longlat")
 coordinates(phys_sp) = c('decimalLongitude','decimalLatitude')
 proj4string(phys_sp) = CRS("+proj=longlat")
 
-plot(phys_sp)
 
-# Divide FIA data into plots with and without coordinates
-fia_geo = subset(master_locs, !is.na(LAT))
+# Only calculate regional richness for plots used in models
+# This will exclude AK plots where I did not download records for
+fia_geo = subset(master_locs, yrplot.id %in% rownames(model_data))
 
 # Calculate for FIA plots with spatial coordinates
 coordinates(fia_geo) = c('LON','LAT')
 proj4string(fia_geo) = CRS("+proj=longlat")
 
 # Determine which records will be used to calculate regional richness
-recs = parm_sp
+recs = allsp_sp
 
 # Calculate the number of records within 500 km buffer (Could easily check other buffers)
 dist500 = c()
 for(i in 1:nrow(fia_geo)){
 	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], recs, 500)))
-} # min=499 all sp, min=144 Parmeliaceae, min=8 Physciaceae, but used 144 since only 26 plots with fewer than 144.
+} # min=2622 all sp, 
 names(dist500) = fia_geo$yrplot.id
-
 min(dist500) # Min num records for all FIA plots 
+
 # Parm = 598 Phys = 60
 min(dist500[fia_geo$yrplot.id %in% rownames(model_data)]) # Min num records for plots used in analysis
 # Parm = 886 Phys = 374
@@ -301,9 +301,9 @@ min(dist500[fia_geo$yrplot.id %in% rownames(model_data)]) # Min num records for 
 regS = data.frame(yrplot.id=rownames(model_data))
 
 # Define size of subsample (nsamps)
-nsamp = 350
+nsamp = 2500
 
-recs = parm_sp
+recs = allsp_sp
 
 richness = c()
 
@@ -317,28 +317,26 @@ for(i in 1:nrow(model_data)){
 
 
 # Compare richness with sampling effort (# records)
-png('../FIA Lichen/Figures/ regS Parm (500 record rarefaction) vs sampling effort.png', height=600, width=600)
+png('../FIA Lichen/Figures/ regS (500 record rarefaction) vs sampling effort.png', height=600, width=600)
 par(mar=c(5,6,1,1.5))
 plot(richness~dist500[rownames(model_data)], las=1, xlab='Number of records w/in 500km radius', ylab='Rarefied richness for 350 records', cex=2, cex.lab=1.5, cex.axis=1.5)
 dev.off()
 
 
 # Save data
+regS$regS = richness
 regS$regPhys = richness
 regS$regParm = richness
-write.csv(regS, '../FIA Lichen/Data/Regional Richness/ParmPhys_regS_CNALH-2014-09-20.csv', row.names=F)
+write.csv(regS, '../FIA Lichen/Data/Regional Richness/regS_CNALH-2014-09-20.csv', row.names=F)
 
 
 #
+fia_geo2 = merge(fia_geo, regS)
 
 # Quick Plot 
-spplot(fia_geo, 'regS', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
+spplot(fia_geo2, 'regS', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
 
-# Still biased toward higher richness in more frequently sampled areas
-png('../FIA Lichen/Figures/regional richness (500 records subsample) vs sampling effort.png', height=600, width=600)
-par(mar=c(5,6,1,1))
-plot(regS~dist500, las=1, xlab='Number of records w/in 500km radius', ylab='Avg. richness of 499 records', cex=2, cex.lab=1.5, cex.axis=1.5)
-dev.off()
+
 
 
 
@@ -945,10 +943,11 @@ find_recs = function(point, recs, buff){
 # A function that returns a species list from a vector of species names
 # It removes genus spp. that are already represented by a species
 get_species = function(x){
-	splitnames = strsplit(x, " ")
-	justgenus = unique(x[as.numeric(lapply(splitnames, length))==1])
-	allspecies = splitnames[as.numeric(lapply(splitnames, length))>1]
-	allspecies = unique(sapply(allspecies, function(s) paste(s[1],s[2])))
+	new_x = get.latinbinom(x)	
+	splitnames = strsplit(new_x, " ")
+	justgenus = unique(new_x[as.numeric(lapply(splitnames, length))==1])
+	allspecies = new_x[as.numeric(lapply(splitnames, length))>1]
+	allspecies = unique(allspecies)
 	spgenera = unique(sapply(strsplit(allspecies, " "), function(y) y[1]))
 	keepgenera = justgenus[!(justgenus %in% spgenera)]
 
@@ -959,10 +958,11 @@ get_species = function(x){
 tab_species = function(x){
 	if(length(x)>0){
 
-	splitnames = strsplit(x, " ")
-	justgenus = x[as.numeric(lapply(splitnames, length))==1]
-	allspecies = splitnames[as.numeric(lapply(splitnames, length))>1]
-	allspecies = sapply(allspecies, function(s) paste(s[1],s[2]))
+	new_x = get.latinbinom(x)
+	splitnames = strsplit(new_x, " ")
+	justgenus = new_x[as.numeric(lapply(splitnames, length))==1]
+	allspecies = new_x[as.numeric(lapply(splitnames, length))>1]
+
 	if(length(allspecies)>0){
 		spgenera = unique(sapply(strsplit(allspecies, " "), function(y) y[1]))
 		keepgenera = justgenus[!(justgenus %in% spgenera)]
