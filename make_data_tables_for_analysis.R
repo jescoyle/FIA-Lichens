@@ -47,8 +47,8 @@ regS_tree = read.csv('./Data/TreeData/Regional tree diversity/fia_lichen_tree_re
 # Lichen functional diversity data
 fd_data = read.csv('./Data/LichenTraits/fia_lichen_LIAS_means_diversity.csv')
 
-# Lichen regional richness data
-reg_data = read.csv('./Data/Regional Richness/fia_lichen_reg_richness.csv')
+# Lichen regional richness data - not available for all plots because calculated from CNALH download on 2014-10-08, excluding AK
+reg_data = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20.csv')
 
 # Environmental data
 env_data = read.csv('./Data/fia_lichen_env_data_points.csv')
@@ -68,12 +68,12 @@ master = merge(master, env_data, all.x=T, all.y=F)
 master = merge(master, env_reg_data, all.x=T, all.y=F)
 
 # Save data
-write.csv(master, './Data/fia_lichen_master_data.csv', row.names=F)
+write.csv(master, './Data/fia_lichen_master_data_2014-10-27.csv', row.names=F)
 
 rownames(master) = master$yrplot.id
 ###############################################################################
 ### Data Subsetting ###
-master = read.csv('./Data/fia_lichen_master_data.csv', row.names=1)
+master = read.csv('./Data/fia_lichen_master_data_2014-10-27.csv', row.names=1)
 
 # Use recent plots after plot design had been standardized
 model_data = subset(master, MEASYEAR>=1997)
@@ -295,7 +295,6 @@ usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 ## Write out list of test and fit plots
 #write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
 #write.csv(data.frame(yrplot.id=fitplots), './Data/model fit plots.csv')
-
 
 
 ################# OLD CODE ###############

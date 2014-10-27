@@ -282,28 +282,27 @@ coordinates(fia_geo) = c('LON','LAT')
 proj4string(fia_geo) = CRS("+proj=longlat")
 
 # Determine which records will be used to calculate regional richness
-recs = allsp_sp
+recs = phys_sp
 
 # Calculate the number of records within 500 km buffer (Could easily check other buffers)
 dist500 = c()
 for(i in 1:nrow(fia_geo)){
 	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], recs, 500)))
-} # min=2622 all sp, 
+} # min=2622 all sp, 882 parm, 374 phys
 names(dist500) = fia_geo$yrplot.id
 min(dist500) # Min num records for all FIA plots 
 
-# Parm = 598 Phys = 60
-min(dist500[fia_geo$yrplot.id %in% rownames(model_data)]) # Min num records for plots used in analysis
-# Parm = 886 Phys = 374
-
+recordnum = data.frame(parm = dist500)
+recordnum$phys = dist500
+write.csv(recordnum, '../FIA Lichen/Data/Regional Richness/num_records_CNALH_2014-10-08_fiagenera.csv', row.names=F)
 
 ## Calculate Regional Richness using rarefaction (vegan) only for plots used in analysis
 regS = data.frame(yrplot.id=rownames(model_data))
 
 # Define size of subsample (nsamps)
-nsamp = 2500
+nsamp = 350 # use 350 for regParm and regPhys, use 2500 for allsp
 
-recs = allsp_sp
+recs = phys_sp
 
 richness = c()
 
@@ -327,21 +326,21 @@ dev.off()
 regS$regS = richness
 regS$regPhys = richness
 regS$regParm = richness
-write.csv(regS, '../FIA Lichen/Data/Regional Richness/regS_CNALH-2014-09-20.csv', row.names=F)
+write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20.csv', row.names=F)
 
 
 #
 fia_geo2 = merge(fia_geo, regS)
 
 # Quick Plot 
-spplot(fia_geo2, 'regS', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
-
+spplot(fia_geo2, 'regPhys', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
 
 
 
 
 ## Assess how sampling radius (km) affects richness estimates
 #Note: subsampled different number of records in each case b/c more records in larger radii
+# This code has not been run for most recently downloaded CNALH data
 
 rich1000 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_1000km.csv')
 rich700 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_700km.csv')
@@ -377,15 +376,8 @@ cor(ranks)
 
 
 
-
-
-
-
-
-
-
-
 ## Calculate for FIA plots without spatial coordinates
+## THIS CODE NO LONGER USED
 
 # Assign plot location to centroid of counties
 coords = data.frame()
@@ -803,10 +795,7 @@ par('usr')
 
 
 
-
-
-
-# Calc  regS for each grid cell 
+ Calc  regS for each grid cell 
 
 # Define size of subsample (nsamps) and number of times to resample (reps)
 nsamp = 350
