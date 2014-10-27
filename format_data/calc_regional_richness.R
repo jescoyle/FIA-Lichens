@@ -4,26 +4,24 @@
 library(sp)
 library(rgdal)
 library(vegan) # rarefy
+library(stringr) #str_trim
+library(rgeos) # gBuffer
 
+source('C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
+# Read in locations of master data of FIA plots with plot data and environmental data
+master_locs = read.csv('./Data/fia_lichen_plot_locations.csv')
+
+# Move to CNALH Directory
 setwd('C:/Users/jrcoyle/Documents/UNC/Projects/CNALH Diversity/')
-#setwd('C:/Users/jrcoyle/Documents/Projects/CNALH Diversity/')
-options(stringsAsFactors=F)
 
 # Read in CNALH records
-records_raw = read.csv('./Lower48_2014-10-08/occurrences.csv') #355119 records
-
-# Read in master data of FIA plots with plot data and environmental data
-master = read.csv('../FIA Lichen/Data/master_data.csv')
-master_locs = read.csv('../FIA Lichen/Data/fia_lichen_plot_locations.csv')
-
-## NEED TO LOAD MODEL_DATA 
-
+records_raw = read.csv('./Lower48_2014-10-08_specieslist/checklist.csv') #361502 records
 
 # Read in list of lichen species from FIA
 fia_splist = read.csv('../Lichen Traits/fia_lichen_master_list.csv')
 
 # Read in list of accepted species names
-cnalh_splist = read.csv('CNALH_allrecords_NAm_2013-02-19_checklist.csv')
+splist = read.csv('./Lower48_2014-10-08_specieslist/checklist.csv')
 
 target_fams = c('Parmeliaceae','Physciaceae','Cladoniaceae','Coccocarpiaceae','Collemataceae',
 	'Lobariaceae','Caliciaceae','Pannariaceae','Lecideaceae','Nephromataceae','Peltigeraceae',
@@ -36,9 +34,11 @@ target_genera = target_genera[target_genera!='']
 # Only look at Canada, USA, Mexico
 records_raw$country = factor(records_raw$country)
 levels(records_raw$country)
-mycountries = c('Canada',"CANADA",'canada','Meixco','Mexcio','mexico','Mexico','MEXICO',"México",'U.S.A.','U.S.A..',
-	'USA - HAWAII','United States','United States of America','usa','USA','Usa','US')
-records = subset(records_raw, country %in% mycountries) #331244 records
+mycountries = c('Canada',"CANADA",'canada','Meixco','Mexcio','mexico',
+	'Mexico','MEXICO',"México",'Meixco', 'Mexcio','Mwxico', 'U.S.A.',
+	'U.S.A..','USA - HAWAII','United States','United States of America',
+	'usa','USA','Usa','US','united States','United states','United STates')
+records = subset(records_raw, country %in% mycountries) #360373 records
 
 # Standardize capitalization of genera names
 sapply(records$genus, function(x){
@@ -49,7 +49,7 @@ sapply(records$genus, function(x){
 rec_fams = unique(records$family)
 rec_fams[order(rec_fams)]
 
-# Fix misspelled families
+# Fix some misspelled families
 records[records$family=="Brigantiaeaceae",'family']<- 'Brigantiaceae'
 records[records$family %in% c("Chrysothrichaceae","Chrysotrichaceae"),'family']<- 'Chrysothricaceae'
 records[records$family=="Haematommaceae",'family']<- "Haematommataceae" 
@@ -57,162 +57,199 @@ records[records$family=="Sphinctrinacaea",'family']<- "Sphinctrinaceae"
 records[records$family=="Stictidacaea",'family']<- "Stictidaceae" 
 
 # Remove records not in targeted families
-records = subset(records, family %in% target_fams) # 239781 records
+records = subset(records, family %in% target_fams) # 260853 records
 
 # Examine genera
 unique(records$genus)[order(unique(records$genus))]
 
-# Fix misspelled genera
-records[records$genus=="Diplotemma",'genus']<- "Diplotomma" 
-records[records$genus %in% c("Hypotrachnya","Hypotrachna"),'genus']<-  "Hypotrachyna"
-records[records$genus=="Lasillia",'genus']<- "Lasallia" 
+# Fix mis-spelled genera
 records[records$genus=="Tuckermanopsis",'genus']<- 'Tuckermannopsis'
-records[records$genus=="Vulpicidia",'genus']<- 'Vulpicida'
+
+# Records that do not match central taxonomy in CNALH
+good_names = str_trim(unique(paste(str_trim(splist$genus), str_trim(splist$specificEpithet))))
+record_names = get.latinbinom(records$scientificName)
+records_bad = subset(records, !(record_names %in% good_names))
+unique(records_bad$scientificName)
+
+# Add species to good_names that clearly are correct in CNALH
+add_names = c('Gyalolechia xanthostigmoidea', 'Fuscopannaria coralloidea', 'Umbilicaria proboscidea',
+	'Buellia lacteoidea', 'Lecidea','Bacidina egenuloidea')
+good_names = c(good_names, add_names)
+
+# Fix mis-spelled or old species names in records
+records[records$scientificName=='Buellia lepidastroidea','scientificName'] <- 'Buellia sequax'
+records[records$scientificName=='Bacidia egenuloidea','scientificName'] <- 'Bacidina egenuloidea'
+records[records$scientificName=='Caloplaca xanthostigmoidea', 'scientificName'] <- 'Gyalolechia xanthostigmoidea'
+records[records$scientificName=='Lecidea insularis', 'scientificName'] <- 'Rimularia insularis'
+
+## Remove records whose scientificNames are not in good_names (derived from genus, species in species list)
+record_names = get.latinbinom(records$scientificName)
+sum(record_names %in% good_names)
+records = subset(records, record_names %in% good_names) # 257295
 
 # Remove species not in targeted genera - may want to do this for targeted species instead
-records = subset(records, genus %in% target_genera) # 158448 records
-
-# Remove records that do not match standardized naming conventions according to CNALH
-# May want to try to deal with matching names later
-records = subset(records, scientificName %in% cnalh_splist$ScientificName) # 148285 records
+records = subset(records, genus %in% target_genera) # 181904 records
 
 # Divide records into a set with coordinates and a set located to county level
 records$decimalLatitude = as.numeric(records$decimalLatitude)
 records$decimalLongitude = as.numeric(records$decimalLongitude)
 
-records_geo = subset(records, !is.na(decimalLatitude)) #148230
-records_county = subset(records, is.na(decimalLatitude)) #55 records from South Carolina
+# Add a column flagging whether coordinates changed
+records$locEdit = F
 
-# Records to spatial data
-records_sp = records_geo[,c('family','scientificName','genus','specificEpithet','taxonRank',
-	'infraspecificEpithet','country','stateProvince','county','decimalLatitude','decimalLongitude',
-	'geodeticDatum')]
+# Assign coordinates to redacted localities using centroids of counties
+records_county = subset(records, is.na(decimalLatitude)) #169 records
+records_county[,c('country','stateProvince','county','locality')]
+find_locs = unique(records_county[,c('country','stateProvince','county')])
+find_locs$Lat = NA; find_locs$Lon = NA
+find_locs[find_locs$county=='Edmonson',c('Lat','Lon')] <- c(37.202580, -86.218226)
+find_locs[find_locs$county=='Avery',c('Lat','Lon')] <- c(36.083778, -81.916961)
+find_locs[find_locs$county=='Haywood',c('Lat','Lon')] <- c(35.553605, -82.966312)
+find_locs[find_locs$county=='Bladen',c('Lat','Lon')] <- c(34.602780, -78.539721)
+find_locs[find_locs$county=='Carteret',c('Lat','Lon')] <- c(34.793599, -76.587769)
+find_locs[find_locs$county=='Florence',c('Lat','Lon')] <- c(34.024970, -79.690412)
+find_locs[find_locs$county=='Darlington',c('Lat','Lon')] <- c(34.329154, -79.952160)
+find_locs[find_locs$county=='Wake',c('Lat','Lon')] <- c(35.793767, -78.666188)
+find_locs[find_locs$county=='Teton',c('Lat','Lon')] <- c(43.948921, -110.580647)
+find_locs[find_locs$county=='Park',c('Lat','Lon')] <- c(44.518208, -109.454910)
+find_locs[find_locs$county=='Orange',c('Lat','Lon')] <- c(36.066422, -79.126231)
+find_locs[find_locs$county=='Pierce',c('Lat','Lon')] <- c(47.033251, -122.159689)
+find_locs[find_locs$county=='Chatham',c('Lat','Lon')] <- c(35.701793, -79.291376)
+find_locs[find_locs$county=='Montgomery',c('Lat','Lon')] <- c(35.349764, -79.887426)
 
+# Replace NAs in records data
+# and indicate that record locality info was changed
+for(i in 1:nrow(find_locs)){
+	use_info = find_locs[i,]
 
-# Probably don't need to worry about converting datums
-datums = unique(records_sp$geodeticDatum)
-
-coordinates(records_sp) = c('decimalLongitude','decimalLatitude')
-proj4string(records_sp) = CRS("+proj=longlat")
-
-plot(records_sp)
-
-# Examine and remove records that fall in the water
-NA_outline = readOGR('C:/Users/jrcoyle/Documents/GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
-
-records_sp = spTransform(records_sp, CRS(proj4string(NA_outline)))
-rec_poly = overlay(records_sp, NA_outline)
-
-plot(NA_outline)
-plot(subset(records_sp, is.na(rec_poly)), pch=1, add=T)
-
-water_recs = select.spatial(records_sp)
-
-records_geo[water_recs,c('decimalLatitude','decimalLongitude','verbatimCoordinates','country','stateProvince','county')]
-
-records
-
-# Fix bad coordinates
-records[records$verbatimCoordinates=="44°29'02'N, 9353'15'W",'decimalLongitude'] = -93.8875 
-records[records$verbatimCoordinates=="44°41'46'N, 8610'57'W",'decimalLongitude'] = -86.1825
-records[records$verbatimCoordinates=="38°27'N, 172°36'02'W",'decimalLongitude'] = -122.6006
-records[records$verbatimCoordinates=="7°25'N, 147°10'W",c('decimalLatitude','decimalLongitude')]= c(NA,NA) # South Carolina records- can't figure out what lat lon was supposed to be
-records[(records$locality=="Mission Falls area, Flathead Indian Reservation. E of St. Ignatius, MT.")&(records$decimalLongitude<=-120),'decimalLongitude']<- -114
-records[(records$locality=="JUNEAU, MENDENHALL LAKE, 5 MI N OF AUKE BAY"),'decimalLatitude'] <- 58.42
-records[(records$locality=="Eight miles S of Furlong Bay Provincial Campground along Highway 25, N of Kitimat"),'decimalLatitude'] <- 54.26667
-records = records[(records$locality!="Australia; Langi Ghiran State Park, 15km SE of Ararat."),]
-records[(records$locality=="Arctic Alaska; East side Jago River, crest of Jag Mt."),'decimalLatitude'] <- 69 # From Google maps
-records[(records$locality=="Queen Charlotte Islands, Moresby Island, Port Alliford near Sandspit"),'decimalLongitude'] <- -131.9667 
-records[(records$locality=="Island of Maui, Olinda Koolan Forest Reserve, North Haleakala"),'decimalLongitude'] <- -156.2361
-records[(records$locality=="NORTH HALEAKALA METROSIDEROS; OLINDA FOREST RESERVE"),'decimalLongitude'] <- -156.2361
-records[(records$locality=="NORTH HALEAKALA, OLINDA KOOLAN F; HALEAKALA NP"),'decimalLongitude'] <- -156.2361
-records = records[(records$locality!="Mt. Wilhem, Eastern Highlands, Kombugomambuno, Keglsugl-Pindaunde trail"),]
-records[records$verbatimCoordinates=="15°07'S, 167°01'E",c('decimalLatitude','decimalLongitude')]<- c(NA,NA) # Carson pass, Alpine CA had wrong coordinates
-records[(records$locality=="Island of Kaua'i, Kaaweiki Ridge, near Methodist camp"),'decimalLongitude'] <- -159.6833
-records = records[(records$locality!="Hungary Creek Watershed. Raven Lake Mountain Caribou Study. Prince George Region."),] # Bad coordinates and county info
-records[(records$locality=="Ocala National Forest, along Co. Rd. 316, ca. 0.8 km E of Oklawaha River bridge at Eureka, 0.32 km W of Forest Service Rd. 67"),'decimalLatitude'] <- 39.47
-records[records$verbatimCoordinates=="4113'56'N, 81°35'51'W",'decimalLatitude'] = 41.232222
-records[(records$locality=="CHELAN, S OF"),'decimalLatitude'] <- 47.75 
-records[(records$locality=="Algoma District:  Lake Superior Provincial Park; cliffs and spruce forest overlooking Old Woman Bay,"),'decimalLatitude'] <- 47.75
-records[(records$locality=="Chadron State Park, 19 km S of Chadron off US Route 385, near primative campground"),'decimalLongitude'] <-  -103.0217
-records[(records$locality=="0.2 km up dirt road, S side of Hwy 16,  60 km E of Tensleep"),'decimalLongitude'] <- -106.9333
-records[(records$locality=="Camp Meriwether Boy Scout Camp"),'decimalLongitude'] <- -124
-records[(records$locality=='HIGHLANDS')&(records$verbatimCoordinates=="69°20'N, 145°00'W"),c('decimalLongitude','decimalLatitude')] <- c(-83.2, -83.2, 35,35)
-
-# Used for checking records
-bad_recs = records_geo[water_recs,c('decimalLatitude','decimalLongitude','verbatimCoordinates','country','stateProvince','county','locality')]
-subset(bad_recs, stateProvince %in% c('Colorado', 'NORTH CAROLINA','Nunavut'))
-
-# Write out record data
-write.csv(records, '../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv', row.names=F)
-
-
-### Calculate regional species richness for each FIA plot
-records = read.csv('../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv')
-
-library('spatstat') #disc
-library('rgeos')
-
-# Define spatial record data
-records_geo = subset(records, !is.na(decimalLatitude)) #148224
-records_county = subset(records, is.na(decimalLatitude)) #58 records, 55 from South Carolina
-
-# Records to spatial data
-records_sp = records_geo[,c('family','scientificName','genus','specificEpithet','taxonRank',
-	'infraspecificEpithet','country','stateProvince','county','decimalLatitude','decimalLongitude',
-	'geodeticDatum')]
-coordinates(records_sp) = c('decimalLongitude','decimalLatitude')
-proj4string(records_sp) = CRS("+proj=longlat")
-
-## Make county records into spatial data
-
-# Read in county data for U.S>
-county.sh = readOGR('../FIA Lichen/GIS','counties')
-
-records_county$county = cap.first(records_county$county)
-records_county$stateProvince = sapply(strsplit(records_county$stateProvince, ' '), function(x){
-	if(length(x)==1) return(cap.first(x[1]))
-	else return(paste(cap.first(x[1]), cap.first(x[2])))
-})
-
-records_poly = records_county[,c('family','scientificName','genus','specificEpithet','taxonRank',
-	'infraspecificEpithet','country','stateProvince','county','decimalLatitude','decimalLongitude',
-	'geodeticDatum')]
-
-# Assign lat/lon based on the center of the county
-coords = data.frame()
-for(i in 1:nrow(records_poly)){
-	x = records_poly[i,]
-
-	use_poly = county.sh[(county.sh$STATE_NAME==x$stateProvince)&(county.sh$NAME==x$county),]
-	these_coords= gCentroid(use_poly)
-	coords = rbind(coords, these_coords@coords)
+	records[is.na(records$decimalLatitude)&(records$stateProvince==use_info$stateProvince)&(records$county==use_info$county), 'decimalLatitude'] <-  use_info$Lat
+	records[is.na(records$decimalLongitude)&(records$stateProvince==use_info$stateProvince)&(records$county==use_info$county), 'decimalLongitude'] <-  use_info$Lon
+	records[is.na(records$decimalLongitude)&(records$stateProvince==use_info$stateProvince)&(records$county==use_info$county), 'locEdit'] <- T
 }
 
-records_poly[,c('decimalLongitude','decimalLatitude')] = coords
+# Records to spatial data
+records_geo = subset(records, !is.na(decimalLatitude)) #181900
+records_ll = records_geo[,c('id','family','scientificName','genus','specificEpithet','taxonRank',
+	'infraspecificEpithet','country','stateProvince','county','locality','decimalLatitude','decimalLongitude',
+	'geodeticDatum')]
+coordinates(records_ll) = c('decimalLongitude','decimalLatitude')
+proj4string(records_ll) = CRS("+proj=longlat")
 
-# Make into spatial data an concatenate with other records
-coordinates(records_poly) = c('decimalLongitude','decimalLatitude')
-proj4string(records_poly) = CRS("+proj=longlat")
+# Examine and remove records that fall in the water
+NA_outline = readOGR('C:/Users/jrcoyle/Documents/UNC/GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
+NA_buff = gBuffer(NA_outline, width=2000) # buffer extending approx. 2km from coast
+NA_buff10 = gBuffer(NA_buff, width=8000)
+save(NA_buff, NA_buff10, file='north_america_outline_buffers.RData')
+plot(NA_buff)
 
-records_sp = rbind(records_sp, records_poly) # 148282 records
+# Remove records not in N. America
+
+# Read in file with new coordinates (from previous analysis of Parm/Phys data)
+bad_coords = read.csv('reset_coordinates.csv')
+reset_coords = subset(bad_coords, !is.na(lat))
+
+for(i in 1:nrow(reset_coords)){
+	x = reset_coords[i,]
+	
+	use_recs = which(records_geo$country==x$country & records_geo$stateProvince==x$stateProvince & records_geo$county==x$county & records_geo$locality==x$locality)
+	
+	changed = (records_geo[use_recs,'decimalLongitude']==x$lon) * (records_geo[use_recs,'decimalLatitude']==x$lat)
+
+	records_geo[use_recs,'decimalLongitude'] <- x$lon
+	records_geo[use_recs,'decimalLatitude'] <- x$lat
+	records_geo[use_recs,'locEdit'] <- changed==0
+}
+
+# Make into spatial data again
+records_ll = records_geo[,c('id','family','scientificName','genus','specificEpithet','taxonRank',
+	'infraspecificEpithet','country','stateProvince','county','locality','decimalLatitude','decimalLongitude',
+	'geodeticDatum')]
+coordinates(records_ll) = c('decimalLongitude','decimalLatitude')
+proj4string(records_ll) = CRS("+proj=longlat")
+records_sp = spTransform(records_ll, CRS(proj4string(NA_outline)))
+
+par(mar=c(0,0,0,0))
+plot(NA_buff10)
+plot(records_sp, pch=15, cex=.3, add=T)
+
+rec_poly = over(records_sp, NA_buff10)
+water_recs = records_sp[is.na(rec_poly),]
+
+par(mar=c(0,0,0,0))
+plot(NA_buff10)
+plot(records_sp, pch=15, cex=.3, add=T)
+plot(water_recs, pch=16, cex=.5, col=2, add=T)
+
+water_places = unique(water_recs[,c('country','stateProvince','county')]@data)
+water_places[order(water_places$country, water_places$stateProvince),]
+water_places$country = as.character(water_places$country)
+
+# Find water_places that have not already been scanned in reset_coords (from Parm/Phys)
+reset_add = unique(water_recs[,c("country", "stateProvince", "county", "locality")]@data)
+reset = rbind(reset_coords[,1:4], reset_add)
+new_places = duplicated(reset)[(nrow(reset_coords)+1):nrow(reset)]==F
+reset_add = reset_add[new_places,]
+reset_add$lat = NA
+reset_add$lon = NA
+
+#write.csv(reset_add, 'reset_coordinates_fiagenera.csv', row.names=F)
+
+pdf('water_records_maps_fiagenera.pdf', height=5, width=5)
+for(i in 1:nrow(water_places)){
+	par(mar=c(0,0,0,0))
+	map('world',c('canada','usa','mexico','hawaii'), xlim=c(-180,-50), ylim=c(0,90))
+	abline(v=seq(-180,-50,5), col='grey')
+	abline(h=seq(0,90,5), col='grey')
+	axis(1)
+	axis(2)	
+	use_place = water_places[i,]
+	use_recs = subset(water_recs, country==use_place$country & stateProvince==use_place$stateProvince & county==use_place$county)$id
+	plot(subset(records_ll, id %in% use_recs), pch=16, col=2, add=T)
+	text(-175,5,labels=paste(use_place, collapse=' '), pos=4)
+	text(-50, 85, pos=2, cex=0.7, labels=paste(subset(records_ll, id %in% use_recs)$locality, collapse='\n'))
+}
+dev.off()
+
+# Manually check locations against Google Maps
+i=86
+use_place = water_places[i,]
+use_recs = subset(water_recs, country==use_place$country & stateProvince==use_place$stateProvince & county==use_place$county)$id
+subset(records_ll, id %in% use_recs)
+unique(coordinates(subset(records_ll, id %in% use_recs)[,c('stateProvince','locality')]))
+
+# Read back in edited coordinates
+reset_add = read.csv('reset_coordinates_fiagenera.csv')
+reset_coords2 = subset(reset_add, !is.na(lat))
+
+for(i in 1:nrow(reset_coords2)){
+	x = reset_coords2[i,]
+	
+	use_recs = which(records_geo$country==x$country & records_geo$stateProvince==x$stateProvince & records_geo$county==x$county & records_geo$locality==x$locality)
+	
+	changed = (records_geo[use_recs,'decimalLongitude']==x$lon) * (records_geo[use_recs,'decimalLatitude']==x$lat)
+
+	records_geo[use_recs,'decimalLongitude'] <- x$lon
+	records_geo[use_recs,'decimalLatitude'] <- x$lat
+	records_geo[use_recs,'locEdit'] <- changed==0
+}
 
 # Write out record data
-write.csv(records_sp, '../FIA Lichen/Data/CNALH_records_fia_genera_NAm.csv', row.names=F)
-
-
+write.csv(records_geo, '../FIA Lichen/Data/CNALH_records_fia_genera_NAm_2014-10-08.csv', row.names=F)
 
 #############################################################
 ### Calculate Regional Richness, All Species and Parmeliaceae/Physciaceae
 
 parmphys = read.csv('Parm_Phys_records_2014-09-20.csv')
-allsp = read.csv()
+allsp = read.csv('../FIA Lichen/Data/CNALH_records_fia_genera_NAm_2014-10-08.csv')
+parmphys_fia = subset(allsp, family %in% c('Parmeliaceae','Physciaceae'))
 
-# Subset to genera in FIA data
-parmphys_fia = subset(parmphys, genus %in% target_genera)
+# Calculate number of species in records
+species = unique(allsp[,'scientificName'])
+species.binom = get.latinbinom(species)
+
 
 # Calculate how many species in Physciaceae and Parmeliaceae in records
-species = unique(parmphys_fia[,c('family','scientificName','genus')])
+species_pp = unique(parmphys_fia[,c('family','scientificName','genus')])
 
 species = subset(species, family %in% c('Parmeliaceae','Physciaceae'))
 genera = unique(species[,c('family','genus')])
@@ -561,7 +598,7 @@ bindata = cbind(bindata, richness_rarefy)
 
 head(bindata)
 
-write.csv(bindata, 'Phys_richness_2-deg_CNALH-2014-09-20.csv', row.names=F)
+write.csv(phys2_bin, 'Phys_richness_2-deg_CNALH-2014-09-20.csv', row.names=F)
 phys5_bin = bindata
 phys2_bin = bindata
 parm5_bin = bindata
@@ -588,8 +625,7 @@ title(main='Parmeliaceae Species Richness\n(50 records)', cex.main=2)
 dev.off()
 
 
-
-
+## NOT DONE YET ##
 # Map Number of observations
 tiff('fia_genera_nsamps_map.tif', width=800, height=800)
 png('parmeliaceae_nsamps_map.png', height=1200, width=1200, bg='transparent')
@@ -732,16 +768,31 @@ mygrid_data = cbind(mygrid_data, richness)
 write.csv(mygrid_data, 'grid_map_Parm_Phys_250km_regS.csv', row.names=F)
 
 
-# plot
+# Plot
+mybreaks = seq(40, 130, by=10)
+colorvar = cut(mygrid_data$regParm300, breaks=mybreaks)
+usecolors = colorRampPalette(mycolors[2:8])(length(mybreaks-1))
 
-colorvar = cut(mygrid_data$regParm300, breaks=seq(40, 130, length.out=9))
-
+png('parmeliaceae_richness_subsample300_250km.png', height=700, width=700)
+par(mar=c(0,4,0,7))
 plot(nam_poly1)
-plot(mygrid_sp, col=mycolors[colorvar], add=T, pch=15, cex=.4)
+plot(mygrid_sp, col=usecolors[colorvar], add=T, pch=15, cex=.8)
+mtext('Parmeliaceae Species Richness\n(from 300 records w/in 250km radius)', 3, -6, cex=1.5)
+usr = par('usr')
+par(xpd=F)
+xwide = (usr[2]-usr[1])/30
+ypad = (usr[4]-usr[3])/3
+plotColorRamp(usecolors, length(mybreaks)-1, c(usr[2], usr[3]+ypad, usr[2]+xwide, usr[4]-ypad), 
+	labels=mybreaks, title='Num. Species', mycex=1, uneven.lab = F, labrange = NA, ndig=1)
+
+dev.off()
+
+rect()
 
 
 windows()
 par(mar=c(0,0,0,0))
+
 plot(0,0, xlim=c(0,1), ylim=c(-.2,1.2), type='n')
 rect(rep(0,8), seq(0, .7, .1), rep(.1, 8), seq(.1, .8, .1), col=mycolors)
 text(rep(0.1, 9), seq(0,.9,.1), labels=seq(40, 140, length.out=9), pos=4, cex=2)
@@ -863,6 +914,15 @@ sps[order(sps)]
 ############################################################################
 ### Functions
 
+# A functions that returns Genus species for a scientificName that may contain subspecific taxonomic info
+get.latinbinom = function(x){
+	namelist = strsplit(str_trim(x), ' ')
+	genus = str_trim(sapply(namelist, function(y) y[1]))
+	species = str_trim(sapply(namelist, function(y) ifelse(is.na(y[2]), '',y[2])))
+	str_trim(paste(genus, species, sep=' '))
+}
+
+
 # A function that capitalizes the first letter of a word
 cap.first = function(x){
 	lastpart = substr(x,2,nchar(x))
@@ -935,11 +995,70 @@ calc_rich_samp = function(recs, nsamp, reps){
 	}
 }
 
+# A function that plots a vertical color ramp on the side of a plot
+# cols    : the colors to use
+# n       : number of divisions
+# barends : location of whole bar c(xleft, ybottom, xright, ytop)
+# labels    : vector of labels for bar, assumes 1st and last numbers correspond to 1st and last colors
+# title   : title to print above bar
+# mycex   : size of label and title text
+# uneven.lab : TRUE when numeric labels are not evenly spaced along length of color bar
+# labrange : use when uneven.lab=T to specify minimum and maximum values of color range c(min, max)
+# ndig    : number of digits beyond decimal placeto print for numeric labels 
+plotColorRamp = function(cols, n, barends, labels=NA, title=NA, mycex=1.5, uneven.lab = F, labrange = NA, ndig=1){
+	dX = barends[3] - barends[1]
+	dY = barends[4] - barends[2]
+	dy = dY/n
+	
+	xpd.old = par('xpd')
+	par(xpd=T)
 
+	lend.old = par('lend')
+	par(lend=1)
 
+	usecols = colorRampPalette(cols)(n)
 
+	for(i in 1:n){
+		rect(barends[1], barends[2]+dy*(i-1), barends[3], barends[2]+dy*i, col=usecols[i], border=usecols[i])
+	}
 
+	if(!is.na(labels)){
+		if(is.numeric(labels)){
+			labels.round = format(round(labels, ndig), nsmall=ndig, trim=F)
 
+			if(uneven.lab){
+				dz = dY/diff(labrange)
+				Yposition = barends[2] + dz*(labels-labrange[1])
+			} else {
+				dZ = labels[length(labels)]-labels[1]
+				dz = dY/dZ
+				Yposition = barends[2] + dz*(labels-labels[1])
+			}
 
+			text(barends[3]+dX*0.5, Yposition, labels.round, pos=4, cex=mycex)
 
+		} else {
+			labels.round = labels
+			dz = dY/length(labels)
+			Yposition = barends[2] + dz*(0:(length(labels)-1))
 
+			text(barends[3]+dX*0.5, Yposition, labels, pos=4, cex=mycex)
+		}
+
+		segments(barends[3], Yposition, barends[3]+dX*0.5, Yposition)	
+	}
+	if(!is.na(title)){
+		
+		
+		## Determine how many characters away to place title
+		digits = max(nchar(labels.round)) # Maximum number of digits in a label
+		largest = labels.round[which(nchar(labels.round)==digits)] # Which labels are longest
+		
+		small.chars = grep('[-.]', largest) # Does the largest label have a small character?
+			if(length(small.chars)==length(largest)) digits = digits-0.6 # Discount the size of the largest label by 0.6 a character
+		
+		text(barends[3]+dX*0.5+par('cxy')[1]*mycex*(digits+.5), barends[2]+0.5*dY, labels=title, srt=-90, cex=mycex)
+	}
+	par(xpd=xpd.old)
+	par(lend=lend.old)
+}
