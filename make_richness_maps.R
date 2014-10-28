@@ -89,15 +89,16 @@ spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 dev.off()
 
 ## regional richness
-mycolramp100 = colorRampPalette(mycol)(100)
+#mycolramp100 = colorRampPalette(mycol)(100)
+#mycolramp100bw = colorRampPalette(c('black','grey90'))(100)
 
-pdf('./Figures/Map regional lichen richness white.pdf', height=8, width=12)
+pdf('./Figures/Map regional lichen richness white new regS.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
-colcuts = seq(120,220,10)  
+colcuts = seq(230,430,20)  
 spplot(sp_data, 'regS', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
 		sp.polygons(OUTLINES.laea, fill='white')
 		panel.pointsplot(x,y,...)
-	}, cuts=100, cex=1.5, col.regions = mycolramp100, auto.key=F,
+	}, cuts=colcuts, cex=1.5, col.regions = mycolramp, auto.key=F,
 	key=list(x=1,y=.3, corner=c(1,.5), title='Species\nRichness',
 		rectangles=list(col=mycolramp, size=3, border='transparent'),
 		text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
@@ -105,9 +106,24 @@ spplot(sp_data, 'regS', ylim=c(-1600,1500), main='', panel=function(x,y,subscrip
 
 dev.off()
 
-pdf('./Figures/Map regional lichen richness with forest bw.pdf', height=8, width=12)
+pdf('./Figures/Map regional lichen richness with forest new regS.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
-colcuts = seq(120,220,10)
+colcuts = seq(230,430,20)
+spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
+	panel=function(x,y,z,subscripts,...){
+		panel.levelplot(x,y,z,subscripts,...)
+		sp.polygons(OUTLINES.laea, fill='transparent', col='black')
+		sp.points(sp_data, col=mycolramp[cut(sp_data@data[,'regS'], colcuts, include.lowest=T)], pch=16, cex=1.5)
+	}, col.regions=c(0,'grey90'), colorkey=F,
+	key=list(x=1,y=.3, corner=c(1,.5), title='Number\nof Species',
+		rectangles=list(col=mycolramp, size=3, border='transparent'),
+		text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
+)
+dev.off()
+
+pdf('./Figures/Map regional lichen richness with forest bw new regS.pdf', height=8, width=12)
+trellis.par.set(axis.line=list(col=NA))
+colcuts = seq(230,430,20)
 spplot(forest_low48_grid, 'layer', ylim=c(-1600,1500), main='',
 	panel=function(x,y,z,subscripts,...){
 		panel.levelplot(x,y,z,subscripts,...)

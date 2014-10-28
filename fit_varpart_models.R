@@ -68,7 +68,7 @@ nb_log_mod = glm.nb(richness~., link='log', data=use_data_fit[,c('richness',use_
 gaus_log_mod = glm(richness~., family=gaussian(link='log'), data=use_data_fit[,c('richness',use_vars)])
 gaus_iden_mod = glm(richness~., family=gaussian(link='identity'), data=use_data_fit[,c('richness',use_vars)])
 
-AIC(gaus_iden_mod, pois_log_mod, nb_log_mod) #gaus_log_mod,
+AIC(gaus_log_mod,gaus_iden_mod, pois_log_mod, nb_log_mod) #gaus_log_mod,
 # nb_log mod wins by far for lichen richness, Parmeliaceae, Physcaceae
 # gaus_iden wins by far for fric, can't use nb or pois b/c not integer.
 
@@ -120,7 +120,7 @@ gaus_iden = glm(richness~reg, family=gaussian(link='identity'), data=use_data_fi
 
 summary(gaus_iden)
 
-AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_iden) # Ended up using nb_log for consistency with other variables
+AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_log, gaus_iden) # Ended up using nb_log for consistency with other variables
 AIC(pois_log, nb_log, gaus_iden)
 
 # Plot nb_log and nb_iden
@@ -164,7 +164,7 @@ names(unimods) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','line_theta','line_theta_SE',
 	'quad_int','quad_slope','quad_sq','quad_theta','quad_theta_SE','N')
 
-write.csv(unimods, 'univariate_models_Phys.csv', row.names=T)
+write.csv(unimods, 'univariate_models_AllSp.csv', row.names=T)
 
 
 # For functional diversity
@@ -227,7 +227,7 @@ unimods_reg = data.frame(t(unimods_reg))
 names(unimods_reg) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 	'line_int','line_slope','quad_int','quad_slope','quad_sq','N')
 
-write.csv(unimods_reg, 'univariate_models_regS_Phys.csv', row.names=T)
+write.csv(unimods_reg, 'univariate_models_regS_AllSp.csv', row.names=T)
 
 
 ## Make a chart of linear vs quadratic and concavity
@@ -672,7 +672,7 @@ barwide=1.5
 use_shade = c('FF','55','99','CC')
 use_color = c('#2415B0','#00BF32','#126A71')
 
-svg('./Figures/variation partitioning figure phys.svg', height=5, width=10)
+svg('./Figures/variation partitioning figure new regS.svg', height=5, width=10)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -788,7 +788,7 @@ dev.off()
 
 
 ## Plot local-regional varition partitioning without climate variables.
-svg('./Figures/variation partitioning local-regional no climate.svg', height=5, width=4)
+svg('./Figures/variation partitioning local-regional no climate new regS.svg', height=5, width=4)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
