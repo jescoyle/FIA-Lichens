@@ -12,6 +12,7 @@ load('sem_analysis.RData')
 library(lavaan)
 library(semPlot)
 library(semTools)
+library(corrplot)
 
 
 # Read in table of predictor variable types
@@ -33,37 +34,38 @@ sink()
 
 ##################################################################
 ## Read in tables of parameter estimates and effects
+
+## TABLES FOR FRIC DID NOT GENERATE PROPERLY IN KURE DUE TO AN ERROR. WILL NEED TO RE-OUTPUT THESE LATER.
+
 # All parameter estimares
-allsp_ests = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_parameterEstimates.csv')
-parm_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_parameterEstimates.csv')
-phys_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_parameterEstimates.csv')
-#raoq_ests = read.csv('./SEM models/finalmod_RaoQ_testdata_parameterEstimates.csv')
-noabun_ests = read.csv('./SEM models/No Pollution/noabun_regToRich_nopol_AllSp_testdata_parameterEstimates.csv')
-reg2rich_ests = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
-soil_ests = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
-rev_ests = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_parameterEstimates.csv')
+allsp_ests = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_parameterEstimates.csv')
+noabun_ests = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regToRich_nopol_AllSp_testdata_parameterEstimates.csv')
+reg2rich_ests = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
+soil_ests = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
+recip_ests = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_parameterEstimates.csv')
+reg2_recip_ests = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_parameterEstimates.csv')
+
+
 
 # Total effects
-allsp = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-parm = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_totaleffects.csv', row.names=1)
-phys = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_totaleffects.csv', row.names=1)
-#raoq = read.csv('./SEM models/finalmod_RaoQ_testdata_totaleffects.csv', row.names=1)
-fric = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_totaleffects.csv', row.names=1)
-reg2 = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-noabun = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-soil = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
-rev = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_totaleffects.csv', row.names=1)
+allsp = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+fric = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_fric_testdata_totaleffects.csv', row.names=1) # tables did not generate in KURE, need to do this separately
+reg2 = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+noabun = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+soil = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_totaleffects.csv', row.names=1)
+recip = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_totaleffects.csv', row.names=1)
+reg2_recip = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_totaleffects.csv', row.names=1)
+
 
 # Direct effects
-allsp_d = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-parm_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_directeffects_richness.csv', row.names=1)
-phys_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_directeffects_richness.csv', row.names=1)
-fric_d = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
-#raoq_d = read.csv('./SEM models/finalmod_RaoQ_testdata_directeffects_richness.csv', row.names=1)
-reg2_d = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-noabun_d = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-soil_d = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
-rev_d = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_directeffects_richness.csv', row.names=1)
+allsp_d = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+fric_d = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
+reg2_d = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+noabun_d = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+soil_d = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
+recip_d = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_directeffects_richness.csv', row.names=1)
+reg2_recip_d = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_directeffects_richness.csv', row.names=1)
+
 
 # Direct effect on abundance
 #allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
@@ -71,46 +73,37 @@ rev_d = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_directeffects
 #phys_da = read.csv('./SEM models/finalmod_Phys_testdata_directeffects_abundance.csv', row.names=1)
 
 # Direct effects on regional richness
-allsp_dr = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
-reg2_dr = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
-noabun_dr = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
-soil_dr = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
-rev_dr = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_directeffects_regS.csv', row.names=1)
+allsp_dr = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+reg2_dr = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+noabun_dr = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+soil_dr = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_directeffects_regS.csv', row.names=1)
+recip_dr = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_directeffects_regS.csv', row.names=1)
+reg2_recip_dr = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_directeffects_regS.csv', row.names=1)
+
 
 # Indirect effects via abundance
-allsp_i = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-parm_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_indirecteffects_via_abundance.csv', row.names=1)
-phys_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_indirecteffects_via_abundance.csv', row.names=1)
-fric_i = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
-#raoq_i = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_abundance.csv', row.names=1)
-reg2_i = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-soil_i = read.csv('./SEM models/No Pollution/soilmod_regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
-rev_i = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+allsp_i = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+fric_i = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Fric_testdata_indirecteffects_via_abundance.csv', row.names=1)
+reg2_i = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+soil_i = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+recip_i = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+reg2_recip_i = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_indirecteffects_via_abundance.csv', row.names=1)
+
 
 # Indirect effects of regional scale predictors
-allsp_ir = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
-parm_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_regionalvars_indirecteffects.csv')
-phys_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_regionalvars_indirecteffects.csv')
-fric_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_regionalvars_indirecteffects.csv')
-#raoq_ir = read.csv('./SEM models/finalmod_RaoQ_testdata_regionalvars_indirecteffects.csv')
-reg2_ir = read.csv('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
-noabun_ir = read.csv('./SEM models/No Pollution/noabun_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
-soil_ir = read.csv('./SEM models/No Pollution/soil_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
-rev_ir = read.csv('./SEM models/No Pollution/reverse_AllSp_testdata_regionalvars_indirecteffects.csv')
+allsp_ir = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+fric_ir = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Fric_testdata_regionalvars_indirecteffects.csv')
+reg2_ir = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+noabun_ir = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+soil_ir = read.csv('./SEM models/Oct2014 No Measurement Error/soil_regTorich_nopol_AllSp_testdata_regionalvars_indirecteffects.csv')
+recip_ir = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_regionalvars_indirecteffects.csv')
 
 # Indirect effects via forest structure
-allsp_if = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_indirecteffects_via_forest.csv')
-parm_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Parm_testdata_indirecteffects_via_forest.csv')
-phys_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Phys_testdata_indirecteffects_via_forest.csv')
-fric_if = read.csv('./SEM models/No Pollution/regTorich_nopol_Fric_testdata_indirecteffects_via_forest.csv')
-#raoq_if = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_forest.csv')
+allsp_if = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_indirecteffects_via_forest.csv')
+parm_if = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Parm_testdata_indirecteffects_via_forest.csv')
+phys_if = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Phys_testdata_indirecteffects_via_forest.csv')
+fric_if = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Fric_testdata_indirecteffects_via_forest.csv')
 
-# Indirect effects via local pollution
-#allsp_ip = read.csv('./SEM models/finalmod_AllSp_testdata_indirecteffects_via_pollution.csv')
-#parm_ip = read.csv('./SEM models/finalmod_Parm_testdata_indirecteffects_via_pollution.csv')
-#phys_ip = read.csv('./SEM models/finalmod_Phys_testdata_indirecteffects_via_pollution.csv')
-#fric_ip = read.csv('./SEM models/finalmod_Fric_testdata_indirecteffects_via_pollution.csv')
-#raoq_ip = read.csv('./SEM models/finalmod_RaoQ_testdata_indirecteffects_via_pollution.csv')
 
 ##################################################################
 ### Results ###
@@ -121,7 +114,7 @@ names(which(apply(parm[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(phys[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 names(which(apply(soil[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
-names(which(apply(rev[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
+names(which(apply(recip[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0))
 
 tot_sig = allsp[which(apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 tot_sig = reg2[which(apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
@@ -160,6 +153,19 @@ data.frame(AllSp = allsp$std.all,
 	Parm = parm$std.all,
 	Phys = phys$std.all)
 
+# Compare significance of total effects across models
+tot_sig = data.frame(Base = apply(allsp[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Recip = apply(recip[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
+	Reg2 = apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,	
+	Reg2_Recip = apply(reg2_recip[,c('std.ci.lower','std.ci.upper')], 1, prod)>0)
+tot_vals = data.frame(Var = rownames(allsp), Base = allsp$std.all,
+	Recip = recip$std.all,
+	Reg2 = reg2$std.all,
+	Reg2_Recip = reg2_recip$std.all)
+plot(tot_vals$Base, tot_vals$Recip); abline(0,1); abline(h=0,v=0)
+plot(tot_vals$Reg2, tot_vals$Reg2_Recip); abline(0,1); abline(h=0,v=0)
+plot(tot_vals$Base, tot_vals$Reg2); abline(0,1); abline(h=0,v=0)
+
 # Compare significance of direct effects across taxa
 dir_sig = data.frame(AllSp = apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
 	Parm = apply(parm_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
@@ -179,6 +185,156 @@ rownames(reg2)==rownames(noabun)
 tot_sig = data.frame(Reg2_sig = apply(reg2[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0,
 	NoAbun_sig = apply(noabun[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0)
 data.frame(predictor = rownames(reg2), Reg2 = reg2$std.all, NoAbun = noabun$std.all, tot_sig)
+
+###########################################################################
+### Assess model fit
+
+# Load model specifications
+source('./GitHub/FIA-Lichens/sem_model_specs.R')
+
+# Load previously fit models (from Kure)
+
+load('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_output.RData')
+load('./SEM models/Oct2014 No Measurement Error/noabun_nopol_AllSp_testdata_output.RData')
+load('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_AllSp_testdata_output.RData')
+load('./SEM models/Oct2014 No Measurement Error/regToRich_nopol_recip_AllSp_testdata_output.RData')
+
+nopol_fit
+noabun_nopol_fit
+regTorich_nopol_fit
+regTorich_nopol_recip_fit
+
+AIC(nopol_fit, noabun_nopol_fit, regTorich_nopol_fit, regTorich_nopol_recip_fit)
+anova(regTorich_nopol_fit, nopol_fit) # including direct paths to local richness makes the model significantly better.
+anova(regTorich_nopol_recip_fit, regTorich_nopol_fit) # including reciprocal effects of local richness on regional richness significant improves model.
+
+# Assess model fit
+examine_mod = regTorich_nopol_fit 
+
+summary(examine_mod, standardized=T, rsq=TRUE, fit.measures=T)
+fitMeasures(examine_mod)
+logLik(examine_mod)
+hist(resid(examine_mod)$cov)
+qqnorm(resid(examine_mod, type='standardized')$cov)
+
+res = resid(examine_mod)$cov
+which(abs(res)>.15, arr.ind=T)
+
+res_order = order(abs(res), decreasing=T)
+resdf = data.frame(residual=res[res_order], 
+	var1=matrix(rownames(res), nrow=nrow(res), ncol=ncol(res))[res_order],
+	var2=matrix(colnames(res), nrow=nrow(res), ncol=ncol(res), byrow=T)[res_order])
+
+subset(resdf, abs(residual)>0.1)[]
+subset(resdf, var1=='lichen.rich_log')
+subset(resdf, var1=='regS')
+
+
+# Residual correlation figure: only plot residual correlations greater than .1
+cortab = res
+cortabsig = 1-abs(cortab)
+png('./Figures/nopol regTorich residual correlations.png', height=1700, width=1700, type='cairo')
+corrplot(cortab, method='square', type='upper', diag=F, 
+	order='original', hclust.method='complete', p.mat=cortabsig,
+	sig.level=.9, insig='blank', tl.cex=1.5, tl.col=1, cl.cex=2, mar=c(1,1,4,1))
+dev.off()
+
+# What are the residuals? Obs - Exp covariances
+obscov = inspectSampleCov(path_regTorich_nopol_recip, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
+modcov = fitted(regTorich_nopol_recip_fit)$cov 
+covdiff =  obscov - modcov 
+solid = abs(covdiff)>0.1
+mypch = c(1,16)
+
+richVar = 'lichen.rich_log'#'Phys_log'#
+regVar = 'regS' #'regPhys'#
+
+svg('./Figures/nopol regTorich recip covariance residuals.svg', height=6, width=6)
+plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
+	ylab='Model Covariances', las=1, pch = mypch[solid[covdiff!=0]+1])
+abline(0,1)
+abline(h=0,v=0)
+points(obscov[richVar,], modcov[richVar,], pch=mypch[solid[richVar,]+1], col=2, cex=1.5)
+points(obscov[regVar,], modcov[regVar,], pch=mypch[solid[regVar,]+1], col='blue', cex=1.1)
+legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+	pch=16, pt.cex=c(1.5,1.1), bty='n')
+mtext('Direct Regional Paths + Reciprocal Richness Model', 3, 0.5) 
+dev.off()
+
+cbind(obscov['lichen.rich_log',], modcov['lichen.rich_log',])
+
+## Compare model predictions to observed data.
+# Model covariance and mean structure
+examine_mod = regTorich_nopol_recip_fit
+mu = fitted(examine_mod)$mean
+Sigma= matrix(fitted(examine_mod)$cov, nrow=length(mu), ncol=length(mu))
+
+# Random variables that follow model structure
+nvars = length(mu); nobs = nrow(working_data_test)
+rvars = matrix(rnorm(nvars*nobs, mean=mu), nrow=nvars, ncol=nobs)
+L = chol(Sigma)
+predvars = t(L) %*% matrix(rnorm(nvars*nobs), nrow=nvars, ncol=nobs)
+predvars = data.frame(t(predvars)); colnames(predvars) = names(mu)
+ 
+## Fit model to randomly generated data. What are the fit statistics?
+examine_path = path_regTorich_nopol_recip
+random_fit = sem(examine_path, data=predvars, fixed.x=T, estimator='ML', se='robust.sem')
+summary(random_fit, standardized=T, rsq=TRUE, fit.measures=T)
+obsrand = inspectSampleCov(examine_path, data=predvars)$cov
+modrand = fitted(random_fit)$cov 
+
+svg('./Figures/compare noabun_regTorich_recip random vs model residuals.svg', height=6, width=12)
+par(mfrow=c(1,2))
+plot(obsrand[covdiff!=0], modrand[covdiff!=0], xlab='Observed Covariances', 
+	ylab='Model Covariances', las=1)
+abline(0,1)
+abline(h=0,v=0)
+points(obsrand['lichen.rich_log',], modrand['lichen.rich_log',], pch=16, col=2, cex=1.5)
+points(obsrand['regS',], modrand['regS',], pch=16, col='blue', cex=1.1)
+legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+	pch=16, pt.cex=c(1.5,1.1), bty='n')
+mtext('Random Data', 3, 0.5) 
+
+plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
+	ylab='Model Covariances', las=1)
+abline(0,1)
+abline(h=0,v=0)
+points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=16, col=2, cex=1.5)
+points(obscov['regS',], modcov['regS',], pch=16, col='blue', cex=1.1)
+legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+	pch=16, pt.cex=c(1.5,1.1), bty='n')
+mtext('Observed Data', 3, 0.5) 
+dev.off()
+
+
+## Residuals from Base Model with Pollution
+pol_fit = sem(path_pol, data=working_data_test, fixed.x=T, estimator='ML', se='robust.sem')
+obscov = inspectSampleCov(path_pol, data=working_data_test)$cov 
+modcov = fitted(pol_fit)$cov 
+covdiff =  obscov - modcov 
+solid = abs(covdiff)>0.1
+mypch = c(1,16)
+
+svg('./Figures/finalmod covariance residuals.svg', height=6, width=6)
+plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
+	ylab='Model Covariances', las=1, pch = mypch[solid[covdiff!=0]+1])
+abline(0,1)
+abline(h=0,v=0)
+points(obscov[richVar,], modcov[richVar,], pch=mypch[solid[richVar,]+1], col=2, cex=1.5)
+points(obscov[regVar,], modcov[regVar,], pch=mypch[solid[regVar,]+1], col='blue', cex=1.1)
+legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+	pch=16, pt.cex=c(1.5,1.1), bty='n')
+points(obscov[c('totalNS','totalNS_reg'),], modcov[c('totalNS','totalNS_reg'),], pch=16, col='green', cex=1)
+legend('bottomright', 'Pollution', col='green', pch=16, bty='n')
+dev.off()
+
+
+
+
+
+
+
+
 
 
 #################################################################################
@@ -356,20 +512,6 @@ path_regional_regTorich_noabun = "
 		r1CH1*wetness_reg_var + r1CH2*rain_lowRH_reg_var + r1CH3*iso_reg_var + r1CH4*pseas_reg_var + r1CH5*mat_reg_var +
 		r1P1*totalNS_reg + r1FH1*regS_tree 
 "
-
-# Load previously fit models (from Kure)
-
-load('./SEM models/No Pollution/nopol_AllSp_testdata_output.RData')
-load('./SEM models/No Pollution/noabun_nopol_AllSp_testdata_output.RData')
-load('./SEM models/No Pollution/regTorich_nopol_AllSp_testdata_output.RData')
-
-nopol_fit
-noabun_nopol_fit
-regTorich_nopol_fit
-
-AIC(nopol_fit, noabun_nopol_fit, regTorich_nopol_fit)
-anova(regTorich_nopol_fit, nopol_fit) # including direct paths to local richness makes the model significantly better.
-
 # Fit models
 # Change data set to test when ready to report final results
 
@@ -385,103 +527,7 @@ finalmod_fit = sem(path_finalmod, data=working_data_fit, fixed.x=T, estimator='M
 
 nopol_fit = sem(path_nopol, data=working_data_fit, fixed.x=T, estimator='ML', se='robust.sem')
 
-# Assess model fit
-examine_mod = regTorich_nopol_fit 
 
-summary(examine_mod, standardized=T, rsq=TRUE, fit.measures=T)
-fitMeasures(examine_mod)
-logLik(examine_mod)
-hist(resid(examine_mod)$cov)
-qqnorm(resid(examine_mod, type='standardized')$cov)
-
-res = resid(examine_mod)$cov
-which(abs(res)>.15, arr.ind=T)
-
-res_order = order(abs(res), decreasing=T)
-resdf = data.frame(residual=res[res_order], 
-	var1=matrix(rownames(res), nrow=nrow(res), ncol=ncol(res))[res_order],
-	var2=matrix(colnames(res), nrow=nrow(res), ncol=ncol(res), byrow=T)[res_order])
-
-subset(resdf, abs(residual)>0.1)[]
-subset(resdf, var1=='lichen.rich_log')
-subset(resdf, var1=='regS')
-
-
-# Residual correlation figure: only plot residual correlations greater than .1
-cortab = res
-cortabsig = 1-abs(cortab)
-png('./Figures/nopol noabun residual correlations.png', height=1700, width=1700, type='cairo')
-corrplot(cortab, method='square', type='upper', diag=F, 
-	order='original', hclust.method='complete', p.mat=cortabsig,
-	sig.level=.9, insig='blank', tl.cex=1.5, tl.col=1, cl.cex=2, mar=c(1,1,4,1))
-dev.off()
-
-# What are the residuals? Obs - Exp covariances
-obscov = inspectSampleCov(path_regTorich_nopol, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
-modcov = fitted(examine_mod)$cov 
-covdiff =  obscov - modcov 
-solid = abs(covdiff)>0.1
-mypch = c(1,16)
-
-richVar = 'Phys_log'#'lichen.rich_log'
-regVar = 'regPhys'#'regS'
-
-svg('./Figures/nopol regTorich covariance residuals Physciaceae.svg', height=6, width=6)
-plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
-	ylab='Model Covariances', las=1, pch = mypch[solid[covdiff!=0]+1])
-abline(0,1)
-abline(h=0,v=0)
-points(obscov[richVar,], modcov[richVar,], pch=mypch[solid[richVar,]+1], col=2, cex=1.5)
-points(obscov[regVar,], modcov[regVar,], pch=mypch[solid[regVar,]+1], col='blue', cex=1.1)
-legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
-	pch=16, pt.cex=c(1.5,1.1), bty='n')
-#points(obscov[c('totalNS','totalNS_reg'),], modcov[c('totalNS','totalNS_reg'),], pch=16, col='green', cex=1)
-#legend('bottomright', 'Pollution', col='green', pch=16, bty='n')
-#mtext('No Abundance Model', 3, 0.5) 
-dev.off()
-
-cbind(obscov['lichen.rich_log',], modcov['lichen.rich_log',])
-
-## Compare model predictions to observed data.
-# Model covariance and mean structure
-mu = fitted(examine_mod)$mean
-Sigma= matrix(fitted(examine_mod)$cov, nrow=length(mu), ncol=length(mu))
-
-# Random variables that follow model structure
-nvars = length(mu); nobs = nrow(working_data_test)
-rvars = matrix(rnorm(nvars*nobs, mean=mu), nrow=nvars, ncol=nobs)
-L = chol(Sigma)
-predvars = t(L) %*% matrix(rnorm(nvars*nobs), nrow=nvars, ncol=nobs)
-predvars = data.frame(t(predvars)); colnames(predvars) = names(mu)
- 
-## Fit model to randomly generated data. What are the fit statistics?
-random_fit = sem(path_noabun_nopol, data=predvars, fixed.x=T, estimator='ML', se='robust.sem')
-summary(random_fit, standardized=T, rsq=TRUE, fit.measures=T)
-obsrand = inspectSampleCov(path_noabun_nopol, data=predvars)$cov
-modrand = fitted(random_fit)$cov 
-
-svg('./Figures/compare noabun_nopol random vs model residuals.svg', height=6, width=12)
-par(mfrow=c(1,2))
-plot(obsrand[covdiff!=0], modrand[covdiff!=0], xlab='Observed Covariances', 
-	ylab='Model Covariances', las=1)
-abline(0,1)
-abline(h=0,v=0)
-points(obsrand['lichen.rich_log',], modrand['lichen.rich_log',], pch=16, col=2, cex=1.5)
-points(obsrand['regS',], modrand['regS',], pch=16, col='blue', cex=1.1)
-legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
-	pch=16, pt.cex=c(1.5,1.1), bty='n')
-mtext('No Abundance Model: Random Data', 3, 0.5) 
-
-plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
-	ylab='Model Covariances', las=1)
-abline(0,1)
-abline(h=0,v=0)
-points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=16, col=2, cex=1.5)
-points(obscov['regS',], modcov['regS',], pch=16, col='blue', cex=1.1)
-legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
-	pch=16, pt.cex=c(1.5,1.1), bty='n')
-mtext('No Abundance Model: Observed Data', 3, 0.5) 
-dev.off()
 
 
 ## Comparisons:
@@ -554,24 +600,7 @@ anova(regTorich_nopol_fit, nopol_fit)
 
 ######################################
 ## Compare total effects
-
-# Make df of total effects including direct effects of regS and abundance
-
-# Order variables from lowest to highest total effects
-total = rev # This changes based on what response variable is being analyzed
-total = rbind(rev, rev_d[c('regS','tot_abun_log'),])
-#total = rbind(total, noabun_d['regS',])
-
-ordered_vars = rownames(total[order(total$std.all),])
-
-# Put tables in same order
-use_total = total[ordered_vars,]
-
 library(lattice)
-
-# Define range limits that will include 95% confidence intervals
-myrange = range(use_total[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
-myrange[1] = -1 #-.8
 
 # Color scheme
 mycols = matrix(c('#b3b5ffff','#6b6dd7ff','#8dff94ff','#38af4fff'), nrow=2)
@@ -592,8 +621,24 @@ myadj=.15
 mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
 names(mytypes)=c('C','F','P','R','A')
 
+
+# Make df of total effects including direct effects of regS and abundance
+
+# Order variables from lowest to highest total effects
+total = reg2 # This changes based on what response variable is being analyzed
+total = rbind(total, reg2_d[c('regS','tot_abun_log'),])
+
+ordered_vars = rownames(total[order(total$std.all),])
+
+# Put tables in same order
+use_total = total[ordered_vars,]
+
+# Define range limits that will include 95% confidence intervals
+myrange = range(use_total[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
+myrange[1] = -0.85 #-1
+
 # Make plot
-svg('./Figures/Standardized total effects on AllSp richness reversemod nopol regTorich.svg', height=20, width=19)
+svg('./Figures/No Measurement Error/Standardized total effects on AllSp richness nopol regTorich recip.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/3, xlim=myrange,
@@ -619,7 +664,7 @@ dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, 
 	
 		# Add text labeling the variable type
 		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1))) 
-		panel.text(myrange[1]-0.05, y, labels=mytypes[vartypes], cex=2)
+		panel.text(myrange[1]+0.05, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
@@ -631,7 +676,7 @@ dev.off()
 ### Direct effects on regional richness
 
 # Define data set to use
-direct_reg = rev_dr
+direct_reg = reg2_recip_dr
 
 # Order variables from lowest to highest direct effects
 ordered_vars = rownames(direct_reg[order(direct_reg$std.all),])
@@ -641,15 +686,10 @@ use_df = direct_reg[ordered_vars,]
 
 # Define range limits that will include 95% confidence intervals
 myrange = range(use_df[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .04)
-myrange[1] = -1.8
-
-#myshade = c('55','99','')
-#names(myshade) = c('het','opt','')
-mytypes = expression('C','F','P','','') # symbols used in plot to denote variable types
-names(mytypes)=c('C','F','P','R','A')
+myrange[1] = -2
 
 # Make plot
-svg('./Figures/Standardized direct effects on AllSp regional richness regTorich nopol reversemod.svg', height=9, width=19)
+svg('./Figures/No Measurement Error/Standardized direct effects on AllSp regional richness regTorich nopol recip.svg', height=9, width=19)
 dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, data=use_df, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=4/5, xlim=myrange,
@@ -657,7 +697,7 @@ dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, dat
 	
 		# Add horizontal boxes
 		colorcombos = predtypes[ordered_vars, c('mode','scale')]
-		#colorcombos['regS','mode'] = 'opt'
+		colorcombos['lichen.rich_log','mode'] = 'opt' # Use with reciprocal richness models
 		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
 		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
 			col=colororder, border='grey50')
@@ -674,8 +714,8 @@ dotplot(as.numeric(factor(rownames(use_df), levels = ordered_vars))~std.all, dat
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
-		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
-		panel.text(-1.7, y, labels=mytypes[vartypes], cex=2)
+		#vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
+		#panel.text(myrange[1]+0.1, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
@@ -687,8 +727,8 @@ dev.off()
 ### Direct and indirect effects on local richness
 
 # Define datasets to use
-direct = rev_d
-indirect = rev_i
+direct = reg2_recip_d
+indirect = reg2_recip_i
 direct = direct[c(rownames(indirect),'tot_abun_log'),]
 #direct = direct[rownames(indirect),] # Use for plotting noabun model
 
@@ -706,7 +746,7 @@ myrange[1] = -.34
 jitter = 0
 
 # Make plot
-svg('./Figures/Standardized direct and indirect effects on AllSp richness reversemod regTorich nopol.svg', height=13, width=19)
+svg('./Figures/No Measurement Error/Standardized direct and indirect effects on AllSp richness regTorich nopol recip.svg', height=13, width=19)
 dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all, data=use_direct, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/4, xlim=myrange,
@@ -750,8 +790,6 @@ dotplot(as.numeric(factor(rownames(use_direct), levels = ordered_vars))~std.all,
 		background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
 )
 dev.off()
-
-
 
 
 
@@ -810,20 +848,23 @@ dev.off()
 
 ###########################################
 ### Are totaleffects at regional scale larger than total effects at local scale?
+
+total = allsp# This changes based on what response variable is being analyzed
+total = rbind(total, allsp_d[c('regS','tot_abun_log'),])
+
 cvars = c('wetness','rain_lowRH','pseas','iso','mat')
 
 lvars = c(cvars, 'PIE.ba.tree')
 rvars = c(paste(cvars, 'reg_mean', sep='_'), 'regS_tree')
 
-# keep track of which model is currently saved as 'total'
-svg('./Figures/compare local-regional total effects regTorich nopol reversemod.svg', height=5.5, width=5.5)
+svg('./Figures/No Measurement Error/compare local-regional total effects nopol.svg', height=5.5, width=5.5)
 par(mar=c(5,5,1,1))
 par(lwd=2)
 par(lend=1)
 par(cex.lab=1.2)
 plot(total[lvars, 'std.all'], total[rvars, 'std.all'], 	
 	xlab='Local Effect', ylab='Regional Effect', type='n', las=1,
-	xlim=c(-1,1), ylim=c(-1,1))
+	xlim=c(-0.9,0.9), ylim=c(-0.9,0.9))
 usr=par('usr')
 polygon(usr[c(1,1,2,2)],usr[c(3,4,4,3)], col='#8dff94fb')
 polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
@@ -836,12 +877,12 @@ arrows(total[lvars,'std.all'], total[rvars,'std.ci.lower'],
 points(total[lvars, 'std.all'], total[rvars, 'std.all'], pch=15, col='black')
 
 # Labels for regTorich
-text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
-	pos=c(2,2,4,4,2,4), offset=1.5, col='black')
-
-# Labels for finalmod
 #text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
-#	pos=c(3,2,4,3,1,4), offset=.9)
+#	pos=c(2,2,4,4,2,4), offset=1.5, col='black')
+
+# Labels for base model
+text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
+	pos=c(3,2,4,3,1,4), offset=.9)
 
 dev.off()
 
@@ -877,11 +918,11 @@ climReg_IE_tab = merge(climReg_IE_tab, sub_vars_FH[,c('var','IEvar2','subpath_FH
 climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','loc','regS','FH','subpath_FH',
 	'loc_sig','regS_sig','FH_sig','subFH_sig')]
 
-write.csv(climReg_IE_tab, 'Indirect regional climate effects nopol.csv', row.names=F)
+write.csv(climReg_IE_tab, './Tables/No Measurement Error/Indirect regional climate effects nopol.csv', row.names=F)
 
 # Table for regTorich model which includes direct effect
-indirect_ir = rev_ir
-direct = rev_d
+indirect_ir = reg2_ir
+direct = reg2_d
 
 order_clim = c('wetness','rain_lowRH','pseas','mat','iso','radiation')
 order_clim_reg = c(paste(order_clim[1:5],'reg_mean', sep='_'), paste(order_clim[1:5], 'reg_var', sep='_'), 'regS_tree')
@@ -908,7 +949,7 @@ climReg_IE_tab = merge(climReg_IE_tab, sub_vars_FH[,c('var','IEvar2','subpath_FH
 climReg_IE_tab = climReg_IE_tab = climReg_IE_tab[,c('var','IEvar2','predictor','dir','loc','regS','FH','subpath_FH',
 	'dir_sig','loc_sig','regS_sig','FH_sig','subFH_sig')]
 
-write.csv(climReg_IE_tab, 'Indirect regional climate effects regTorich nopol reversemod.csv', row.names=F)
+write.csv(climReg_IE_tab, './Tables/No Measurement Error/Indirect regional climate effects regTorich nopol.csv', row.names=F)
 
 
 indirect = phys_i
@@ -951,13 +992,13 @@ write.csv(climEff_tab, './SEM models/Compare effects climate variables Phys.csv'
 use_vars = subset(predtypes, scale=='local'&label!=''&type%in%c('env','forest'))
 use_vars = use_vars[-grep('soil', rownames(use_vars)),]
 
-use_d = rev_d[rownames(use_vars),]
-use_i = rev_i[rownames(use_vars),]
+use_d = reg2_d[rownames(use_vars),]
+use_i = reg2_i[rownames(use_vars),]
 
 mypch = c(22,23)
 mycol=c('white','grey30')
 
-svg('./Figures/compare richness abundance effects local vars regTorich reversemod.svg', height=5, width=5 )
+svg('./Figures/No Measurement Error/compare richness abundance effects local vars regTorich.svg', height=5, width=5 )
 par(mar=c(4,4,1,1))
 plot(use_d$std.all, use_i$std.all, type='n', 
 	xlim=c(-.3, .3), ylim=c(-.3,.3), las=1, ylab='Indirect Effect via Abundance',
@@ -1013,6 +1054,7 @@ compare_id[order(compare_id$direct, decreasing=T),]
 ### Draw path diagram for significant paths
 
 use_pred = subset(predtypes, label !='')
+
 ## Going to make diagram in two modules: focused on local and regional effects
 
 ## Local module:
@@ -1049,7 +1091,7 @@ unit = 1
 
 # Start with richness and abundance in center
 var_locs['abun_log',] = c(-1,0) 
-var_locs['lichen_rich',] = c(1,0)
+var_locs['lichen.rich_log',] = c(1,0)
 
 # Add pollution and regS to corners
 #var_locs['totalNS',] = c(-2.5,2.5)
@@ -1071,7 +1113,7 @@ var_locs=data.frame(var_locs)
 # Make plot
 mycex=1.5
 
-svg('./Figures/nopol model large paths local module.svg', height=5, width=8.5) # Change based on response variable of interest
+svg('./Figures/path diagram nopol model local module.svg', height=5, width=8.5) # Change based on response variable of interest
 par(mar=c(0,0,0,0))
 par(lend="butt")
 plot(var_locs, xlim=c(-6,6), ylim=c(-2.5,6), type='n', axes=F, xlab='', ylab='')
@@ -1086,7 +1128,7 @@ for(i in order(abs(sigpaths$std.all))){
 text(var_locs[fm_vars,], labels=varnames[fm_vars,'midName'], pos=2, offset=.25)
 text(var_locs[fh_vars,], labels=varnames[fh_vars,'midName'], pos=4, offset=.25)
 text(var_locs[c_vars,], labels=varnames[c_vars,'midName'],adj=-.1, srt=45)
-text(var_locs[c('lichen_rich','abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
+text(var_locs[c('lichen.rich_log','abun_log'),], labels=c('Local\nrichness','Abundance'),pos=1, offset=1)
 text(var_locs['totalNS',], labels=varnames['totalNS','midName'], pos=2, offset=.25)
 text(var_locs['reg',], labels='Regional richness', pos=1, offset=.25)
 
@@ -1206,12 +1248,14 @@ dev.off()
 unit=2
 var_locs = matrix(unit*c(0.25,-1,.5,0,-.5,0,0,1,-.5,-1), nrow=5, ncol=2, byrow=T)
 colnames(var_locs) = c('X','Y')
-rownames(var_locs) = c('lichen_rich','regS','lvar','rvar','tot_abun_log')
+rownames(var_locs) = c('lichen.rich_log','regS','lvar','rvar','tot_abun_log')
 var_locs = data.frame(var_locs)
 
 # Model with direct paths from regional climate to local richness
-regS_eff = subset(reg2rich_ests, lhs=='lichen_rich'&rhs=='regS')[,c('std.ci.lower','std.all','std.ci.upper')]
-abun_eff = subset(reg2rich_ests, lhs=='lichen_rich'&rhs=='tot_abun_log')[,c('std.ci.lower','std.all','std.ci.upper')]
+use_ests = reg2rich_ests
+
+regS_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='regS')[,c('std.ci.lower','std.all','std.ci.upper')]
+abun_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='tot_abun_log')[,c('std.ci.lower','std.all','std.ci.upper')]
 use_vars = c('mat','iso','pseas','wetness','rain_lowRH')
 use_breaks = seq(0,2,length.out=11)
 
@@ -1223,15 +1267,15 @@ for(i in use_vars){
 	lvar = i
 	rvar = paste(i, 'reg_mean', sep='_')
 
-	d_eff = subset(reg2rich_ests, lhs=='lichen_rich'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	rl_cor = subset(reg2rich_ests, lhs==lvar&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	l_eff = subset(reg2rich_ests, lhs=='lichen_rich'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	r_eff = subset(reg2rich_ests, lhs=='regS'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	la_eff = subset(reg2rich_ests, lhs=='tot_abun_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	d_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	rl_cor = subset(use_ests, lhs==lvar&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	l_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	r_eff = subset(use_ests, lhs=='regS'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	la_eff = subset(use_ests, lhs=='tot_abun_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
 
 	effs = rbind(d_eff, l_eff, r_eff, regS_eff, rl_cor, la_eff, abun_eff)
 	effs$from = c('rvar','lvar','rvar','regS','rvar','lvar','tot_abun_log')
-	effs$to = c('lichen_rich','lichen_rich','regS','lichen_rich','lvar','tot_abun_log','lichen_rich')
+	effs$to = c('lichen.rich_log','lichen.rich_log','regS','lichen.rich_log','lvar','tot_abun_log','lichen.rich_log')
 	effs$code = c(2,2,2,2,3,2,2)
 	effs$col = c('#FF0000','#000000')[as.numeric(effs$std.all>0)+1]
 	effs$lty = c(3,1)[as.numeric(apply(effs[,c('std.ci.lower','std.ci.upper')], 1, prod)>0)+1]
@@ -1255,16 +1299,18 @@ for(i in use_vars){
 	}
 	text(var_locs['rvar',], labels=varnames[rvar,'midName'], pos=3, offset=.5)
 	text(var_locs['lvar',], labels=varnames[lvar,'midName'], pos=2, offset=.5)
-	text(var_locs['lichen_rich',], labels='Local richness', pos=1, offset=.5)
+	text(var_locs['lichen.rich_log',], labels='Local richness', pos=1, offset=.5)
 	text(var_locs['regS',], labels='Regional richness', pos=4, offset=.5)
 	text(var_locs['tot_abun_log',], labels='Lichen abundance', pos=1, offset=.5)
 
 }
 dev.off()
 
-# Model without direct paths from regional climate to local richness
-regS_eff = subset(allsp_ests, lhs=='lichen_rich'&rhs=='regS')[,c('std.ci.lower','std.all','std.ci.upper')]
-abun_eff = subset(allsp_ests, lhs=='lichen_rich'&rhs=='tot_abun_log')[,c('std.ci.lower','std.all','std.ci.upper')]
+# Model with direct paths from regional climate to local richness
+use_ests = allsp_ests
+
+regS_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='regS')[,c('std.ci.lower','std.all','std.ci.upper')]
+abun_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='tot_abun_log')[,c('std.ci.lower','std.all','std.ci.upper')]
 use_vars = c('mat','iso','pseas','wetness','rain_lowRH')
 use_breaks = seq(0,2,length.out=11)
 
@@ -1276,14 +1322,14 @@ for(i in use_vars){
 	lvar = i
 	rvar = paste(i, 'reg_mean', sep='_')
 
-	rl_cor = subset(allsp_ests, lhs==lvar&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	l_eff = subset(allsp_ests, lhs=='lichen_rich'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	r_eff = subset(allsp_ests, lhs=='regS'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
-	la_eff = subset(reg2rich_ests, lhs=='tot_abun_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	rl_cor = subset(use_ests, lhs==lvar&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	l_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	r_eff = subset(use_ests, lhs=='regS'&rhs==rvar)[,c('std.ci.lower','std.all','std.ci.upper')]
+	la_eff = subset(use_ests, lhs=='tot_abun_log'&rhs==lvar)[,c('std.ci.lower','std.all','std.ci.upper')]
 
 	effs = rbind(l_eff, r_eff, regS_eff, rl_cor, la_eff, abun_eff)
 	effs$from = c('lvar','rvar','regS','rvar','lvar','tot_abun_log')
-	effs$to = c('lichen_rich','regS','lichen_rich','lvar','tot_abun_log','lichen_rich')
+	effs$to = c('lichen.rich_log','regS','lichen.rich_log','lvar','tot_abun_log','lichen.rich_log')
 	effs$code = c(2,2,2,3,2,2)
 	effs$col = c('#FF0000','#000000')[as.numeric(effs$std.all>0)+1]
 	effs$lty = c(3,1)[as.numeric(apply(effs[,c('std.ci.lower','std.ci.upper')], 1, prod)>0)+1]
@@ -1291,7 +1337,7 @@ for(i in use_vars){
 	#effs$lowCat = as.numeric(cut(abs(effs$std.ci.lower),use_breaks))
 	#effs$hiCat = as.numeric(cut(abs(effs$std.ci.upper),use_breaks))
 	effs$estCat = as.numeric(cut(abs(effs$std.all),use_breaks))
-
+	
 	plot(var_locs, xlim=c(-(unit+1),unit+1), ylim=c(-(unit+1),unit+1), type='n', axes=F, xlab='', ylab='')
 	for(a in 1:nrow(effs)){
 		arrows(var_locs[effs$from[a],'X'], var_locs[effs$from[a],'Y'],
@@ -1307,7 +1353,7 @@ for(i in use_vars){
 	}
 	text(var_locs['rvar',], labels=varnames[rvar,'midName'], pos=3, offset=.5)
 	text(var_locs['lvar',], labels=varnames[lvar,'midName'], pos=2, offset=.5)
-	text(var_locs['lichen_rich',], labels='Local richness', pos=1, offset=.5)
+	text(var_locs['lichen.rich_log',], labels='Local richness', pos=1, offset=.5)
 	text(var_locs['regS',], labels='Regional richness', pos=4, offset=.5)
 	text(var_locs['tot_abun_log',], labels='Lichen abundance', pos=1, offset=.5)
 
@@ -1316,13 +1362,10 @@ dev.off()
 
 
 
-
-
-
-
 ## Only show variables with significant paths to richness
 ## Variables to remove have to be identified by hand
 
+## THIS DOES NOT REFLECT MOST RECENT ANALYSES
 # Variables to remove
 subset(sigpaths, rhs=='bark_moist_pct.rao.ba') # Check variables that are difficult to distinguish on path diagram
 remove_vars = c('diamDiversity','bigTrees','LogSeed.ba','bark_moist_pct.ba','lightDist.mean','LogSeed.rao.ba','wood_SG.rao.ba')

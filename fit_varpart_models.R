@@ -844,6 +844,19 @@ usr = par('usr')
 plotColorRamp(cols = mycolbw, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
 	labels = seq(-2.5,3.5,.5), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)')
 
+par(mar=c(5,5,1,6))
+plot(richness~reg, data=use_data_test, pch=16, col=colorvec)
+
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[2], usr[3], usr[2]+0.05*diff(usr[1:2]), usr[4]),
+	labels = seq(-2.5,3.5,.5), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)')
+
+colorvec = mycol[cut(use_data_test$regS, 10, include.lowest=T)]
+plot(richness~reghet_pc1, data=use_data_test, pch=16, col=colorvec)
+
+exp(coef(pcamod))
+
+# 
 
 
 ## How does regional heterogeneity affect local control of local richness
@@ -856,9 +869,9 @@ cbind(coef(reghetloc_mod)[c(2,4:21)], coef(reghetloc_mod)[22:40], coef(summary(r
 
 # Probably should only do this for local scale variables that have significant effects.
 # Decide using sem?
-use_locvars = c('pseas','wetness','bark_moist_pct.rao.ba','PIE.ba.tree','wood_SG.ba','light.mean','PC1')
+#use_locvars = c('pseas','wetness','radiation','bark_moist_pct.rao.ba','PIE.ba.tree','wood_SG.ba','light.mean','PC1')
 
-interactionmods = sapply(use_locvars, function(x){
+interactionmods = sapply(localvars, function(x){
 	
 	# Define non-NA observations
 	use_obs = rownames(use_data_test)[!is.na(use_data_test[,x])]
@@ -885,7 +898,9 @@ names(interactionmods) = c('AIC_line','R2_line',
 	'line_theta','line_theta_SE','N')
 
 
+sigint_mods = subset(interactionmods, line_interaction_P <0.05)
 
+sigint_mods[,c('line_slope','line_interaction')]
 
 reghetloc_mod = glm.nb(richness~wetness*reghet_pc1 + pseas*reghet_pc1 + PIE.ba.tree*reghet_pc1 + 
 	bark_moist_pct.rao.ba*reghet_pc1 + wood_SG.ba*reghet_pc1 + light.mean*reghet_pc1 + 
