@@ -32,10 +32,12 @@ sink('./SEM models/test summary.txt')
 summary(noabun_nopol_fit, standardized=T, rsq=TRUE, fit.measures=T)
 sink()
 
+
 ##################################################################
 ## Read in tables of parameter estimates and effects
 
 ## TABLES FOR FRIC DID NOT GENERATE PROPERLY IN KURE DUE TO AN ERROR. WILL NEED TO RE-OUTPUT THESE LATER.
+## noabun tables are from the reg2_noabun model
 
 # All parameter estimares
 allsp_ests = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_parameterEstimates.csv')
@@ -44,8 +46,6 @@ reg2rich_ests = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_no
 soil_ests = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_parameterEstimates.csv')
 recip_ests = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_parameterEstimates.csv')
 reg2_recip_ests = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_parameterEstimates.csv')
-
-
 
 # Total effects
 allsp = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_totaleffects.csv', row.names=1)
@@ -56,7 +56,6 @@ soil = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nop
 recip = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_totaleffects.csv', row.names=1)
 reg2_recip = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_totaleffects.csv', row.names=1)
 
-
 # Direct effects
 allsp_d = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 fric_d = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_Fric_testdata_directeffects_richness.csv', row.names=1)
@@ -65,7 +64,6 @@ noabun_d = read.csv('./SEM models/Oct2014 No Measurement Error/noabun_regTorich_
 soil_d = read.csv('./SEM models/Oct2014 No Measurement Error/soilmod_regTorich_nopol_AllSp_testdata_directeffects_richness.csv', row.names=1)
 recip_d = read.csv('./SEM models/Oct2014 No Measurement Error/nopol_recip_AllSp_testdata_directeffects_richness.csv', row.names=1)
 reg2_recip_d = read.csv('./SEM models/Oct2014 No Measurement Error/regTorich_nopol_recip_AllSp_testdata_directeffects_richness.csv', row.names=1)
-
 
 # Direct effect on abundance
 #allsp_da = read.csv('./SEM models/No Pollution/nopol_AllSp_testdata_directeffects_abundance.csv', row.names=1)
@@ -126,6 +124,7 @@ tot_sig = tot_sig[order(abs(tot_sig$std.all)),]
 predtypes[rownames(tot_sig),]
 
 # How many local-scale predictors have significant direct effects on local richness?
+dir_sig = allsp_d[which(apply(allsp_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = reg2_d[which(apply(reg2_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = soil_d[which(apply(soil_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
 dir_sig = rev_d[which(apply(rev_d[,c('std.ci.lower', 'std.ci.upper')], 1, prod)>0),]
@@ -227,7 +226,9 @@ resdf = data.frame(residual=res[res_order],
 
 subset(resdf, abs(residual)>0.1)[]
 subset(resdf, var1=='lichen.rich_log')
-subset(resdf, var1=='regS')
+subset(resdf, var1=='regS'&abs(residual)>0.1)
+
+subset(resdf, var1=='regS'& )
 
 
 # Residual correlation figure: only plot residual correlations greater than .1
@@ -626,7 +627,7 @@ names(mytypes)=c('C','F','P','R','A')
 
 # Order variables from lowest to highest total effects
 total = reg2 # This changes based on what response variable is being analyzed
-total = rbind(total, reg2_d[c('regS','tot_abun_log'),])
+total = rbind(total, reg2_d[c('regS','tot_abun_log'),]) #
 
 ordered_vars = rownames(total[order(total$std.all),])
 
@@ -638,7 +639,7 @@ myrange = range(use_total[,c('std.ci.lower','std.ci.upper')], na.rm=T)+c(-.04, .
 myrange[1] = -0.85 #-1
 
 # Make plot
-svg('./Figures/No Measurement Error/Standardized total effects on AllSp richness nopol regTorich recip.svg', height=20, width=19)
+svg('./Figures/No Measurement Error/Standardized total effects on AllSp richness nopol regTorich.svg', height=20, width=19)
 dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
 	xlab=list('Standardized Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=5/3, xlim=myrange,
