@@ -496,12 +496,11 @@ noclimate_partition = partvar2(Rs)
 ### Variation Partitioning by Heterogeneity / Optimality ###
 
 ## At regional scale
-
 RHvars = rownames(subset(use_preds, scale=='regional'&mode=='het'))
 ROvars = rownames(subset(use_preds, scale=='regional'&mode=='opt'))
 
 RH_mod = lm(reg~., data=use_data_test[,c('reg', RHvars, paste(sq_vars_reg[sq_vars_reg %in% RHvars],2,sep=''))])
-RO_mod = lm(reg~., data=use_data_test[,c('reg', ROvars)]) # Don't need to add in sq_vars_reg since no longer including total_NS_r
+RO_mod = lm(reg~., data=use_data_test[,c('reg', ROvars, paste(sq_vars_reg[sq_vars_reg %in% ROvars],2,sep=''))]) # Don't need to add in sq_vars_reg since no longer including total_NS_r
 
 # Make a list of predictors
 predlist = list(Heterogeneity=names(RH_mod$coefficients[-1]),
@@ -818,15 +817,18 @@ dev.off()
 ###################################################################
 ### Interaction between regional environment and local control of local richness
 
+use_preds = subset(predtypes, !(label %in% c('','r1','a1','p1','P1')))
+RHvars = rownames(subset(use_preds, scale=='regional'&mode=='het'))
+ROvars = rownames(subset(use_preds, scale=='regional'&mode=='opt'))
+
 ## How does regional heterogeneity affect regional control of local richness?
-reghet_vars = rownames(subset(predtypes, scale=='regional'&mode=='het'&label!=''&type=='env'))
 
 fullmod = glm.nb(richness~mat_reg_var*reg + iso_reg_var*reg + 
 	pseas_reg_var*reg + wetness_reg_var*reg + rain_lowRH_reg_var*reg +
 	regS_tree*reg, data = use_data_test, link='log')
 
 # Using PCA of heterogeneity variables
-reghet_pca  = prcomp(use_data[,reghet_vars], center=T, scale=T)
+reghet_pca  = prcomp(use_data[,RHvars], center=T, scale=T)
 reghet_pc1 = predict(reghet_pca)[,'PC1']
 reghet_pc1 = reghet_pc1[rownames(use_data_test)]
 
@@ -856,7 +858,292 @@ plot(richness~reghet_pc1, data=use_data_test, pch=16, col=colorvec)
 
 exp(coef(pcamod))
 
-# 
+## Partial regression controlling for mean climate
+
+# See p.570 Legendre & Legendre 2012
+# y : local richness
+# W : regional climate
+# X : regional heterogeneity PC1
+
+W = use_data_test[,c(ROvars, paste(sq_vars_reg[sq_vars_reg %in% ROvars],2,sep=''))]
+
+# Normal model
+yW_mod = lm(richness~., data=data.frame(richness=use_data_test$richness, W))
+yW_res = resid(yW_mod)
+XW_mod = lm(reghet_pc1~., data=W)
+XW_res = resid(XW_mod)
+yspX_mod = lm(use_data_test$richness~XW_res)
+yspX_intmod = lm(richness~regS*XW_res, data=use_data_test)
+ypX_mod = lm(yW_res~XW_res)
+ypX_intmod = lm(yW_res~regS*XW_res, data=use_data_test)
+
+plot(yW_res~regS, data=use_data_test)
+
+# Plot local ~ regional richness colored by reghet residuals
+colorvec = colorRampPalette(mycol)(100)[cut(XW_res, 100, include.lowest=T)]
+plot(richness~regS, data=use_data_test,
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec, lwd=2, axes=F)
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+
+## Map reghet and reghet residuals
+# Map projection
+plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
+
+# N. Am. outline
+OUTLINES = readOGR('../../GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
+OUTLINES.laea = spTransform(OUTLINES,CRS(plot_prj))
+
+het_sp = data.frame(reghet_pc1, XW_res)
+coordinates(het_sp) = master[rownames(use_data_test), c('LON','LAT')]
+proj4string(het_sp) = CRS("+proj=longlat")
+het_laea = spTransform(het_sp, CRS(plot_prj))
+
+map('usa')
+colorvec = colorRampPalette(mycol)(100)[cut(yW_res, 100, include.lowest=T)]
+plot(het_sp, col=colorvec, add=T, pch=16)
+
+
+## Add regional climate to model to control for east-west
+full_mod = glm.nb(richness ~ ., data=cbind(use_data_test[,c('richness','regS')], W))
+full_mod = update(full_mod, ~.+regS*reghet_pc1)
+
+# Plot lines
+lowhet = quantile(reghet_pc1, 0.25)
+highhet = quantile(reghet_pc1, 0.75)
+use_coef = coef(full_mod)
+RO_term = sum(use_coef[3:8]*colMeans(W))
+
+use_x = seq(min(use_data_test$regS), max(use_data_test$regS), length.out=100)
+use_ylow = exp(use_coef[1]+use_coef[2]*use_x+RO_term+use_coef[9]*lowhet+use_coef[10]*lowhet*use_x) 
+use_yhigh = exp(use_coef[1]+use_coef[2]*use_x+RO_term+use_coef[9]*highhet+use_coef[10]*highhet*use_x) 
+
+colorvec = colorRampPalette(mycol)(100)[cut(reghet_pc1, 100, include.lowest=T)]
+plot(richness~regS, data=use_data_test,
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec, lwd=2, axes=F)
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+lines(use_x, use_ylow, lwd=5, col='white')
+lines(use_x, use_yhigh, lwd=5, col=mycol[10])
+lines(use_x, use_ylow, lwd=4, col=mycol[1], lty=2)
+lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+
+## Categorical East-West: divide by longitude -100
+ew = as.numeric(master[rownames(use_data_test), 'LON'] > -100) # east = 1, west = 0
+
+ew_mod = glm.nb(richness ~ regS*reghet_pc1*ew, data=use_data_test)
+summary(ew_mod)
+
+
+# 3-panel plot showing E vs W models and map of reghet
+# Make separately and edit in Inkscape
+
+# Map
+pdf('./Figures/map_reghetpc1.pdf', height=4, width=7)
+trellis.par.set(axis.line=list(col=NA))
+spplot(het_laea, 'reghet_pc1', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
+	sp.polygons(OUTLINES.laea, fill='white')
+	panel.pointsplot(x,y,...)
+}, cuts=100, cex=1.5, col.regions = colorRampPalette(mycol)(100), auto.key=F)
+dev.off()
+
+use_x = seq(min(use_data_test$regS), max(use_data_test$regS), length.out=100)
+use_coef = coef(ew_mod)
+
+# 2-panel Models
+svg('./Figures/reghet_interaction_models.svg', height=3.5, width=7)
+text.cex = 1.2
+
+par(cex.axis=text.cex)
+par(cex.lab=text.cex)
+par(pch=1)
+par(cex=1)
+par(las=1)
+par(lend=1)
+layout(matrix(c(1,2,3), nrow=1), widths=c(0.4, 0.4, 0.2))
+
+colorvec = colorRampPalette(mycol)(100)[cut(reghet_pc1, 100, include.lowest=T)]
+medhet = median(reghet_pc1)
+
+par(mar=c(5,4,1.5,0))
+plot(richness~regS, data=use_data_test[ew==0,],
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec[ew==0], lwd=2, axes=F, main='West')
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+lowhet = quantile(reghet_pc1[ew==0], 0.25)
+highhet = quantile(reghet_pc1[ew==0], 0.75)
+use_ylow = exp(cbind(1, use_x, lowhet, 0, use_x*lowhet, 0, 0, 0) %*% use_coef)
+use_yhigh = exp(cbind(1, use_x, highhet, 0, use_x*highhet, 0, 0, 0) %*% use_coef) 
+lines(use_x, use_ylow, lwd=5, col='white')
+lines(use_x, use_yhigh, lwd=5, col=mycol[10])
+lines(use_x, use_ylow, lwd=4, col=mycol[1], lty=2)
+lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+
+use_ymed = exp(cbind(1, use_x, medhet, 0, use_x*medhet, 0, 0, 0) %*% use_coef)
+lines(use_x, use_ymed, lwd=5, col='black')
+
+
+par(mar=c(5,3,1.5,1))
+plot(richness~regS, data=use_data_test[ew==1,],
+	xlab='Regional Species Richness', ylab='', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec[ew==1], lwd=2, axes=F, main='East')
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+lowhet = quantile(reghet_pc1[ew==1], 0.25)
+highhet = quantile(reghet_pc1[ew==1], 0.75)
+use_ylow = exp(cbind(1, use_x, lowhet, 1, use_x*lowhet, use_x, lowhet, lowhet*use_x) %*% use_coef)
+use_yhigh = exp(cbind(1, use_x, highhet, 1, use_x*highhet, use_x, highhet, highhet*use_x) %*% use_coef) 
+lines(use_x, use_ylow, lwd=5, col='white')
+lines(use_x, use_yhigh, lwd=5, col=mycol[10])
+lines(use_x, use_ylow, lwd=4, col=mycol[1], lty=2)
+lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+
+use_ymed = exp(cbind(1, use_x, medhet, 1, use_x*medhet, use_x, medhet, medhet*use_x) %*% use_coef)
+lines(use_x, use_ymed, lwd=5, col='black')
+
+par(mar=c(5,0,1.5,1))
+plot.new()
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[1], usr[3], usr[1]+0.2*diff(usr[1:2]), usr[4]),
+	labels = seq(-3,3,1), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
+	mycex=text.cex, ndig=1)
+
+dev.off()
+
+## 3D plot
+library(rgl)
+xpoints = seq(min(use_data_test$regS), max(use_data_test$regS), length.out=20)
+ypoints = seq(min(reghet_pc1), max(reghet_pc1), length.out=20)
+
+
+# Create a grid of regS vs reghet
+XY = expand.grid(X=xpoints, Y=ypoints)
+
+# Function from fitted model
+# r is 0 or 1 for east or west 
+Zf = function(X,Y,r){
+     exp(cbind(1, X, Y, r, X*Y, X*r, Y*r, X*Y*r) %*% coef(ew_mod)) 
+}
+
+# Populate a surface for east and west
+west_pred = Zf(XY$X, XY$Y, 0)
+east_pred = Zf(XY$X, XY$Y, 1)
+
+# plot
+
+Z = east_pred
+zlim = range(Z)
+zlen = zlim[2] - zlim[1] + 1
+
+jet.colors = colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+colorzjet <- jet.colors(100)  # 100 separate color 
+
+
+open3d()
+par3d(scale=c(1,15,1))
+rgl.surface(x=xpoints, y=matrix(Z,20), 
+            coords=c(1,3,2),z=ypoints, 
+            color=colorzjet[ findInterval(Z, seq(min(Z), max(Z), length=100))] )
+
+axes3d()
+
+Z = west_pred
+zlim = range(Z)
+zlen = zlim[2] - zlim[1] + 1
+
+jet.colors = colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+colorzjet <- jet.colors(100)  # 100 separate color 
+
+open3d()
+par3d(scale=c(5,100,.5))
+rgl.surface(x=xpoints, y=matrix(Z,20), 
+            coords=c(1,3,2),z=ypoints, 
+            color=colorzjet[ findInterval(Z, seq(min(Z), max(Z), length=100))] )
+
+axes3d()
+
+rgl.snapshot("copyMatlabstyle.png")
+
+
+## Fit two separate models - because my main question isn't 'do they differ', but 'what is the interaction'
+w_mod = glm.nb(richness ~ regS*reghet_pc1[ew==0], data=use_data_test[ew==0,])
+e_mod = glm.nb(richness ~ regS*reghet_pc1[ew==1], data=use_data_test[ew==1,])
+
+summary(w_mod)
+summary(e_mod)
+
+# Plot
+svg('./Figures/reghet_interaction_models_separate_regions.svg', height=3.5, width=7)
+text.cex = 1.2
+
+par(cex.axis=text.cex)
+par(cex.lab=text.cex)
+par(pch=1)
+par(cex=1)
+par(las=1)
+par(lend=1)
+layout(matrix(c(1,2,3), nrow=1), widths=c(0.4, 0.4, 0.2))
+
+colorvec = colorRampPalette(mycol)(100)[cut(reghet_pc1, 100, include.lowest=T)]
+medhet = median(reghet_pc1)
+
+par(mar=c(5,4,1.5,0))
+plot(richness~regS, data=use_data_test[ew==0,],
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec[ew==0], lwd=2, axes=F, main='West')
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+
+use_coef = coef(w_mod)
+lowhet = quantile(reghet_pc1[ew==0], 0.25)
+highhet = quantile(reghet_pc1[ew==0], 0.75)
+use_ylow = exp(cbind(1, use_x, lowhet, use_x*lowhet)%*% use_coef)
+use_yhigh = exp(cbind(1, use_x, highhet, use_x*highhet) %*% use_coef) 
+lines(use_x, use_ylow, lwd=5, col='white')
+lines(use_x, use_yhigh, lwd=5, col=mycol[10])
+lines(use_x, use_ylow, lwd=4, col=mycol[1], lty=2)
+lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+
+par(mar=c(5,3,1.5,1))
+plot(richness~regS, data=use_data_test[ew==1,],
+	xlab='Regional Species Richness', ylab='', 
+	las=1, xlim=c(230, 430), ylim=c(0,40),
+	col=colorvec[ew==1], lwd=2, axes=F, main='East')
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+use_coef = coef(e_mod)
+lowhet = quantile(reghet_pc1[ew==1], 0.25)
+highhet = quantile(reghet_pc1[ew==1], 0.75)
+use_ylow = exp(cbind(1, use_x, lowhet, use_x*lowhet)%*% use_coef)
+use_yhigh = exp(cbind(1, use_x, highhet, use_x*highhet) %*% use_coef) 
+lines(use_x, use_ylow, lwd=5, col='white')
+lines(use_x, use_yhigh, lwd=5, col=mycol[10])
+lines(use_x, use_ylow, lwd=4, col=mycol[1], lty=2)
+lines(use_x, use_yhigh, lwd=4, col='white', lty=3)
+
+par(mar=c(5,0,1.5,1))
+plot.new()
+usr = par('usr')
+plotColorRamp(cols = mycol, n = 100, barends = c(usr[1], usr[3], usr[1]+0.2*diff(usr[1:2]), usr[4]),
+	labels = seq(-3,3,1), uneven.lab=T, labrange=range(reghet_pc1), title='Regional Heterogeneity (PC1)',
+	mycex=text.cex, ndig=1)
+
+dev.off()
+
 
 
 ## How does regional heterogeneity affect local control of local richness
@@ -866,6 +1153,7 @@ use_modstring = paste('richness', paste(paste(localvars, '*reghet_pc1', sep=''),
 ## Opposite interaction for regional heterogeneity on strength of local filters?
 reghetloc_mod = glm.nb(use_modstring, data=use_data_test, link='log')
 cbind(coef(reghetloc_mod)[c(2,4:21)], coef(reghetloc_mod)[22:40], coef(summary(reghetloc_mod))[22:40,4])
+
 
 # Probably should only do this for local scale variables that have significant effects.
 # Decide using sem?
