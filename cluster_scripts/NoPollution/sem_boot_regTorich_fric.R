@@ -89,7 +89,7 @@ mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimate
 regTorich_nopol_boot = mod_boot
 
 # Used to re-calculate tables outside of Kure
-#load('regToRich_nopol_AllSp_testdata_output.RData') 
+#load('regToRich_nopol_fric_testdata_output.RData') 
 #mod_boot = regTorich_nopol_boot
 #use_fit = regTorich_nopol_fit 
 
