@@ -246,6 +246,7 @@ parmphys_fia = subset(allsp, family %in% c('Parmeliaceae','Physciaceae'))
 # Calculate number of species in records
 species = unique(allsp[,'scientificName'])
 species.binom = unique(get.latinbinom(species)) # 1757 species (including just genus)
+genera = unique(sapply(strsplit(species.binom, ' '), function(x) x[1])) #80 genera
 
 # Calculate how many species in each family in records
 species_f = unique(allsp[,c('family','scientificName','genus')])
@@ -282,7 +283,7 @@ coordinates(fia_geo) = c('LON','LAT')
 proj4string(fia_geo) = CRS("+proj=longlat")
 
 # Determine which records will be used to calculate regional richness
-recs = phys_sp
+recs = allsp_sp
 
 # Calculate the number of records within 500 km buffer (Could easily check other buffers)
 dist500 = c()
