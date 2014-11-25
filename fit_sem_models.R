@@ -36,7 +36,11 @@ sink()
 ##################################################################
 ## Read in tables of parameter estimates and effects
 
+load('./SEM models/Oct2014 No Measurement Error/regToRich_nopol_Fric_testdata_output.RData')
+
 ## TABLES FOR FRIC DID NOT GENERATE PROPERLY IN KURE DUE TO AN ERROR. WILL NEED TO RE-OUTPUT THESE LATER.
+
+
 ## noabun tables are from the reg2_noabun model
 
 # All parameter estimares
@@ -241,8 +245,8 @@ corrplot(cortab, method='square', type='upper', diag=F,
 dev.off()
 
 # What are the residuals? Obs - Exp covariances
-obscov = inspectSampleCov(path_regTorich_nopol_recip, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
-modcov = fitted(regTorich_nopol_recip_fit)$cov 
+obscov = inspectSampleCov(path_regTorich_nopol, data=working_data_test)$cov #Make sure to change to test or fit data where appropriate
+modcov = fitted(regTorich_nopol_fit)$cov 
 covdiff =  obscov - modcov 
 solid = abs(covdiff)>0.1
 mypch = c(1,16)
@@ -266,7 +270,7 @@ cbind(obscov['lichen.rich_log',], modcov['lichen.rich_log',])
 
 ## Compare model predictions to observed data.
 # Model covariance and mean structure
-examine_mod = regTorich_nopol_recip_fit
+examine_mod = regTorich_nopol_fit
 mu = fitted(examine_mod)$mean
 Sigma= matrix(fitted(examine_mod)$cov, nrow=length(mu), ncol=length(mu))
 
@@ -278,32 +282,32 @@ predvars = t(L) %*% matrix(rnorm(nvars*nobs), nrow=nvars, ncol=nobs)
 predvars = data.frame(t(predvars)); colnames(predvars) = names(mu)
  
 ## Fit model to randomly generated data. What are the fit statistics?
-examine_path = path_regTorich_nopol_recip
+examine_path = path_regTorich_nopol
 random_fit = sem(examine_path, data=predvars, fixed.x=T, estimator='ML', se='robust.sem')
 summary(random_fit, standardized=T, rsq=TRUE, fit.measures=T)
 obsrand = inspectSampleCov(examine_path, data=predvars)$cov
 modrand = fitted(random_fit)$cov 
 
-svg('./Figures/compare noabun_regTorich_recip random vs model residuals.svg', height=6, width=12)
+svg('./Figures/No Measurement Error/compare regTorich random vs model residuals.svg', height=6, width=12)
 par(mfrow=c(1,2))
 plot(obsrand[covdiff!=0], modrand[covdiff!=0], xlab='Observed Covariances', 
 	ylab='Model Covariances', las=1)
 abline(0,1)
 abline(h=0,v=0)
-points(obsrand['lichen.rich_log',], modrand['lichen.rich_log',], pch=16, col=2, cex=1.5)
-points(obsrand['regS',], modrand['regS',], pch=16, col='blue', cex=1.1)
-legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
-	pch=16, pt.cex=c(1.5,1.1), bty='n')
+#points(obsrand['lichen.rich_log',], modrand['lichen.rich_log',], pch=16, col=2, cex=1.5)
+#points(obsrand['regS',], modrand['regS',], pch=16, col='blue', cex=1.1)
+#legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+#	pch=16, pt.cex=c(1.5,1.1), bty='n')
 mtext('Random Data', 3, 0.5) 
 
 plot(obscov[covdiff!=0], modcov[covdiff!=0], xlab='Observed Covariances', 
 	ylab='Model Covariances', las=1)
 abline(0,1)
 abline(h=0,v=0)
-points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=16, col=2, cex=1.5)
-points(obscov['regS',], modcov['regS',], pch=16, col='blue', cex=1.1)
-legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
-	pch=16, pt.cex=c(1.5,1.1), bty='n')
+#points(obscov['lichen.rich_log',], modcov['lichen.rich_log',], pch=16, col=2, cex=1.5)
+#points(obscov['regS',], modcov['regS',], pch=16, col='blue', cex=1.1)
+#legend('topleft', c('Local richness','Regional richness'), col=c('red','blue'), 
+#	pch=16, pt.cex=c(1.5,1.1), bty='n')
 mtext('Observed Data', 3, 0.5) 
 dev.off()
 
@@ -850,15 +854,15 @@ dev.off()
 ###########################################
 ### Are totaleffects at regional scale larger than total effects at local scale?
 
-total = allsp# This changes based on what response variable is being analyzed
-total = rbind(total, allsp_d[c('regS','tot_abun_log'),])
+total = reg2# This changes based on what response variable is being analyzed
+total = rbind(total, reg2_d[c('regS','tot_abun_log'),1:4])
 
 cvars = c('wetness','rain_lowRH','pseas','iso','mat')
 
 lvars = c(cvars, 'PIE.ba.tree')
 rvars = c(paste(cvars, 'reg_mean', sep='_'), 'regS_tree')
 
-svg('./Figures/No Measurement Error/compare local-regional total effects nopol.svg', height=5.5, width=5.5)
+svg('./Figures/No Measurement Error/compare local-regional total effects nopol regTorich.svg', height=5.5, width=5.5)
 par(mar=c(5,5,1,1))
 par(lwd=2)
 par(lend=1)
@@ -878,12 +882,12 @@ arrows(total[lvars,'std.all'], total[rvars,'std.ci.lower'],
 points(total[lvars, 'std.all'], total[rvars, 'std.all'], pch=15, col='black')
 
 # Labels for regTorich
-#text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
-#	pos=c(2,2,4,4,2,4), offset=1.5, col='black')
+text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
+	pos=c(2,2,4,4,2,4), offset=1.5, col='black')
 
 # Labels for base model
-text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
-	pos=c(3,2,4,3,1,4), offset=.9)
+#text(total[lvars,'std.all'], total[rvars,'std.all'], varnames[lvars,'midName'],
+#	pos=c(3,2,4,3,1,4), offset=.9)
 
 dev.off()
 
@@ -1054,7 +1058,9 @@ compare_id[order(compare_id$direct, decreasing=T),]
 ##################################################
 ### Draw path diagram for significant paths
 
-use_pred = subset(predtypes, label !='')
+use_pred = subset(predtypes, !(label %in% c('', 'r1')))
+use_pred = rbind(use_pred, predtypes['lichen.rich_log',]) # This changes based on which local richness variable is used in the model e.g. fric
+
 
 ## Going to make diagram in two modules: focused on local and regional effects
 
@@ -1246,6 +1252,7 @@ dev.off()
 
 
 ## Regional climate modules: one for each variable
+mycex=1.5
 unit=2
 var_locs = matrix(unit*c(0.25,-1,.5,0,-.5,0,0,1,-.5,-1), nrow=5, ncol=2, byrow=T)
 colnames(var_locs) = c('X','Y')
@@ -1260,7 +1267,7 @@ abun_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='tot_abun_log')[,c('std.
 use_vars = c('mat','iso','pseas','wetness','rain_lowRH')
 use_breaks = seq(0,2,length.out=11)
 
-svg('./Figures/regional climate paths nopol regTorich model.svg', height=14, width=7)
+svg('./Figures/No Measurement Error/regional climate paths nopol regTorich model.svg', height=14, width=7)
 par(mfrow=c(5,1))
 par(mar=c(0,0,0,0))
 for(i in use_vars){
@@ -1315,7 +1322,7 @@ abun_eff = subset(use_ests, lhs=='lichen.rich_log'&rhs=='tot_abun_log')[,c('std.
 use_vars = c('mat','iso','pseas','wetness','rain_lowRH')
 use_breaks = seq(0,2,length.out=11)
 
-svg('./Figures/regional climate paths nopol model.svg', height=14, width=7)
+svg('./Figures/No Measurement Error/regional climate paths nopol model.svg', height=14, width=7)
 par(mfrow=c(5,1))
 par(mar=c(0,0,0,0))
 for(i in use_vars){
@@ -1663,24 +1670,27 @@ use_fric = fric_d[rownames(use_vars),]
 ordered_vars = rownames(use_fric)[order(abs(use_fric$std.all) - abs(use_reg2$std.all))]
 
 
+
 order(abs(use_fric$std.all - use_reg2$std.all)*ifelse(abs(use_fric$std.all)>abs(use_reg2$std.all), 1, -1))]
 use_reg2 = use_reg2[ordered_vars,]
 use_fric = use_fric[ordered_vars,]
 
 myrange = c(-.3,.9)
+myshade = c('55','99','')
+names(myshade) = c('het','opt','')
 
 # Comparing direct effects on richness and fric
-svg('./Figures/Standardized direct effects on Fric vs richness regTorich nopol.svg', height=13, width=19)
+svg('./Figures/No Measurement Error/Standardized direct effects on Fric vs richness regTorich nopol.svg', height=13, width=16)
 dotplot(as.numeric(factor(rownames(use_reg2), levels = ordered_vars))~std.all, data=use_reg2, 
 	xlab=list('Standardized Direct Effect',cex=3), ylab='',
 	main='',cex.lab=3,aspect=9/10, xlim=myrange,
 	panel=function(x,y){
 	
 		# Add horizontal boxes
-		shading = myshade[predtypes[ordered_vars, 'mode']]
-		shading[is.na(shading)]<- '99'
+		shading = mycols[predtypes[ordered_vars, 'mode'],'local']
+		
 		panel.rect(myrange[1]-0.1,1:length(ordered_vars)-.5, myrange[2]+0.1, 1:length(ordered_vars)+.5,
-			col=paste(mycols[predtypes[ordered_vars,'scale']], shading, sep=''), border='grey50')
+			col=shading, border='grey50')
 	
 		# Add horizontal boxes
 		#panel.rect(-2,1:length(ordered_vars)-.5, 2, 1:length(ordered_vars)+.5,
@@ -1704,11 +1714,8 @@ dotplot(as.numeric(factor(rownames(use_reg2), levels = ordered_vars))~std.all, d
 		panel.points(x, y, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
 	
 		# Add text labeling the variable type
-		panel.text(-.19, y, labels=mytypes[use_allsp$type], cex=2)
-
-		# Add text labeling the variable type
-		vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
-		panel.text(-.24, y, labels=mytypes[vartypes], cex=2)
+		#vartypes =  sapply(predtypes[ordered_vars,'label'], function(x) toupper(substr(x, 1, 1)))
+		#panel.text(-.24, y, labels=mytypes[vartypes], cex=2)
 		
 	},
 	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
@@ -1728,28 +1735,43 @@ order(abs(use_fric$std.all) - abs(use_reg2$std.all))
 ### Effect of removing abundance from model
 
 
-## Plot total effects of No Abundance model vs Direct Regional Paths model (Reg2Rich)
+## Plot effects of No Abundance model vs Direct Regional Paths model (Reg2Rich)
+
+# Set to use types of effects interested in
+use_x = subset(reg2_ir, IEvar1=='regS')
+use_y = subset(noabun_ir, IEvar1=='regS')
+
+rownames(use_x) = use_x$predictor
+rownames(use_y) = use_y$predictor
 
 # Make sure tables are in same order
-rownames(noabun) == rownames(reg2)
-noabun = noabun[rownames(reg2),]
+rownames(use_x) == rownames(use_y)
+use_x = use_x[rownames(use_y),]
 
 
-plot(reg2$std.all, noabun$std.all, xlim=c(-1.3,1.3), ylim=c(-1.3,1.3))
-abline(0,1)
-abline(h=0,v=0)
+# Examine differences in effects (in order)
+diff = abs(use_x$std.all - use_y$std.all)
+names(diff) = rownames(use_x)
+diff = diff[order(diff, decreasing=T)]
+diff_tab = data.frame(diff, reg2 = use_x[names(diff), 'std.all'], noabun= use_y[names(diff),'std.all'])
+diff_tab$signChange = diff_tab$reg2*diff_tab$noabun<0
 
-use_x = reg2
-use_y = noabun
-
-use_vars = rownames(use_x)[abs(use_x$std.all - use_y$std.all) > 0.1]
+use_vars = rownames(subset(diff_tab, diff > 0.1))
+#use_vars = rownames(subset(diff_tab, signChange))
 use_x = use_x[use_vars,]
 use_y = use_y[use_vars,]
 
+use_pch = c(22,23,21)[factor(predtypes[use_vars,'mode'], levels=c('het','opt',''))]
+use_col = apply(predtypes[use_vars,], 1, function(x){
+	if(x['mode']==''){ 'grey30' } else { mycols[x['mode'],x['scale']] }
+})
+use_lim = range(c(use_x[,c('std.ci.lower','std.ci.upper')],use_y[,c('std.ci.lower','std.ci.upper')]))#+c(-.05, .05)
+
+svg('./Figures/No Measurement Error/compare reg2 vs noabun indirect effects via regS.svg', height=5, width=5)
 par(mar=c(4,4,1,1))
 plot(use_x$std.all, use_y$std.all, type='n', 
-	xlim=c(-.7, 1.4), ylim=c(-.7,1.4), las=1, ylab='Total Effect (No Abundance)',
-	xlab='Total Effect (Direct Regional Paths)', cex.axis=1, cex.lab=1)
+	xlim=use_lim, ylim=use_lim, las=1, ylab='Indirect Effect (No Abundance)',
+	xlab='Indirect Effect (Direct Regional Paths)', cex.axis=1, cex.lab=1)
 abline(h=0,v=0)
 abline(0,1)
 abline(0,-1)
@@ -1759,7 +1781,86 @@ arrows(use_x$std.ci.lower, use_y$std.all,
 arrows(use_x$std.all, use_y$std.ci.lower,
 	use_x$std.all, use_y$std.ci.upper,
 	code=3, angle=90, lwd=2, length=0.05)
-points(use_x$std.all, use_y$std.all)#
+points(use_x$std.all, use_y$std.all, bg=use_col, pch=use_pch, lwd=2, cex=1.5)#
+
+dev.off()
+
+
+
+
+## Plot total effects for reg2 and no abun
+
+# Order variables from lowest to highest total effects
+total = reg2 # This changes based on what response variable is being analyzed
+total = rbind(total, reg2_d[c('regS','tot_abun_log'),]) #
+
+total_noabun = noabun
+total_noabun = rbind(total_noabun, noabun_d['regS',]) #
+
+ordered_vars = rownames(total[order(total$std.all),])
+
+# Put tables in same order
+use_total = total[ordered_vars,]
+use_noabun = total_noabun[ordered_vars,]
+
+# Define range limits that will include 95% confidence intervals
+myrange = range(c(use_total[,c('std.ci.lower','std.ci.upper')], use_noabun[,c('std.ci.lower','std.ci.upper')]), na.rm=T)+c(-.04, .04)
+jitter = 0.05
+
+mypcols = c('white','grey30')
+mypch = c(22,23)
+
+# Make plot
+svg('./Figures/No Measurement Error/Standardized total effects on AllSp richness nopol regTorich and noabun.svg', height=20, width=22)
+dotplot(as.numeric(factor(rownames(use_total), levels = ordered_vars))~std.all, data=use_total, 
+	xlab=list('Standardized Effect',cex=3), ylab='',
+	main='',cex.lab=3,aspect=5/3, xlim=myrange,
+	panel=function(x,y){
+	
+		# Add horizontal boxes
+		colorcombos = predtypes[ordered_vars, c('mode','scale')]
+		colorcombos['regS','mode'] = 'opt'
+		colororder = apply(colorcombos, 1, function(x) mycols[x[1],x[2]])
+
+		panel.rect(myrange[1]-0.01,1:length(ordered_vars)-.5, myrange[2]+0.01, 1:length(ordered_vars)+.5,
+			col=colororder, border='grey50')
+	
+		# Add vertical line at 0
+		panel.abline(v=c(-.2,0,.2), col='grey30', lty=2, lwd=2)
+
+		# Add null distribution segments for total effects of noabun model
+		panel.segments(use_noabun$std.ci.lower, y+jitter,
+			use_noabun$std.ci.upper, y+jitter, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for total estimated effects of noabun model
+		panel.points(use_noabun$std.all, y+jitter, col='black', fill=mypcols[2], pch=mypch[2], cex=3, lwd=3) 
+	
+		# Add null distribution segments for total effects or reg2 model
+		panel.segments(use_total$std.ci.lower, y-jitter,
+			use_total$std.ci.upper, y-jitter, 
+			col='black', lwd=4.5, lend=1)
+		# Add points for total estimated effects of reg2 model
+		panel.points(x, y-jitter, col='black', fill=mypcols[1], pch=mypch[1], cex=3, lwd=3) 
+	
+},
+	scales=list(y=list(labels=varnames[ordered_vars,'midName'], 
+		cex=3, col='black'),
+		x=list(cex=3, tick.number=8)),
+	key=list(x=.5, y=1, corner=c(.5,0), lines=list(type='o', pch=mypch, fill=mypcols, lwd=3, pt.lwd=3),
+		text=list(c('Direct Regional Paths model','No Abundance model')),
+		background='white', cex=3, divide=1, padding.text=5, border=F, columns=2)
+)
+dev.off()
+
+
+
+
+
+
+
+
+
+
 
 
 #############################################################################

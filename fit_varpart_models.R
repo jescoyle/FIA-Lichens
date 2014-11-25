@@ -342,6 +342,7 @@ localvars = localvars[-grep('soil', localvars)] # Leave out soil vars
 region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, paste(sq_vars[sq_vars %in% regionvars],2,sep=''))])
 local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, paste(sq_vars[sq_vars %in% localvars],2,sep=''))])
 
+
 AIC(region_mod, local_mod) # region_mod is best
 
 # Make a list of predictors
@@ -373,6 +374,13 @@ spdata$fullmod_res = resid(full_mod)
 Moran.I(spdata$fullmod_res, invdist_mat)
 plot(spdata$lichen.rich, spdata$fullmod_res)
 
+# Calculate Moran's I for local ve regional models
+# greater residual SA in local model
+spdata$loc_res = resid(local_mod)
+spdata$reg_res = resid(region_mod)
+Moran.I(spdata$loc_res, invdist_mat)
+Moran.I(spdata$reg_res, invdist_mat)
+
 # Correlogram of residuals (long computation time!)
 cg = correlog(spdata$LON, spdata$LAT, spdata$fullmod_res, latlon=T, increment=50)
 plot(cg)
@@ -382,6 +390,8 @@ abline(h=0)
 plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
 spdata_prj = spTransform(spdata, CRS(plot_prj))
 spplot(spdata_prj, 'fullmod_res')
+spplot(spdata_prj, 'loc_res')
+spplot(spdata_prj, 'reg_res')
 
 # Selection of eigenvectors to use in spatial variation partitioning
 # Brute-force determination of set of models with no RSA (residual spatial autocorrelation)
@@ -521,9 +531,17 @@ regional_het_opt_partition = partvar2(Rs)
 env = use_data_test[,c('reg',unlist(predlist))]
 regional_full_mod = lm(reg~., data=use_data_test[,c('reg',unlist(predlist))])
 
-# Autocorrelation in regional richness
+
+## Look at spatial autocorrelation of residuals in RH vs RO
+# SA is high in both models but of comparable magnitude
+spdata$RH_res = resid(RH_mod)
+spdata$RO_res = resid(RO_mod)
 spdata$regmod_res = resid(regional_full_mod)
+
+# Autocorrelation in regional richness
 Moran.I(spdata$regmod_res, invdist_mat)
+Moran.I(spdata$RH_res, invdist_mat)
+Moran.I(spdata$RO_res, invdist_mat)
 plot(spdata$regS, spdata$regmod_res)
 spplot(spdata, 'regmod_res', col.regions=mycol, cuts=10)
 

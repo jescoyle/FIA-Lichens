@@ -235,6 +235,65 @@ mtext('D',3,adj=0,line=0, font=2, cex=2)
 
 dev.off()
 
+## Two panels  - abundance and regional richness
+
+svg('./Figures/univariate models 2-panel.svg', height=7, width=4)
+text.cex = 1.2
+
+par(mfrow=c(2,1))
+par(mar=c(4,4,1.5,1))
+par(mgp=c(2.4,0.7,0))
+par(cex.axis=text.cex)
+par(cex.lab=text.cex)
+par(pch=1)
+par(cex=1)
+par(las=1)
+par(lend=1)
+
+# Abundance
+# Both richness and abundance are log(x+1) transformed
+plot(log(lichen.rich+1)~tot_abun_log, data=trans_data_test,
+	xlab='Ln( Abundance + 1 )', ylab='Ln( Species Richness + 1 )', 
+	las=1, xlim=c(0,7), col='#00000050', lwd=2, pch=1)		
+use_mod = glm.nb(lichen.rich~tot_abun_log, data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_min = max(min(trans_data_test$tot_abun_log),-use_coef[1]/use_coef[2])
+use_x = seq(use_min, max(trans_data_test$tot_abun_log), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x)
+lines(use_x, log(use_y+1), lwd=5, col='white')
+lines(use_x, log(use_y+1), lwd=4, col='black')
+r2 = r.squaredLR(use_mod, null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('A',3,adj=0,line=0, font=2, cex=2)
+
+# Regional richness with heterogeneity colored
+plot(lichen.rich~regS, data=trans_data_test,
+	xlab='Regional Species Richness', ylab='Local Species Richness', 
+	las=1, xlim=c(230,430), ylim=c(0,40),
+	col='#00000050', lwd=2, axes=F)
+axis(1, at=seq(230,430,50))
+axis(2)
+box()
+use_mod = glm.nb(lichen.rich~regS, data=trans_data_test, link='log')
+use_coef = coef(use_mod)
+use_x = seq(min(trans_data_test$regS), max(trans_data_test$regS), length.out=100)
+use_y = exp(use_coef[1]+use_coef[2]*use_x) 
+lines(use_x, use_y, lwd=4, col='black')
+
+usr = par('usr')
+r2 = r.squaredLR(glm.nb(lichen.rich~regS, data=trans_data_test, link='log'), null=glm.nb(lichen.rich~1, data=trans_data_test, link='log'))
+r2 = attr(r2, 'adj.r.squared')
+use_label = bquote(italic(R)^2 == .(format(r2, nsmall=2, digits=2)))
+mtext(use_label, 3, adj=1, line=0)
+mtext('B',3,adj=0,line=0, font=2, cex=2)
+
+dev.off()
+
+
+
+
 ## Two panels- richness (with regional heterogeneity interaction) and abundance
 reghet_vars = rownames(subset(predtypes, scale=='regional'&mode=='het'&label!=''&type=='env'))
 reghet_pca  = prcomp(trans_data[,reghet_vars], center=T, scale=T)
