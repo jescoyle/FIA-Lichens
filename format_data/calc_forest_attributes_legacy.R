@@ -427,6 +427,28 @@ summary(trees$FOLIAGE_TRANSPARENCY)
 hist(subset(trees, is.na(trees$FOLIAGE_TRANSPARENCY))[,'DIA'])
 hist(subset(trees, !is.na(trees$FOLIAGE_TRANSPARENCY))[,'DIA'])
 
+
+## Add forest type code
+
+FORTYPCD = sapply(master.data.tree$yrplot.id, function(x){
+	use_conds = subset(conds, yrplot.id==x)
+	
+	FORTYPCD=NA
+		
+	if(length(use_conds)==1){
+		FORTYPCD = use_conds$FORTYPCD
+	} else {
+		use_conds[use_conds$CONDID==1, 'FORTYPCD']
+	}
+
+})
+
+master.data.tree$FORTYPCD = FORTYPCD
+
+
+
+
+
 ## Write out master forest data
 write.csv(master.data.tree, './Data/TreeData/master_data_tree_legacy.csv', row.names=F)
 
