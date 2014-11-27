@@ -86,10 +86,10 @@ for(p in unique(legacy$plot.id)){
 # Combine data
 unique(c(names(legacy), names(current)))
 
-current.new = current.new[,c(2,3,7,8,10:14,18:79)]
+current.new = current.new[,c(2,3,7,8,10:14,18:80)]
 names(current.new)[c(1,3,4,5,8)] = c('yrplot.id','STATE','COUNTY','YEAR','ELEVATION')
 
-legacy.new = data.frame(legacy.new[,c(1,2,4,5,3)], LAT=NA, LON=NA, legacy.new[,c(6:69)])
+legacy.new = data.frame(legacy.new[,c(1,2,4,5,3)], LAT=NA, LON=NA, legacy.new[,c(6:70)])
 legacy.new = legacy.new[,names(current.new)]
 
 master.data = rbind(current.new, legacy.new)

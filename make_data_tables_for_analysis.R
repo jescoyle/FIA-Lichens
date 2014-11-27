@@ -30,7 +30,8 @@ rich_data = rbind(rich_current, rich_legacy)
 abun_data = read.csv('./Data/lichen abundance based on tree occupancy.csv') # Not available for all plots b/c originally calculated after subsetting.
 
 # FIA tree data
-tree_data = read.csv('./Data/TreeData/master_data_forest.csv')[,c('yrplot.id','S.tree','D.abun.tree',
+tree_data = read.csv('./Data/TreeData/master_data_forest.csv')
+tree_data = tree_data[,c('yrplot.id','S.tree','D.abun.tree',
 	'D.area.tree','maxDiam','numTreesBig','numTreesSm','propDead','numDead','numCut',
 	'PIE.stems.tree','PIE.ba.tree','wood_moist_pct.rao.pres','bark_moist_pct.rao.pres',
 	'wood_SG.rao.pres','bark_SG.rao.pres','LogSeed.rao.pres','wood_moist_pct.rao.stems',
@@ -38,7 +39,7 @@ tree_data = read.csv('./Data/TreeData/master_data_forest.csv')[,c('yrplot.id','S
 	'wood_moist_pct.stems','bark_moist_pct.stems','wood_SG.stems','bark_SG.stems','LogSeed.stems',
 	'wood_moist_pct.rao.ba','bark_moist_pct.rao.ba','wood_SG.rao.ba','bark_SG.rao.ba','LogSeed.rao.ba',
 	'wood_moist_pct.ba','bark_moist_pct.ba','wood_SG.ba','bark_SG.ba','LogSeed.ba','diamDist.mean',
-	'n.stems','basal.area','light.mean','light.var','lightDist.mean','totalCirc')]
+	'n.stems','basal.area','light.mean','light.var','lightDist.mean','totalCirc', 'FORTYPCD')]
 tree_pca = read.csv('./Data/TreeData/tree_funcgrp_pca1-3.csv')
 
 # Regional tree richness
@@ -68,7 +69,7 @@ master = merge(master, env_data, all.x=T, all.y=F)
 master = merge(master, env_reg_data, all.x=T, all.y=F)
 
 # Save data
-write.csv(master, './Data/fia_lichen_master_data_2014-10-27.csv', row.names=F)
+write.csv(master, './Data/fia_lichen_master_data_2014-11-27.csv', row.names=F)
 
 rownames(master) = master$yrplot.id
 ###############################################################################

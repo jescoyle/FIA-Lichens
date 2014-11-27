@@ -429,23 +429,31 @@ hist(subset(trees, !is.na(trees$FOLIAGE_TRANSPARENCY))[,'DIA'])
 
 
 ## Add forest type code
+cond$yrplot.id = paste(cond$year, cond$plot.id, sep='_')
+
+# find plots without conditions
+missing_cond = !(master.data.tree$yrplot.id %in% cond$yrplot.id)
+master.data.tree$yrplot.id[missing_cond] # all from 1994, just ignore
 
 FORTYPCD = sapply(master.data.tree$yrplot.id, function(x){
-	use_conds = subset(conds, yrplot.id==x)
+	use_conds = subset(cond, yrplot.id==x)
 	
 	FORTYPCD=NA
-		
-	if(length(use_conds)==1){
-		FORTYPCD = use_conds$FORTYPCD
+	
+	if(nrow(use_conds)==0){ } else {
+
+	if(nrow(use_conds)==1){
+		FORTYPCD = use_conds$FOREST_TYPE
 	} else {
-		use_conds[use_conds$CONDID==1, 'FORTYPCD']
+		FORTYPCD = use_conds[use_conds$CONDITION_CLASS_NBR==1, 'FOREST_TYPE']
 	}
 
+	}
+
+	FORTYPCD
 })
 
-master.data.tree$FORTYPCD = FORTYPCD
-
-
+master.data.tree$FORTYPCD = as.numeric(FORTYPCD)
 
 
 
