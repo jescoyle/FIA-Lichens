@@ -6,6 +6,60 @@ source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
 
+
+#####################################################################
+### Table of Forest Types
+
+# identify legacy plots
+legplots = read.csv('./Data/lichen_plotData_legacy.csv')
+legplots = legplots$yrplot.id
+
+use_data = master[testplots$yrplot.id,]
+use_data$legacy = use_data$yrplot.id %in% legplots
+
+# read in forest type descriptions
+fortypes = read.table('./Data/forest_types.txt', sep='\t', header=T)
+
+forest = data.frame(table(use_data$FORTYPCD, use_data$legacy))
+names(forest) = c('FORTYPCD','legacy','numplots')
+
+forest = subset(forest, numplots>0)
+
+forest = merge(forest, fortypes, all.x=T, all.y=F)
+
+missingtype = subset(forest, is.na(Description))
+sum(missingtype$numplots)
+
+forest[order(forest$numplots, decreasing=T),]
+
+
+# Table of general forest types
+summary_codes = c(seq(100, 400, 10), seq(500, 800, 100), seq(900, 990, 10), 999, 1000)
+generalcodes = cut(use_data$FORTYPCD, breaks=summary_codes, right=F)
+generalcodes = summary_codes[as.numeric(generalcodes)] # note that many legacy codes <100 or >1000 are assigned NA
+
+forest = data.frame(table(generalcodes))
+names(forest) = c('FORTYPCD','numplots')
+forest = subset(forest, numplots>0)
+forest = merge(forest, fortypes, all.x=T, all.y=F)
+
+missingtype = subset(forest, is.na(Description))
+sum(missingtype$numplots)
+
+for_tab = forest[order(!is.na(forest$Description), forest$numplots, decreasing=T),]
+
+write.csv(for_tab, './Tables/Forest Types on 962 test plots.csv', row.names=F)
+
+# Identify locations for 261 plots without forest type descriptions
+badcodes = as.numeric(c(as.character(missingtype$FORTYPCD), unique(use_data$FORTYPCD[is.na(generalcodes)])))
+
+noforest = subset(use_data, FORTYPCD %in% badcodes)
+
+nf_states = table(noforest$STATE)
+nf_states[order(nf_states)]
+
+
+
 #####################################################################
 ### Compare models with soil variables
 
