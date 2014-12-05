@@ -89,9 +89,9 @@ mod_boot = bootstrapLavaan(use_fit, R=10000, FUN=function(x) c(parameterEstimate
 regTorich_nopol_boot = mod_boot
 
 # Used to re-calculate tables outside of Kure
-#load('regToRich_nopol_Parm_testdata_output.RData') 
-#mod_boot = regTorich_nopol_boot
-#use_fit = regTorich_nopol_fit 
+load('regToRich_nopol_Parm_testdata_output.RData') 
+mod_boot = regTorich_nopol_boot
+use_fit = regTorich_nopol_fit 
 
 # Save raw bootstrap output and models
 save(regTorich_nopol_fit, regTorich_nopol_boot, path_regTorich_nopol, file=paste(modform,response,'testdata_output.RData', sep='_'))
@@ -99,11 +99,13 @@ save(regTorich_nopol_fit, regTorich_nopol_boot, path_regTorich_nopol, file=paste
 ## Calculate table of bootstrapped parameter estimates
 ests = parameterEstimates(use_fit)[,c('label','lhs','op','rhs')]
 
-# convert regParm -> regS and parm_abun_log -> tot_abun_log
+# convert regParm -> regS and parm_abun_log -> tot_abun_log and Parm_log -> lichen.rich_log 
 ests$rhs[grep('regParm', ests$rhs)] <- 'regS'
 ests$lhs[grep('regParm', ests$lhs)] <- 'regS'
 ests$rhs[grep('parm_abun_log', ests$rhs)] <- 'tot_abun_log'
 ests$lhs[grep('parm_abun_log', ests$lhs)] <- 'tot_abun_log'
+ests$rhs[grep('Parm_log', ests$rhs)] <- 'lichen.rich_log'
+ests$lhs[grep('Parm_log', ests$lhs)] <- 'lichen.rich_log'
 
 nEst = ncol(mod_boot)/2 # number of parameters
 estlabs = paste(predtypes[ests$lhs,'label'],predtypes[ests$rhs,'label'], sep=':')
@@ -125,7 +127,7 @@ indirect_abun$std.ci.lower = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.0
 indirect_abun$std.ci.upper = apply(IE_abun_mat, 2, function(x) quantile(x, p=0.975))
 
 # Calculate direct effects on local richness
-use_ests = ests$lhs=='Parm_log'&ests$op=='~'
+use_ests = ests$lhs=='lichen.rich_log'&ests$op=='~'
 DE_mat = stdmat[,use_ests]
 colnames(DE_mat) = ests[use_ests,c('rhs')]
 direct_rich = data.frame(predictor=colnames(DE_mat))
