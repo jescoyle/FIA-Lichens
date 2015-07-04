@@ -8,7 +8,7 @@ varnames=read.csv('varnames.csv', row.names=1)
 records_sp = read.csv('./Data/Regional Richness/CNALH_records_fia_genera_NAm.csv')
 #save.image('FIA_lichen_analysis_final.Rdata')
 
-master = read.csv('./Data/fia_lichen_master_data_2014-11-27.csv')
+master = read.csv('./Data/fia_lichen_master_data_2015-05-08.csv')
 rownames(master) = master$yrplot.id
 model_data = read.csv('./Data/fia_lichen_model_data.csv', row.names=1)
 trans_data = read.csv('./Data/fia_lichen_trans_data.csv', row.names=1)

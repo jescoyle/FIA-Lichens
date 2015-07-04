@@ -313,6 +313,71 @@ lichenFD_df = data.frame(yrplot.id = names(lichenFD$RaoQ), raoQ = lichenFD$RaoQ,
 
 write.csv(lichenFD_df, './Data/lichen_FD.csv', row.names=F)
 
+##########################################
+### Calculate FD among species in different families
+
+# Read in a list of species that identifies the family they are in
+splist = read.csv('lichen_species.csv')
+splist$taxon = str_trim(paste(splist$GENUS, splist$SPECIES))
+splist = subset(splist, !is.na(family))
+
+# Make community data matrix with sites containing all species in each family
+famXsp = sapply(unique(splist$family), function(x){
+	these_sp = subset(splist, family==x)$taxon
+	labels(traitdist) %in% these_sp
+})
+rownames(famXsp)=labels(traitdist)
+famXsp = t(famXsp)
+
+# Only calculate for families with more than 3 species
+famXsp = famXsp[rowSums(famXsp)>3,]
+
+# Drop species is trait dist that were in small families
+famXsp = famXsp[,colSums(famXsp)>0]
+traitdistmat = as.matrix(traitdist)
+traitdistmat = traitdistmat[colnames(famXsp),colnames(famXsp)]
+
+# Calculate 
+famFD = dbFD(traitdistmat, famXsp, w.abun=F, corr='lingoes')
+
+## Ordination of species in trait space
+use_sp = subset(splist, family %in% c('Parmeliaceae','Physciaceae'))$taxon
+traitdistmat = as.matrix(traitdist)
+use_dist = as.dist(traitdistmat[rownames(traitdistmat) %in% use_sp,colnames(traitdistmat) %in% use_sp])
+
+traitpcoa = pcoa(use_dist, correction='none')
+ord = rda(traitpcoa$vectors)
+plot(ord, c(1,2), type='none')
+points(ord, select=labels(use_dist) %in% subset(splist, family=='Parmeliaceae')$taxon, pch=15)
+points(ord, select=labels(use_dist) %in% subset(splist, family=='Physciaceae')$taxon, pch=16, col=2)
+plot(ord, c(3,4), type='none')
+points(ord, select=labels(use_dist) %in% subset(splist, family=='Parmeliaceae')$taxon)
+points(ord, select=labels(use_dist) %in% subset(splist, family=='Physciaceae')$taxon, col=2)
+
+## Summarize traits across families
+spXtrait_parm = spXtrait[rownames(spXtrait) %in% subset(splist, family=='Parmeliaceae')$taxon,]
+spXtrait_phys = spXtrait[rownames(spXtrait) %in% subset(splist, family=='Physciaceae')$taxon,]
+
+nparm= nrow(spXtrait_parm)
+nphys = nrow(spXtrait_phys)
+
+pdf('./Parm-Phys/compare traits parm phys.pdf', height=4, width=4)
+for(var in colnames(spXtrait)[1:17]){
+	parm = table(factor(spXtrait_parm[,var], levels=0:2))/nparm
+	phys = table(factor(spXtrait_phys[,var], levels=0:2))/nphys
+
+	print(barplot(cbind(parm,phys), main=var))
+
+}
+dev.off()
+	
+
+}
+
+
+
+apply(factor(spXtrait_parm[,1:17]), 2, function(x) table(x)/nrow(spXtrait_parm)) 
+
 
 ##########################################
 ### Explore lichen FD
@@ -334,7 +399,7 @@ traitdf = read.csv('./lias_trait_types.csv', row.names=1)
 ## Just based on presence absence
 siteXsp_pres = siteXsp>0
 
-## Caluculate the proportion of species on each site that have each binary trait.
+## Calculate the proportion of species on each site that have each binary trait.
 ## NA is not counted in total
 ## Both is added to both
 

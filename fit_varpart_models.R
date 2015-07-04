@@ -5,7 +5,7 @@ source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
 
 #save.image('varpart_analysis.Rdata')
-load('varpart_analysis.Rdata')
+#load('varpart_analysis.Rdata')
 
 # Color ramp
 mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
@@ -15,13 +15,13 @@ mycol = mycol[10:1]
 ###################################################################################
 ### Variation Partitioning among climate, forest, regional richness, and pollution
 
-library(hier.part) # combos
+#library(hier.part) # combos
 library(MuMIn) # r.squaredLR
 library(MASS) # glm.nb
 library(spdep) # spatial autocorrelation
 library(sp) # spatial data handling
 library(ape) # Moran.I
-library(ncf) # correlog - distance-based binning for Moran's I correlogram
+#library(ncf) # correlog - distance-based binning for Moran's I correlogram
 library(gstat) # variogram
 library(qpcR) # akaike.weights
 
@@ -53,8 +53,23 @@ use_data$soilPC2 = soil[rownames(use_data), 'PC2']
 # Then, re-run final analysis using only use testing data set
 use_data_test = use_data[testplots$yrplot.id,]
 use_data_fit = use_data[fitplots$yrplot.id,]
-
 sum(is.na(use_data_fit)) # Checking for NAs- in soil variables
+
+# Define spatial dataframe for spatial analysis at regional scale
+spdata = master[rownames(use_data),c('LAT','LON','lichen.rich','regS')]
+coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
+spdata_test = spdata[testplots$yrplot.id,]
+spdata_fit = spdata[fitplots$yrplot.id,]
+
+## Functions that create neighbor, weights and listw objects given a spatial dataset
+
+# Create a listw object with weights based on overlapping areas of 500km circles
+# The weight is the percentage of the area shared with overlapping circle from another observation
+A_intersect = function(d, R){ 2*(R^2)*acos(d/(2*R)) - 0.5*d*sqrt(4*(R^2) - (d^2))}
+area_dist_func = function(d) A_intersect(d, 500)/(pi*(500^2))
+make_regnb = function(sp_data) dnearneigh(sp_data, 0, 1000, row.names=rownames(coordinates(sp_data)))
+make_regweights = function(sp_data, reg_nb) lapply(nbdists(reg_nb, sp_data), area_dist_func) 
+make_reglistw = function(sp_data, reg_nb) nb2listw(reg_nb, glist=make_regweights(sp_data, reg_nb), style='W')
 
 ### Test linear, log-linear, Poisson, and Negative Binomial GLMs with different link functions
 # define set of variables to consider in models
@@ -117,7 +132,6 @@ nb_log = glm.nb(richness~reg, link='log', data=use_data_fit)
 nb_iden = glm.nb(richness~reg, link='identity', data=use_data_fit)
 gaus_log = glm(richness~reg, family=gaussian(link='log'), data=use_data_fit)
 gaus_iden = glm(richness~reg, family=gaussian(link='identity'), data=use_data_fit)
-
 summary(gaus_iden)
 
 AIC(pois_log, pois_iden, nb_log, nb_iden, gaus_log, gaus_iden) # Ended up using nb_log for consistency with other variables
@@ -229,6 +243,26 @@ names(unimods_reg) = c('AIC_line','AIC_quad','R2_line','R2_quad',
 
 write.csv(unimods_reg, 'univariate_models_regS_AllSp.csv', row.names=T)
 
+# Spatial error models
+# Models use data scaled to mean=0, var=1 because otherwise models don't fit
+reg_nb = make_regnb(spdata_fit)
+reg_listw = make_reglistw(spdata_fit, reg_nb)
+
+sarmods_reg = sapply(use_vars, function(x){
+	
+	# By default uses log link function, so coefficients are on log scale
+	linear_mod = errorsarlm(working_data_fit[, 'regS'] ~ working_data_fit[,x], listw=reg_listw)
+	quad_mod = 	errorsarlm(working_data_fit[,'regS']~working_data_fit[,x]+I(working_data_fit[,x]^2), listw = reg_listw)
+
+	c(AIC(linear_mod), AIC(quad_mod), linear_mod$s2, quad_mod$s2, coef(linear_mod),	coef(quad_mod))
+})
+
+sarmods_reg = data.frame(t(sarmods_reg))
+names(sarmods_reg) = c('AIC_line','AIC_quad','ML_s2_line','ML_s2_quad',
+	'line_lambda','line_int','line_slope','quad_lambda', 'quad_int','quad_slope','quad_sq')
+
+write.csv(sarmods_reg, 'univariate_models_regS_AllSp_sar.csv', row.names=T)
+
 
 ## Make a chart of linear vs quadratic and concavity
 
@@ -252,17 +286,29 @@ modcompare_reg = cbind(modcompare_reg, predtypes[rownames(modcompare_reg),c('typ
 modcompare_reg = data.frame(predictor=varnames[rownames(modcompare_reg),'midName'], modcompare_reg)
 modcompare_reg = modcompare_reg[order(modcompare_reg$scale, modcompare_reg$mode, modcompare_reg$deltaAIC),]
 
+modcompare_sar = data.frame(deltaAIC = sarmods_reg$AIC_line-sarmods_reg$AIC_quad) # deltaAIC neg indicates AIC_line < AIC_quad and quadratic term not needed
+rownames(modcompare_sar) = rownames(sarmods_reg)
+modcompare_sar$type = ifelse(modcompare_sar$deltaAIC>2, 'quadratic','linear')
+modcompare_sar$coef_sq = sarmods_reg$quad_sq
+modcompare_sar$concavity = ifelse(sarmods_reg$quad_sq>0, 'up','down')
+modcompare_sar = cbind(modcompare_sar, predtypes[rownames(modcompare_sar),c('type','scale','mode')])
+
+modcompare_sar = data.frame(predictor=varnames[rownames(modcompare_sar),'midName'], modcompare_sar)
+modcompare_sar = modcompare_sar[order(modcompare_sar$scale, modcompare_sar$mode, modcompare_sar$deltaAIC),]
+
 # Note: even though coefficients are on log scale, the quadratic models will be 
 # concave down whenever the quadratic coefficient is negative- proved using calculus.
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
 write.csv(modcompare_reg, 'Univariate model shapes of regS.csv', row.names=T)
+write.csv(modcompare_sar, 'Univariate model shapes of regS SAR.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes fric.csv', row.names=T)
 write.csv(modcompare, 'Univariate model shapes GLM-NB Phys.csv', row.names=T)
 write.csv(modcompare_reg, 'Univariate model shapes of regS Phys.csv', row.names=T)
 
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
 modcompare_reg = read.csv('Univariate model shapes of regS.csv', row.names=1)
+modcompare_sar = read.csv('Univariate model shapes of regS SAR.csv', row.names=1)
 modcompare = read.csv('Univariate model shapes fric.csv', row.names=1)
 modcompare = read.csv('Univariate model shapes GLM-NB Phys.csv', row.names=1)
 modcompare_reg = read.csv('Univariate model shapes of regS Phys.csv', row.names=1)
@@ -293,25 +339,29 @@ lines(y_calcR~x, col='blue')
 # Which variables have AIC supported concave-down relationships?
 sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
 sq_vars_reg = rownames(subset(modcompare_reg, concavity=='down'&type=='quadratic'))
+sq_vars_sar = rownames(subset(modcompare_sar, concavity=='down'&type=='quadratic'))
 
 # Use quadratic relationships for concave-down AIC supported models in variation partitioning
-sq_df = use_data[,unique(c(sq_vars, sq_vars_reg))]^2
-colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
+#sq_df = use_data[,unique(c(sq_vars, sq_vars_reg, sq_vars_sar))]^2
+#colnames(sq_df) = paste(colnames(sq_df),'2', sep='')
 
 # Add square
-use_data = cbind(use_data, sq_df)
+#use_data = cbind(use_data, sq_df)
+#spdata = cbind(spdata, sq_df)
+
+# Save dataframe
+write.csv(use_data, './Data/FIA lichen model data with sq vars.csv', row.names=T)
 
 ## Use test plots for model results:
-use_data_test = use_data[testplots$yrplot.id,]
-use_data_fit = use_data[fitplots$yrplot.id,]
+#use_data_test = use_data[testplots$yrplot.id,]
+#use_data_fit = use_data[fitplots$yrplot.id,]
+#spdata_test = spdata[testplots$yrplot.id,] 
+#spdata_fit = spdata[fitplots$yrplot.id,]
 
 ##################################################
 ### Variation Partitioning by Local / Regional ###
 
-# Define spatial dataframe for spatial analysis
-spdata = master[rownames(use_data_test),c('LAT','LON','lichen.rich','regS')]
-coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
-
+# This analysis was done with test plots, so if re-doing need to change spdata to spdata_test
 # Create spatial weight matrix for eigenvector decomposition using inverse-distance weighting
 invdist_mat = 1/spDists(spdata, longlat=T)
 invdist_mat[is.infinite(invdist_mat)]<-0
@@ -332,18 +382,6 @@ EVsp = EV; coordinates(EVsp) = coordinates(spdata); proj4string(EVsp) = CRS("+pr
 spplot(EVsp, c('EV1', 'EV2','EV3','EV4'), col.regions=mycol, cuts=10)
 spplot(EVsp, c('EV42'), col.regions=mycol, cuts=10)
 
-# define set of predictors to be used in models
-use_preds = subset(predtypes, !(label %in% c('','r1','a1','p1','P1')))
-
-regionvars = rownames(use_preds)[use_preds$scale=='regional']
-localvars = rownames(use_preds)[use_preds$scale=='local']
-localvars = localvars[-grep('soil', localvars)] # Leave out soil vars
-
-region_mod = glm.nb(richness~., data=use_data_test[,c('richness', regionvars, paste(sq_vars[sq_vars %in% regionvars],2,sep=''))])
-local_mod = glm.nb(richness~., data=use_data_test[,c('richness', localvars, paste(sq_vars[sq_vars %in% localvars],2,sep=''))])
-
-
-AIC(region_mod, local_mod) # region_mod is best
 
 # Make a list of predictors
 predlist = list(Regional=names(region_mod$coefficients[-1]),
@@ -831,6 +869,16 @@ svg('./Figures/variation partitioning local-regional no climate new regS.svg', h
 	text(barwide/2, lablocs, labels=names(noclimate_partition)[1:4], cex=2)
 
 dev.off()
+
+###################################################################
+### Variable Importance in Models
+
+
+
+
+
+
+
 
 ###################################################################
 ### Interaction between regional environment and local control of local richness

@@ -56,6 +56,10 @@ env_data = read.csv('./Data/fia_lichen_env_data_points.csv')
 env_plot_data = read.csv('./Data/fia_lichen_env_data_plots.csv')
 env_reg_data = read.csv('./Data/fia_lichen_env_data_regional.csv')
 
+# Convert to Kelvin (means change, variance stays the same)
+env_data$mat = env_data$mat + 273.15
+env_reg_data$mat_reg_mean = env_reg_data$mat_reg_mean + 273.15
+
 # Merge to make master data file
 master = merge(plot_data, env_plot_data, all.x=T, all.y=F)
 master = merge(master, rich_data, all.x=T, all.y=F)
@@ -68,13 +72,20 @@ master = merge(master, reg_data, all.x=T, all.y=F)
 master = merge(master, env_data, all.x=T, all.y=F)
 master = merge(master, env_reg_data, all.x=T, all.y=F)
 
+# Calculate CV now that all env vars are positive
+master$mat_reg_cv = master$mat_reg_var/master$mat_reg_mean
+master$iso_reg_cv = master$iso_reg_var/master$iso_reg_mean
+master$ap_reg_cv = master$ap_reg_var/master$ap_reg_mean
+master$pseas_reg_cv = master$pseas_reg_var/master$pseas_reg_mean
+master$rh_reg_cv = master$rh_reg_var/master$rh_reg_mean
+
 # Save data
-write.csv(master, './Data/fia_lichen_master_data_2014-11-27.csv', row.names=F)
+write.csv(master, './Data/fia_lichen_master_data_2015-05-08.csv', row.names=F)
 
 rownames(master) = master$yrplot.id
 ###############################################################################
 ### Data Subsetting ###
-master = read.csv('./Data/fia_lichen_master_data_2014-10-27.csv', row.names=1)
+master = read.csv('./Data/fia_lichen_master_data_2015-05-08.csv', row.names=1)
 
 # Use recent plots after plot design had been standardized
 model_data = subset(master, MEASYEAR>=1997)
@@ -85,8 +96,9 @@ model_data = subset(model_data, numTreesBig>1) # removes 44 plots widely distrib
 ## Define variables potentially used in analysis
 predictors = read.csv('predictors.csv')
 
-# Subset by predictors that are included in model_data (not derived PCs)
+# Subset by predictors that are included in model_data (not derived PCs or fric)
 measured_pred = subset(predictors, pred %in% colnames(model_data))
+measured_pred = subset(measured_pred, pred!='fric')
 
 # Plot histograms of predictors
 pdf('./Figures/Predictor variable histograms.pdf', height=6, width=6)
@@ -97,7 +109,8 @@ for(p in measured_pred$pred){
 dev.off()
 
 # Remove records that are missing data in these variables
-model_data = model_data[rowSums(is.na(model_data[,measured_pred$pred]))==0,] # 1927 plots
+missing_data_plots = rownames(model_data[rowSums(is.na(model_data[,measured_pred$pred]))>0,])
+model_data = model_data[rowSums(is.na(model_data[,measured_pred$pred]))==0,] # 1923 plots
 
 ## Test for correlations among variables
 
@@ -153,9 +166,9 @@ newvars = merge(newvars, diam_vars, all.x=T)
 
 ## Create data set with variables used for modeling
 myvars = c('lichen.rich','Parmeliaceae','Physciaceae','fric','fdiv','raoQ','wetness','rain_lowRH',
-	'mat','iso','pseas','totalNS','radiation','wetness_reg_mean','rain_lowRH_reg_mean',
-	'mat_reg_mean','iso_reg_mean','pseas_reg_mean','wetness_reg_var','rain_lowRH_reg_var',
-	'mat_reg_var','iso_reg_var','pseas_reg_var','totalNS_reg','regS_tree',
+	'mat','iso','pseas','ap','rh','totalNS','radiation','ap_reg_mean','rh_reg_mean','wetness_reg_mean','rain_lowRH_reg_mean',
+	'mat_reg_mean','iso_reg_mean','pseas_reg_mean','ap_reg_var','rh_reg_var','wetness_reg_var','rain_lowRH_reg_var',
+	'mat_reg_var','iso_reg_var','pseas_reg_var','ap_reg_cv','rh_reg_cv','mat_reg_cv','iso_reg_cv','pseas_reg_cv','totalNS_reg','regS_tree',
 	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','PC1',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
 	'regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
@@ -169,7 +182,7 @@ model_pred = subset(predictors, pred %in% colnames(model_data))
 ## Create scaled and transformed datasets
 
 trans_data = model_data
-logTrans_vars = c('pseas_reg_var','wetness_reg_var','rain_lowRH_reg_var')
+logTrans_vars = c('ap_reg_var','pseas_reg_var','wetness_reg_var','rain_lowRH_reg_var')
 sqrtTrans_vars = c('bark_moist_pct.rao.ba','wood_SG.rao.ba', 'LogSeed.rao.ba')
 
 for(v in logTrans_vars){
@@ -229,7 +242,7 @@ outliers = subset(outliers, rownames(outliers) %in% rownames(model_data[model_da
 dim(subset(model_data, lichen.rich>2&rownames(model_data) %in% rownames(outliers)[which(outliers$numOut>8)]))
 
 # Used to check outliers in each variable
-i=model_pred$pred[33]
+i=model_pred$pred[1]
 ols = lm(working_data$lichen.rich_log~working_data[,i])
 opar <- par(mfrow = c(2, 2), oma = c(0, 0, 1.1, 0))
 plot(ols, las = 1)
@@ -296,7 +309,6 @@ usedata = master[allplots, c('state.abbr', 'yrplot.id')]
 ## Write out list of test and fit plots
 #write.csv(data.frame(yrplot.id=testplots), './Data/model test plots.csv')
 #write.csv(data.frame(yrplot.id=fitplots), './Data/model fit plots.csv')
-
 
 ################# OLD CODE ###############
 
