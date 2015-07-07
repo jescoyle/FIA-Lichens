@@ -4,6 +4,7 @@
 
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
+source('./GitHub/FIA-Lichens/fia_lichen_analysis2_functions.R')
 
 #save.image('varpart_analysis.Rdata')
 #load('varpart_analysis.Rdata')
@@ -21,6 +22,9 @@ library(MASS) # glm.nb
 library(spdep) # spatial autocorrelation
 library(sp) # spatial data handling
 library(qpcR) # akaike.weights
+
+# Read in table of predictor variable types
+predtypes = read.csv('predictors.csv', row.names=1)
 
 # Define dataset- use trans_data where variables have been log or sqrt transformed but not scaled
 use_data = trans_data[,colnames(trans_data) %in% rownames(predtypes)]
@@ -48,16 +52,11 @@ use_data$soilPC2 = soil[rownames(use_data), 'PC2']
 use_data_test = use_data[testplots$yrplot.id,]
 use_data_fit = use_data[fitplots$yrplot.id,]
 
-## Functions that create neighbor, weights and listw objects given a spatial dataset
-
-# Create a listw object with weights based on overlapping areas of 500km circles
-# The weight is the percentage of the area shared with overlapping circle from another observation
-A_intersect = function(d, R){ 2*(R^2)*acos(d/(2*R)) - 0.5*d*sqrt(4*(R^2) - (d^2))}
-area_dist_func = function(d) A_intersect(d, 500)/(pi*(500^2))
-make_regnb = function(sp_data) dnearneigh(sp_data, 0, 1000, row.names=rownames(coordinates(sp_data)))
-make_regweights = function(sp_data, reg_nb) lapply(nbdists(reg_nb, sp_data), area_dist_func) 
-make_reglistw = function(sp_data, reg_nb) nb2listw(reg_nb, glist=make_regweights(sp_data, reg_nb), style='W')
-
+# Define spatial dataframe for spatial analysis at regional scale
+spdata = master[rownames(use_data),c('LAT','LON','lichen.rich','regS')]
+coordinates(spdata) = c('LON','LAT'); proj4string(spdata) = CRS("+proj=longlat")
+spdata_test = spdata[testplots$yrplot.id,]
+spdata_fit = spdata[fitplots$yrplot.id,]
 
 ##################################################################################
 ### Univariate models used to decide which variables will have a squared term in subsequent models
@@ -171,7 +170,7 @@ colnames(sqdata) = paste(colnames(sqdata), 2, sep='')
 full_mod = glm.nb(richness~., data=cbind(use_data_test[,c('richness','reg',allvars)], sqdata[,paste(sq_vars[sq_vars %in% allvars],2, sep='')]))
 
 RregS_mod = glm.nb(richness~., data=cbind(use_data_test[,c('richness','reg',Rvars)], sqdata[,paste(sq_vars[sq_vars %in% Rvars],2, sep='')]))
-R_mod = glm.nb(richness~., data=cbind(use_data_test[,c('richness',Rvars)], sqdata[,paste(sq_vars[sq_vars %in% Rvars],2, 
+R_mod = glm.nb(richness~., data=cbind(use_data_test[,c('richness',Rvars)], sqdata[,paste(sq_vars[sq_vars %in% Rvars],2, sep='')]))
 regS_mod = glm.nb(richness~reg, data=use_data_test)
 L_mod = glm.nb(richness~., data=cbind(use_data_test[,c('richness', Lvars)], sqdata[,paste(sq_vars[sq_vars %in% Lvars],2,sep='')]))
 
@@ -349,6 +348,145 @@ svg('./Figures/New Analysis/variation partitioning het-opt.svg', height=5, width
 	text(c(0,4),1.05, c('A','B'), cex=2, adj=c(0,0))
 	par(xpd=F)
 dev.off()
+
+####################################################################################
+### Model averaging and variable relative importance
+
+# write out a data set for use on the cluster
+#write.csv(use_data_test, './Data/localmods_data.csv', row.names=T)
+
+options(na.action='na.fail') # So that models are not fit to different subsets of data
+
+## Models of local richness
+
+# Scalars use to standardized regression coefficients are based on standard deviations of variables in full data set
+sds = apply(use_data[,c('richness', allvars)], 2, function(x) sqrt(var(x, na.rm=T)))
+sds = sds/sds['richness']
+
+## Get top variables in each category
+
+# RH
+RHdredge = dredge(RH_mod, beta=T, subset=dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2')) 
+# Can leave out wetness_reg_var
+
+# RO
+ROdredge = dredge(RO_mod, beta=T, subset=dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
+# Leave out rain_lowRH_reg_mean and its square
+
+# LH
+LHdredge = dredge(LH_mod, beta=T, subset=dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2'))
+subset(LHdredge, weight >0.01)
+# Maybe leave out lightDist.mean propDead and its square and wood_SG.rao.ba square
+
+# LO
+LOdredge = dredge(LO_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2'))
+subset(LOdredge, weight >0.01)
+# Maybe leave out iso, bark_moist_pct.ba and wood_SG squared
+
+#
+# Optimality variables
+#Odredge = dredge(O_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2')dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
+
+# Heterogeneity variables
+#Hdredge = dredge(H_mod, beta=T, subset=dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'))
+load('./Data/local_rich_het_model_dredge.RData')
+
+cum_weight = calc_cumWeight(Hdredge$weight)
+keep_models = 1:(max(which(cum_weight < 0.95))+1)
+
+# These are effects of heterogeneity variables on local richness
+H_avg = model.avg(Hdredge[keep_models,], beta=T)
+#H_avg_full = model.avg(Hdredge, beta=T) # average across all models
+
+
+svg('./Figures/New Analysis/local richness het model avg coefs.svg', height=13, width=17)
+plot_coefs(make_coefTable(H_avg), 'scale')
+dev.off()
+
+write.csv(make_impTable(H_avg, length(keep_models)), './Figures/New Analysis/local richness het model var importance.csv', row.names=F)
+
+# Dredge full models on cluster using script 'dredge_local_rich_models.R'
+#Rdredge = dredge(use_R_mod, beta=T, subset=dc('wetness_reg_mean', 'wetness_reg_mean2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'), m.min=2)
+#Ldredge = dredge(L_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2')&
+#	dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2'),
+#	m.min=2)
+
+#load('./Data/local_rich_model_dredge.RData')
+
+# Calculate model-averaged coefficients for models with 95% cumulative weight
+cum_weight = calc_cumWeight(Rdredge$weight)
+keep_models = 1:(max(which(cum_weight < 0.95))+1)
+
+# These are effects of regional scale variables on local richness
+R_avg = model.avg(Rdredge[keep_models,])
+R_avg_full = model.avg(Rdredge) # average across all models
+
+
+## Models of regional richness
+
+working_data_test = cbind(working_data_test, sqdata_reg)
+
+RH_regmod = errorsarlm(regS ~ wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
+RO_regmod = errorsarlm(regS ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2, data = working_data_test, listw=reg_listw)
+R_regmod = errorsarlm(regS ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2 + 
+	wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
+
+
+save(R_regmod, RH_regmod, RO_regmod, reg_listw, working_data_test, file='regmods_objects.RData')
+
+# Do these on cluster using scripts 'dredge_regional_models.R' and 'dredge_regional_model_full.R'
+#ROreg_dredge = dredge(RO_regmod, subset=dc('pseas_reg_mean', 'pseas_reg_mean2'))
+#RHreg_dredge = dredge(RH_regmod, subset=dc('regS_tree','regS_tree2'))
+#R_dredge = dredge(R_regmod, subset=dc('pseas_reg_mean', 'pseas_reg_mean2')&dc('regS_tree','regS_tree2'))
+
+load('./Data/regmod_full_dredged.RData')
+load('./Data/regmods_dredged.RData')
+
+subset(R_dredge, weight >0.01) 
+subset(RHreg_dredge, weight >0.01) # Remove regS_tree and its sqared
+subset(ROreg_dredge, weight >0.01) # Possibly remove wetness_reg_mean
+
+# Calculate model-averaged coefficients for models with 95% cumulative weight
+cum_weight = calc_cumWeight(R_dredge$weight)
+keep_models = 1:(max(which(cum_weight < 0.95))+1)
+
+Rreg_avg = model.avg(R_dredge[keep_models,])
+Rreg_avg_full = model.avg(R_dredge) # average across all models
+
+# Note that regional richness models were fit to standardized variables so coefficients are standardized
+
+
+## Plot coefficients from model averages
+library(lattice)
+
+
+svg('./Figures/New Analysis/regional richness model avg coefs.svg', height=13, width=17)
+plot_coefs(make_coefTable(Rreg_avg), 'mode')
+dev.off()
+
+svg('./Figures/New Analysis/regional richness model avg full coefs.svg', height=13, width=17)
+plot_coefs(make_coefTable(Rreg_avg_full), 'mode')
+dev.off()
+
+
+svg('./Figures/New Analysis/regional richness model avg full coefs.svg', height=13, width=17)
+plot_coefs(make_coefTable(Rreg_avg_full), 'mode')
+dev.off()
+
+write.csv(make_impTable(Rreg_avg, length(keep_models)), './Figures/New Analysis/regional richness model var importance.csv', row.names=F)
+
+
+### Pairwise comparisons of variables
+hetopt_pairs = data.frame(het = c('wetness_reg_mean','rain_lowRH_reg_mean','pseas_reg_mean','iso_reg_mean','mat_reg_mean','bark_moist_pct.ba','wood_SG.ba','light.mean','PC1'),
+	opt = c('wetness_reg_var','rain_lowRH_reg_var','pseas_reg_var','iso_reg_var','mat_reg_var','bark_moist_pct.rao.ba','wood_SG.rao.ba','lightDist.mean','PIE.ba.tree'),
+	scale = c(rep('regional',5), rep('local',4)) )
+
+locreg_pairs = data.frame(loc = c(climvars, 'PIE.ba.tree'), reg=c(ROvars,'regS_tree'))
+
+
+
+
+
 
 
 
