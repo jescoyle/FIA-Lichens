@@ -1,5 +1,5 @@
 # This script diversity of lichens from occurence records downloaded from
-# Consortium of North American Lichen Herbaria on 2-19-2012.
+# Consortium of North American Lichen Herbaria in the fall of 2014.
 
 library(sp)
 library(rgdal)
