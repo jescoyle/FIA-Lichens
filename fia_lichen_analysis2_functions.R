@@ -34,7 +34,56 @@ make_coefTable = function(x){
 	tab$ci.upper = qnorm(0.975)*tab$se + tab$est
 
 	tab	
-}	
+}
+
+# A function that formats a coefficient table for publication from a model average object x
+format_coefTable = function(x){
+
+	# Get coefficient table
+	tab = make_coefTable(x)
+
+	# Add variable importance and number of models
+	imp = importance(x)
+	imp_df = as.data.frame(imp)
+	imp_df$nmods = attr(imp, 'n.models')
+	tab = cbind(tab, imp_df[rownames(tab),])
+	
+	# Split coef table into linear and quadratic terms
+	sq = F
+	sqterms = tab$var[grep('2', tab$var)]		
+	if(length(sqterms)>0){
+		sq = T
+		tab2 = tab[sqterms,]
+		tab2$var = substr(tab2$var, 1, nchar(tab2$var)-1)
+		rownames(tab2) = tab2$var
+		tab2$Term = 'quadratic'
+	}
+
+	# Subset coef table to only linear effects of predictors
+	tab = subset(tab, var %in% rownames(predtypes))
+	tab$Term = 'linear'
+	ordered_vars = tab$var[order(abs(tab$est), decreasing=T)]
+
+	# Combine tables
+	newtab = rbind(tab[ordered_vars,], tab2)
+	
+	# Add variable labels
+	newtab$Predictor = varnames[newtab$var,'midName']
+
+	# Add variable mode and scale
+	newtab$Scale = toupper(substr(predtypes[newtab$var,'scale'],1,1))
+	newtab$Mode = toupper(substr(predtypes[newtab$var,'mode'],1,1))
+
+	# Add variable importance and number of models
+	newtab$Importance = format(newtab$imp, digits=2)
+	newtab$'Num. Models' = paste(newtab$nmods, nrow(x$msTable), sep='/')
+
+	# Format estimate and SE
+	newtab$Estimate = format(newtab$est, digits=2)
+	newtab$SE = format(newtab$se, digits=2)
+
+	newtab[,c('Predictor','Term','Scale','Mode','Importance','Num. Models','Estimate','SE')]
+}
 
 plot_coefs = function(tab, shadeby){
 

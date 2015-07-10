@@ -21,7 +21,6 @@ library(MuMIn) # r.squaredLR
 library(MASS) # glm.nb
 library(spdep) # spatial autocorrelation
 library(sp) # spatial data handling
-library(qpcR) # akaike.weights
 
 # Read in table of predictor variable types
 predtypes = read.csv('predictors.csv', row.names=1)
@@ -386,24 +385,34 @@ subset(LOdredge, weight >0.01)
 #
 # Optimality variables
 #Odredge = dredge(O_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2')dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
+load('./Data/local_rich_opt_model_dredge.RData')
+keep_models = which(Odredge$weight/Odredge$weight[1] >= 0.05)
+O_avg = model.avg(Odredge[keep_models,], beta=T)
 
 # Heterogeneity variables
 #Hdredge = dredge(H_mod, beta=T, subset=dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'))
 load('./Data/local_rich_het_model_dredge.RData')
 
-cum_weight = calc_cumWeight(Hdredge$weight)
-keep_models = 1:(max(which(cum_weight < 0.95))+1)
+#cum_weight = calc_cumWeight(Hdredge$weight) # keep models whose weight accumulates to 0.95
+#keep_models = 1:(max(which(cum_weight < 0.95))+1)
+keep_models = which(Hdredge$weight/Hdredge$weight[1] >= 0.05) # Keep models whose evidence ratio is greater than 0.05
 
 # These are effects of heterogeneity variables on local richness
 H_avg = model.avg(Hdredge[keep_models,], beta=T)
 #H_avg_full = model.avg(Hdredge, beta=T) # average across all models
 
-
 svg('./Figures/New Analysis/local richness het model avg coefs.svg', height=13, width=17)
 plot_coefs(make_coefTable(H_avg), 'scale')
 dev.off()
 
+# Table with variable importance
 write.csv(make_impTable(H_avg, length(keep_models)), './Figures/New Analysis/local richness het model var importance.csv', row.names=F)
+
+# Table for publication including variable importance and coefficents
+H_coef = format_coefTable(H_avg)
+write.table(H_coef, './Figures/New Analysis/local richness het model avg coefs.txt', sep='\t', row.names=F, quote=F)
+
+
 
 # Dredge full models on cluster using script 'dredge_local_rich_models.R'
 #Rdredge = dredge(use_R_mod, beta=T, subset=dc('wetness_reg_mean', 'wetness_reg_mean2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'), m.min=2)
@@ -414,12 +423,13 @@ write.csv(make_impTable(H_avg, length(keep_models)), './Figures/New Analysis/loc
 #load('./Data/local_rich_model_dredge.RData')
 
 # Calculate model-averaged coefficients for models with 95% cumulative weight
-cum_weight = calc_cumWeight(Rdredge$weight)
-keep_models = 1:(max(which(cum_weight < 0.95))+1)
+#cum_weight = calc_cumWeight(Rdredge$weight)
+#keep_models = 1:(max(which(cum_weight < 0.95))+1)
 
 # These are effects of regional scale variables on local richness
-R_avg = model.avg(Rdredge[keep_models,])
-R_avg_full = model.avg(Rdredge) # average across all models
+# NOT USING THESE IN THE ANALYSIS
+#R_avg = model.avg(Rdredge[keep_models,])
+#R_avg_full = model.avg(Rdredge) # average across all models
 
 
 ## Models of regional richness
@@ -446,9 +456,8 @@ subset(R_dredge, weight >0.01)
 subset(RHreg_dredge, weight >0.01) # Remove regS_tree and its sqared
 subset(ROreg_dredge, weight >0.01) # Possibly remove wetness_reg_mean
 
-# Calculate model-averaged coefficients for models with 95% cumulative weight
-cum_weight = calc_cumWeight(R_dredge$weight)
-keep_models = 1:(max(which(cum_weight < 0.95))+1)
+# Calculate model-averaged coefficients for models whose evidence ratio is greater than 0.05
+keep_models = which(R_dredge$weight/R_dredge$weight[1] >= 0.05)
 
 Rreg_avg = model.avg(R_dredge[keep_models,])
 Rreg_avg_full = model.avg(R_dredge) # average across all models
@@ -458,7 +467,6 @@ Rreg_avg_full = model.avg(R_dredge) # average across all models
 
 ## Plot coefficients from model averages
 library(lattice)
-
 
 svg('./Figures/New Analysis/regional richness model avg coefs.svg', height=13, width=17)
 plot_coefs(make_coefTable(Rreg_avg), 'mode')
@@ -474,6 +482,10 @@ plot_coefs(make_coefTable(Rreg_avg_full), 'mode')
 dev.off()
 
 write.csv(make_impTable(Rreg_avg, length(keep_models)), './Figures/New Analysis/regional richness model var importance.csv', row.names=F)
+
+## Make table of coefficients from model averages
+Rreg_coef = format_coefTable(Rreg_avg)
+write.table(Rreg_coef, './Figures/New Analysis/regional richness model avg coefs.txt', sep='\t', row.names=F, quote=F)
 
 
 ### Pairwise comparisons of variables

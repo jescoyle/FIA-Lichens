@@ -5,7 +5,7 @@ library(sp)
 library(rgdal)
 library(vegan) # rarefy
 library(stringr) #str_trim
-library(rgeos) # gBuffer
+#library(rgeos) # gBuffer
 
 source('C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 # Read in locations of master data of FIA plots with plot data and environmental data
@@ -338,125 +338,100 @@ spplot(fia_geo2, 'regPhys', col.regions=colorRampPalette(c('dark blue','blue','g
 
 
 
-
+#######################################################################3
 ## Assess how sampling radius (km) affects richness estimates
-#Note: subsampled different number of records in each case b/c more records in larger radii
-# This code has not been run for most recently downloaded CNALH data
+## see script 'calc_regional_richnee_multi-radii.R' for actual calculation run on cluster
 
-rich1000 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_1000km.csv')
-rich700 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_700km.csv')
-rich600 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_600km.csv')
-rich500 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness.csv')
-rich400 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_400km.csv')
-rich200 = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_200km.csv')
+# Load R objects with richness and number of observations computed at different scales and number of sampled records
+load('./data/Regional Richness/regS_across_scales.Rdata')
 
+# Objects are regS and nobs, scales
+# Define scales over which richness was calculated
+scales = c(50, 100, 250, 400, 500)
+nsamps = c(25, 50, 100, 200, 250, 500, 750, 1000, 1500, 2000, 2500, 3000)
 
-plot(rich1000$regS~rich500$regS)
+# Calculate % of plots with nsamp at each scale
+pcts = array(NA, dim=c(length(nsamps), length(scales)), dimnames=list(nsamp=nsamps, scale=paste('R',scales, sep='')))
+for(i in nsamps){
+for(j in colnames(pcts)){
+	pcts[as.character(i),j] = sum(nobs[,j] >= i)/dim(regS)[1]	
+}}
 
-ranks = data.frame(R1000 = rank(rich1000$regS),
-	R700 = rank(rich700$regS),
-	R600 = rank(rich600$regS),
-	R500 = rank(rich500$regS),
-	R400 = rank(rich400$regS),
-	R200 = rank(rich200$regS)
+# Format and save table
+pcts_tab = apply(format(pcts*100, digits=1), c(1,2), function(x) paste(x, '%', sep=''))
+write.table(pcts_tab, './Figures/pct plots with different num records across scales.txt', sep='\t', row.names=T, quote=F)
+
+# Plot example rarefaction curves from two different regions
+most_samps = rownames(nobs)[order(nobs[,'R400'], decreasing=T)]
+master[most_samps,c('yrplot.id','state.abbr')]
+# use 1998_55_3_9514 (from WI) and 2007_4_1_89307 (form AZ) and 1999_53_37_10205 (from WA) and 1998_50_21_7453 (from VT)
+
+ex_plots = c('1998_55_3_9514','2007_4_1_89307','1999_53_37_10205','1998_50_21_7453')
+names(ex_plots) = master[ex_plots,'state.abbr']
+nobs[ex_plots,]
+
+use_regS = regS[,'R400',]
+
+pdf('./Figures/regional richness rarefaction.pdf', height=5, width=5)
+par(mar=c(4,4,1,1))
+plot(nsamps, use_regS[ex_plots[1],], type='n', las=1, 
+	xlab='# Records Sampled', ylab='Species Richness', ylim=c(0,max(use_regS[ex_plots,])))
+for(i in 1:4) lines(nsamps, use_regS[ex_plots[i],], lty=i, lwd=3)
+rect(2400, 0, 2600, 430, col='white', border='white')
+text(2500, use_regS[ex_plots,'2500'], labels=names(ex_plots))
+dev.off()
+
+nobs[ex_plots, ]
+
+# Calculate correlations between richness calculated at different scales
+# Compare 100 samples at 250km and 2500 samples at 500km
+
+cor(regS[,'R250','500'], regS[,'R500','2500'], method='spearman', use='complete.obs')
+cor(regS[,'R250','500'], regS[,'R500','2500'], method='pearson', use='complete.obs')
+
+cor(regS[,'R250','100'], regS[,'R500','2500'], method='spearman', use='complete.obs')
+cor(regS[,'R250','100'], regS[,'R500','2500'], method='pearson', use='complete.obs')
+
+## Map regional richness using 250km sampling radius and 500 subsamples
+
+# Colors
+ncuts=10
+mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
+mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
+mycol = mycol[10:1]
+mycolramp = colorRampPalette(mycol)(ncuts)
+mycolrampbw = colorRampPalette(c('grey80','black'))(ncuts)
+
+# Map projection
+plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
+
+# N. Am. outline
+OUTLINES = readOGR('../../GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
+OUTLINES.laea = spTransform(OUTLINES,CRS(plot_prj))
+
+# Make spatial points data frame with only 1923 plots used in models
+reg500 = regS[,'R500','2500']
+reg250 = regS[,'R250','500']
+sp_data = data.frame(master[dimnames(regS)$yrplot.id,c('LON','LAT')], reg500, reg250)
+coordinates(sp_data) = c('LON','LAT')
+proj4string(sp_data) = CRS("+proj=longlat")
+sp_data = spTransform(sp_data, CRS(plot_prj))
+
+range(sp_data$reg250, na.rm=T)
+
+pdf('./Figures/Maps/Map regional lichen richness R250-S500.pdf', height=8, width=12)
+trellis.par.set(axis.line=list(col=NA))
+colcuts = seq(90, 210, 12) #seq(230,430,20)  
+spplot(sp_data, 'reg250', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
+		sp.polygons(OUTLINES.laea, fill='white')
+		panel.pointsplot(x,y,...)
+	}, cuts=colcuts, cex=1.5, col.regions = mycolramp, auto.key=F,
+	key=list(x=1,y=.3, corner=c(1,.5), title='Species\nRichness',
+		rectangles=list(col=mycolramp, size=3, border='transparent'),
+		text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
 )
 
-rich = data.frame(R1000 = rich1000$regS,
-	R700 = rich700$regS,
-	R600 = rich600$regS,
-	R500 = rich500$regS,
-	R400 = rich400$regS, 
-	R200 = rich200$regS
-)
-
-plot(ranks$R500,ranks$R400)
-plot(ranks$R500,ranks$R600)
-plot(ranks$R500,ranks$R700)
-
-cor(ranks)
-
-
-
-## Calculate for FIA plots without spatial coordinates
-## THIS CODE NO LONGER USED
-
-# Assign plot location to centroid of counties
-coords = data.frame()
-for(i in 1:nrow(fia_county)){
-	x = fia_county[i,]
-
-	use_poly = county.sh[(county.sh$STATE_NAME==x$STATE_NAME)&(county.sh$NAME==x$COUNTYNM),]
-	these_coords= gCentroid(use_poly)
-	coords = rbind(coords, these_coords@coords)
-}
-
-# Calculate richness for each county 
-county_locs = unique(cbind(fia_county[,c('STATE_NAME','COUNTYNM')], coords))
-coordinates(county_locs) = c('x','y')
-proj4string(county_locs) = CRS("+proj=longlat")
-
-# Remove counties that have already been calculated
-prev_county = read.csv('../FIA Lichen/Data/regional richness fia county level.csv')
-prev_county[,c('STATE_NAME','COUNTYNM')]
-merge(county_locs, prev_county) # Looks like all counties have already bee calculated
-
-# Calculate the number of records within various buffers
-dist500 = c()
-for(i in 1:nrow(county_locs)){
-	dist500 = c(dist500, nrow(find_recs(county_locs[i,], records_sp, 500)))
-} # min=1131, min=530 for Parm, min=221 for Phys
-
-nsamp = 499 # minimum from fia plots with coordinates 
-reps = 500
-
-regS = c()
-for(i in 1:nrow(county_locs)){
-	userecs = find_recs(county_locs[i,], records_sp, 500)
-	regS = c(regS, calc_rich_samp(userecs, nsamp, reps))
-}
-county_locs$regS = regS
-county_locs$regParm = regS #STOPPed HERE
-county_locs$regPhys = regS
-
-# Save county-level regional richness
-write.csv(county_locs, '../FIA Lichen/Data/regional Physciaceae richness fia county level.csv', row.names=F)
-county_loc = read.csv('../FIA Lichen/Data/regional Physciaceae richness fia county level.csv')
-
-fia_county = fia_county[,-which(names(fia_county)=='regS')]
-
-fia_county = merge(fia_county, county_loc, all.x=T)
-
-# Combine county and geo data and put into master dataframe
-regS_all = rbind(fia_county[,c('yrplot.id','regS')],fia_geo@data[,c('yrplot.id','regS')])
-
-# Merge data when only a few regS have been calculated for plots with missing values
-master[regS_all$yrplot.id, 'regS'] = regS_all$regS
-
-# Merge data when all regS are calculated at once across all plots
-rownames(master) = master$yrplot.id)
-master = merge(master, regS_all)
-
-## Merge data when only Parmeliaceae or Physciaceae regional richness have been calculated
-
-# merge county-level data with plot ids
-smdata = merge(fia_county[,c('yrplot.id','STATE_NAME','COUNTYNM')], county_loc[,c('STATE_NAME','COUNTYNM','regPhys')], all.x=T)
-
-# create small data frame of just Parm or Phys regional richness to append to main data frame
-newdata = rbind(smdata[,c('yrplot.id','regPhys')], fia_geo@data[,c('yrplot.id','regPhys')])
-
-# This was done on cluster, while Parm was done on laptop
-write.csv(newdata, 'phys reg rich.csv', row.names=F)
-
-# Then I merged Phys and Parm data together
-phys_reg = read.csv('./Data/phys reg rich.csv')
-newdata = merge(newdata, phys_reg, all.x=T)
-
-# The I merged both with the master data
-master = merge(master, newdata, all.x=T)
-model_data = merge(model_data, newdata, all.x=T)
-
-write.csv(master,'../FIA Lichen/Data/master_data.csv', row.names=F)
-write.csv(master[,c('yrplot.id','regS','regParm','regPhys')], '../FIA Lichen/Data/regional_lichen_rich.csv', row.names=F)
+dev.off()
 
 #################################################
 ## Number of species in CNALH data set
