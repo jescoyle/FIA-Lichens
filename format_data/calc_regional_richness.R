@@ -433,6 +433,10 @@ spplot(sp_data, 'reg250', ylim=c(-1600,1500), main='', panel=function(x,y,subscr
 
 dev.off()
 
+
+
+
+
 #################################################
 ## Number of species in CNALH data set
 
@@ -440,6 +444,20 @@ cnalh_sp = get_species(records$scientificName)
 
 unique(sapply(strsplit(cnalh_sp, ' '), function(x) x[1]))
 
+## Get SW species list
+library('maps')
+library('maptools')
+
+SWmap = map('state',c('Arizona','New Mexico'), fill=T)
+SWpoly = map2SpatialPolygons(SWmap, IDs=c('AZ','NM'))
+proj4string(SWpoly) = CRS("+proj=longlat")
+SWpoints = over(allsp_sp, SWpoly)
+allsp_SW = subset(allsp_sp, !is.na(SWpoints))
+
+# Get species list
+SWsp = get_species(allsp_SW$scientificName)
+SWsp = SWsp[order(SWsp)]
+write.table(SWsp, file='./Data/Regional Richness/species list AZ-NM.txt', quote=F, row.names=F)
 
 ### Plot map of county-level and overlayed plot-level regional richness
 county.sh$uniqueID = paste(county.sh$STATE_NAME, county.sh$NAME)

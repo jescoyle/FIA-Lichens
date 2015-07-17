@@ -150,8 +150,8 @@ sq_vars_sar = rownames(subset(modcompare_sar, concavity=='down'&type=='quadratic
 
 # Define sets of predictors to be used in models
 climvars = c('mat','iso','pseas','wetness','rain_lowRH')
-LOvars = c(climvars, 'radiation','bark_moist_pct.ba','wood_SG.ba','light.mean', 'PC1')
-LHvars = c('bark_moist_pct.rao.ba','wood_SG.rao.ba','lightDist.mean','PIE.ba.tree','propDead')
+LOvars = c(climvars, 'radiation','bark_moist_pct.ba','wood_SG.ba','light.mean', 'PC1', 'bigTrees')
+LHvars = c('bark_moist_pct.rao.ba','wood_SG.rao.ba','lightDist.mean','PIE.ba.tree','propDead', 'diamDiversity')
 ROvars = paste(climvars, 'reg_mean', sep='_')
 RHvars = c(paste(climvars, 'reg_var', sep='_'), 'regS_tree')
 Rvars = c(RHvars, ROvars)
@@ -234,6 +234,11 @@ null_mod = errorsarlm(regS ~ 1, data=working_data_test, listw=reg_listw)
 Rs = sapply(list(RH_regmod, RO_regmod, R_regmod), function(x) calc_r2(x, null_mod))
 names(Rs) = c('het','opt','full')
 part_hetopt_reg = partvar2(Rs)
+
+# Print out K for all models
+L_K = lapply(list(RregS_mod, L_mod, full_mod, RO_mod, LO_mod, O_mod, RH_mod, LH_mod, H_mod), logLik)
+R_K = lapply(list(RH_regmod, RO_regmod, R_regmod), logLik)
+
 
 ## Figure. Plot local-regional variation partioning analysis in three panels
 barwide=1.5
@@ -351,6 +356,12 @@ dev.off()
 ####################################################################################
 ### Model averaging and variable relative importance
 
+# Most model averaging was done on the computing cluster using the scripts:
+# pdredge_O_models.R
+# pdredge_H_models.R
+# pdredge_local_rich_models.R
+
+
 # write out a data set for use on the cluster
 #write.csv(use_data_test, './Data/localmods_data.csv', row.names=T)
 
@@ -382,37 +393,35 @@ LOdredge = dredge(LO_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood
 subset(LOdredge, weight >0.01)
 # Maybe leave out iso, bark_moist_pct.ba and wood_SG squared
 
-#
 # Optimality variables
 #Odredge = dredge(O_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2')dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
-load('./Data/local_rich_opt_model_dredge.RData')
-keep_models = which(Odredge$weight/Odredge$weight[1] >= 0.05)
-O_avg = model.avg(Odredge[keep_models,], beta=T)
+load('./Data/local_rich_opt_models_best.RData') # Note that there were 1119727 models so best models were subseted on the cluster
+O_avg = model.avg(Odredge_best, beta=T)
+
+svg('./Figures/New Analysis/local richness opt model avg coefs.svg', height=13, width=17)
+plot_coefs(make_coefTable(O_avg), 'scale')
+dev.off()
+
+# Table for publication including variable importance and coefficents
+O_coef = format_coefTable(O_avg)
+write.table(O_coef, './Figures/New Analysis/local richness opt model avg coefs.txt', sep='\t', row.names=F, quote=F)
 
 # Heterogeneity variables
 #Hdredge = dredge(H_mod, beta=T, subset=dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'))
-load('./Data/local_rich_het_model_dredge.RData')
-
-#cum_weight = calc_cumWeight(Hdredge$weight) # keep models whose weight accumulates to 0.95
-#keep_models = 1:(max(which(cum_weight < 0.95))+1)
-keep_models = which(Hdredge$weight/Hdredge$weight[1] >= 0.05) # Keep models whose evidence ratio is greater than 0.05
+load('./Data/local_rich_het_models_best.RData') # There were 31091 models so best models were subsetted on the cluster
+#keep_models = which(Hdredge$weight/Hdredge$weight[1] >= 0.05) # Keep models whose evidence ratio is greater than 0.05
 
 # These are effects of heterogeneity variables on local richness
-H_avg = model.avg(Hdredge[keep_models,], beta=T)
+H_avg = model.avg(Hdredge_best, beta=T)
 #H_avg_full = model.avg(Hdredge, beta=T) # average across all models
 
 svg('./Figures/New Analysis/local richness het model avg coefs.svg', height=13, width=17)
 plot_coefs(make_coefTable(H_avg), 'scale')
 dev.off()
 
-# Table with variable importance
-write.csv(make_impTable(H_avg, length(keep_models)), './Figures/New Analysis/local richness het model var importance.csv', row.names=F)
-
 # Table for publication including variable importance and coefficents
 H_coef = format_coefTable(H_avg)
 write.table(H_coef, './Figures/New Analysis/local richness het model avg coefs.txt', sep='\t', row.names=F, quote=F)
-
-
 
 # Dredge full models on cluster using script 'dredge_local_rich_models.R'
 #Rdredge = dredge(use_R_mod, beta=T, subset=dc('wetness_reg_mean', 'wetness_reg_mean2')&dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2'), m.min=2)
@@ -430,6 +439,43 @@ write.table(H_coef, './Figures/New Analysis/local richness het model avg coefs.t
 # NOT USING THESE IN THE ANALYSIS
 #R_avg = model.avg(Rdredge[keep_models,])
 #R_avg_full = model.avg(Rdredge) # average across all models
+
+## Plot comparison of local vs regional climate effects on local richness from model averaging with all optimality variables
+keep_vars = c(climvars, ROvars)
+O_coefs = make_coefTable(O_avg)
+xvar = O_coefs[c(climvars,'wetness2'),]
+yvar = O_coefs[c(ROvars,'wetness_reg_mean2'),]
+
+
+lims = range(rbind(xvar, yvar)[,c('ci.upper','ci.lower')])
+lims = c(-1, 1)*max(abs(lims))
+
+pdf('./Figures/New Analysis/Compare climate effects in avg optimality model.pdf', height=4.5, width=4.5)
+par(mar=c(4,4.5,1,1))
+plot(xvar$est, yvar$est, type='n', xlim=lims, ylim=lims, las=1, xlab='Local variable effect',ylab='')
+mtext('Regional variable effect', 2, 3.5)
+usr =par('usr')
+polygon(c(usr[1],0,usr[1],usr[2],0,usr[2],usr[1]),
+	c(usr[3],0,usr[4],usr[4],0,usr[3],usr[3]), col='grey80')
+abline(h=0, v=0, lty=2)
+segments(xvar$est, yvar$ci.lower, xvar$est, yvar$ci.upper, lwd=2, col='black', lend=1)
+segments(xvar$ci.lower, yvar$est, xvar$ci.upper, yvar$est, lwd=2, col='black', lend=1)
+points(xvar$est, yvar$est, pch=15)
+labels=expression(MAT,ISO,PSEAS,WET,LOWRH,WET^2)
+text(xvar$est, yvar$est, labels, pos=c(4,4,2,4,4,2), offset=1)
+dev.off()
+
+
+for(i in climvars){
+	use_coef = O_coef[grep(i, rownames(O_coef)),]
+	
+	plot(
+	
+
+}
+
+
+
 
 
 ## Models of regional richness
@@ -453,11 +499,11 @@ load('./Data/regmod_full_dredged.RData')
 load('./Data/regmods_dredged.RData')
 
 subset(R_dredge, weight >0.01) 
-subset(RHreg_dredge, weight >0.01) # Remove regS_tree and its sqared
+subset(RHreg_dredge, weight >0.01) # Remove regS_tree and its square
 subset(ROreg_dredge, weight >0.01) # Possibly remove wetness_reg_mean
 
 # Calculate model-averaged coefficients for models whose evidence ratio is greater than 0.05
-keep_models = which(R_dredge$weight/R_dredge$weight[1] >= 0.05)
+keep_models = which(R_dredge$weight/R_dredge$weight[1] >= 0.05) # 11 best models out of 4608 total
 
 Rreg_avg = model.avg(R_dredge[keep_models,])
 Rreg_avg_full = model.avg(R_dredge) # average across all models

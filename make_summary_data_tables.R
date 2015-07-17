@@ -43,8 +43,59 @@ write.csv(ordered_data30, './Paper/Plots with at least 30 species.csv', row.name
 
 write.csv(siteXsp, 'siteXsp_matrix_current+legacy.csv', row.names=T)
 
+siteXsp = read.csv('./Data/siteXsp_matrix_current+legacy.csv', row.names=1, check.names=F)
 
+### How many taxa are just IDed to genus
+lichsp = read.csv('./Data/LICHEN_SPECIES_SUMMARY.CSV')
+model_data = read.csv('./Data/fia_lichen_model_data.csv', row.names=1)
+gen_cds = subset(lichsp, SPECIES=='')$LICH_SPPCD
 
+siteXsp_gen = siteXsp[rownames(model_data),colnames(siteXsp) %in% as.character(gen_cds)]
+model_data$justgenus = rowSums(siteXsp_gen)
+table(model_data$justgenus)
+
+master = read.csv('./Data/fia_lichen_master_data.csv', row.names=1)
+spdata = data.frame(master[rownames(model_data), c('LON','LAT')], justgenus = model_data$justgenus)
+
+library(sp)
+library(rgdal)
+
+coordinates(spdata) = c('LON','LAT')
+proj4string(spdata) = CRS('+proj=longlat')
+
+mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
+mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
+mycol = mycol[10:1]
+
+# Map projection
+plot_prj = paste("+proj=laea +lat_0=40 +lon_0=-97 +units=km",sep='')
+
+# N. Am. outline
+OUTLINES = readOGR('../../GIS shape files/N Am Outline','na_base_Lambert_Azimuthal')
+OUTLINES.laea = spTransform(OUTLINES,CRS(plot_prj))
+
+spdata = spTransform(spdata, CRS(plot_prj))
+
+colcuts = seq(1, 15, 2)
+ncuts=7
+mycolramp = colorRampPalette(mycol)(ncuts)
+
+pdf('./Figures/Maps/Just genus ID richness map.pdf', height=8, width=12)
+spplot(spdata, 'justgenus', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
+	sp.polygons(OUTLINES.laea, fill='white')
+	panel.pointsplot(x,y,...)
+}, cuts=colcuts, cex=1.5, col.regions = mycolramp, auto.key=F,
+key=list(x=1,y=.3, corner=c(1,.5), title='# Taxa Ided\nto Genus only',
+	rectangles=list(col=mycolramp, size=3, border='transparent'),
+	text=list(c(paste(colcuts[1],colcuts[2], sep='-'), paste((colcuts+1)[2:(ncuts)], colcuts[2:ncuts+1], sep='-')))) 
+)
+dev.off()
+
+png('./Figures/richness vs just genus taxa.png', height=300, width=300)
+par(mar=c(4,4,1,1))
+plot(justgenus~lichen.rich, data=model_data, las=1, xlab='Species richness', ylab='# Taxa IDed to Genus only', 
+	pch=16, col='#00000040')
+dev.off()
 
 ###################################################################
 ### How many occurences are there of species missing from LIAS? ###
