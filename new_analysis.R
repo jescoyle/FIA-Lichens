@@ -429,7 +429,14 @@ write.table(H_coef, './Figures/New Analysis/local richness het model avg coefs.t
 #	dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2'),
 #	m.min=2)
 
-#load('./Data/local_rich_model_dredge.RData')
+load('./Data/local_rich_models_best.RData')
+
+# Average best models (1545 out of 3359214 total)
+L_avg = model.avg(Ldredge_best, beta=T)
+
+# Make table of coefficients from model averages
+L_coef = format_coefTable(L_avg)
+write.table(L_coef, './Figures/New Analysis/local richness model avg coefs.txt', sep='\t', row.names=F, quote=F)
 
 # Calculate model-averaged coefficients for models with 95% cumulative weight
 #cum_weight = calc_cumWeight(Rdredge$weight)
@@ -464,18 +471,6 @@ points(xvar$est, yvar$est, pch=15)
 labels=expression(MAT,ISO,PSEAS,WET,LOWRH,WET^2)
 text(xvar$est, yvar$est, labels, pos=c(4,4,2,4,4,2), offset=1)
 dev.off()
-
-
-for(i in climvars){
-	use_coef = O_coef[grep(i, rownames(O_coef)),]
-	
-	plot(
-	
-
-}
-
-
-
 
 
 ## Models of regional richness
