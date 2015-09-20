@@ -236,12 +236,21 @@ for(i in 1:nrow(reset_coords2)){
 # Write out record data
 write.csv(records_geo, '../FIA Lichen/Data/CNALH_records_fia_genera_NAm_2014-10-08.csv', row.names=F)
 
+
 #############################################################
 ### Calculate Regional Richness, All Species and Parmeliaceae/Physciaceae
 
+# Read in records
 parmphys = read.csv('Parm_Phys_records_2014-09-20.csv')
 allsp = read.csv('../FIA Lichen/Data/CNALH_records_fia_genera_NAm_2014-10-08.csv')
 parmphys_fia = subset(allsp, family %in% c('Parmeliaceae','Physciaceae'))
+
+# Make a subset of only taxa in FIA data
+fia_taxa = read.csv('./Data/REF_LICHEN_SPECIES.CSV')
+fia_taxa$SciName = str_trim(with(fia_taxa, paste(GENUS,SPECIES))) # Want to use out-of-date names also since herbarium records are old
+allsp_fia = subset(allsp, scientificName %in% fia_taxa$SciName)
+# How many records for each species?
+sptab = table(allsp_fia$scientificName) #795 of 981
 
 # Calculate number of species in records
 species = unique(allsp[,'scientificName'])
@@ -266,13 +275,15 @@ phys = subset(parmphys_fia, family=='Physciaceae')
 allsp_sp = allsp
 parm_sp = parm
 phys_sp = phys
+fia_sp = allsp_fia
 coordinates(allsp_sp) = c('decimalLongitude','decimalLatitude')
 proj4string(allsp_sp) = CRS("+proj=longlat")
 coordinates(parm_sp) = c('decimalLongitude','decimalLatitude')
 proj4string(parm_sp) = CRS("+proj=longlat")
 coordinates(phys_sp) = c('decimalLongitude','decimalLatitude')
 proj4string(phys_sp) = CRS("+proj=longlat")
-
+coordinates(fia_sp) = c('decimalLongitude','decimalLatitude')
+proj4string(fia_sp) = CRS("+proj=longlat")
 
 # Only calculate regional richness for plots used in models
 # This will exclude AK plots where I did not download records for
@@ -283,13 +294,13 @@ coordinates(fia_geo) = c('LON','LAT')
 proj4string(fia_geo) = CRS("+proj=longlat")
 
 # Determine which records will be used to calculate regional richness
-recs = allsp_sp
+recs = allsp_sp # allsp_sp
 
 # Calculate the number of records within 500 km buffer (Could easily check other buffers)
 dist500 = c()
 for(i in 1:nrow(fia_geo)){
 	dist500 = c(dist500, nrow(find_recs(fia_geo[i,], recs, 500)))
-} # min=2622 all sp, 882 parm, 374 phys
+} # min=2622 all sp, 882 parm, 374 phys, 2264 for fia
 names(dist500) = fia_geo$yrplot.id
 min(dist500) # Min num records for all FIA plots 
 
@@ -298,12 +309,12 @@ recordnum$phys = dist500
 write.csv(recordnum, '../FIA Lichen/Data/Regional Richness/num_records_CNALH_2014-10-08_fiagenera.csv', row.names=F)
 
 ## Calculate Regional Richness using rarefaction (vegan) only for plots used in analysis
-regS = data.frame(yrplot.id=rownames(model_data))
+regS = data.frame(yrplot.id=rownames(model_data), Nrecs = dist500[rownames(model_data)])
 
 # Define size of subsample (nsamps)
-nsamp = 350 # use 350 for regParm and regPhys, use 2500 for allsp
+nsamp = 2000 # use 350 for regParm and regPhys, use 2500 for allsp and 2000 for fia
 
-recs = phys_sp
+recs = allsp_sp
 
 richness = c()
 
@@ -329,12 +340,18 @@ regS$regPhys = richness
 regS$regParm = richness
 write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20.csv', row.names=F)
 
+# Save data comparing FIA species and FIA genera
+regS$regFIA = richness
+regS$regS = richness
+write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20_fia_species', row.names=F)
+
+regS$reg_dif = regS$regS - regS$regFIA
 
 #
 fia_geo2 = merge(fia_geo, regS)
 
 # Quick Plot 
-spplot(fia_geo2, 'regPhys', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
+spplot(fia_geo2, 'reg_dif', col.regions=colorRampPalette(c('dark blue','blue','green','yellow','orange','red'))(10), cuts=10)
 
 
 
@@ -458,6 +475,12 @@ allsp_SW = subset(allsp_sp, !is.na(SWpoints))
 SWsp = get_species(allsp_SW$scientificName)
 SWsp = SWsp[order(SWsp)]
 write.table(SWsp, file='./Data/Regional Richness/species list AZ-NM.txt', quote=F, row.names=F)
+
+SWsp = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/FIA Lichen/Data/Regional Richness/species list AZ-NM.txt')
+SWsp$Genus = sapply(strsplit(as.character(SWsp$x), ' '), function(x) unlist(x)[1])
+
+table(SWsp$Genus)
+
 
 ### Plot map of county-level and overlayed plot-level regional richness
 county.sh$uniqueID = paste(county.sh$STATE_NAME, county.sh$NAME)

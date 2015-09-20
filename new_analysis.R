@@ -30,11 +30,11 @@ use_data = trans_data[,colnames(trans_data) %in% rownames(predtypes)]
 
 # Add other variables used to analyze FD and restricted taxonomic groups
 other_data = trans_data[,c('lichen.rich','fric','raoQ','Parmeliaceae','Physciaceae',
-	'tot_abun_log','parm_abun_log','phys_abun_log','regS','regParm','regPhys')]
+	'tot_abun_log','parm_abun_log','phys_abun_log','regS','regFIA','regParm','regPhys')]
 
 # Define predictor variable and appropriate abundance and regional richness variables
 use_response = 'lichen.rich' # This changes based on the analysis
-use_reg = 'regS'
+use_reg = 'regFIA' # Main analyses are with regS
 use_abun = 'tot_abun_log'
 use_data$richness = other_data[,use_response]
 use_data$reg = other_data[,use_reg]
@@ -93,14 +93,15 @@ write.csv(unimods, 'univariate_models_AllSp.csv', row.names=T)
 
 # Spatial error models
 # Models use data scaled to mean=0, var=1 because otherwise models don't fit
+use_vars = rownames(subset(predtypes, scale=='regional'&!(label%in%c('','R1'))))
 reg_nb = make_regnb(spdata_fit)
 reg_listw = make_reglistw(spdata_fit, reg_nb)
 
 sarmods_reg = sapply(use_vars, function(x){
 	
 	# By default uses log link function, so coefficients are on log scale
-	linear_mod = errorsarlm(working_data_fit[, 'regS'] ~ working_data_fit[,x], listw=reg_listw)
-	quad_mod = 	errorsarlm(working_data_fit[,'regS']~working_data_fit[,x]+I(working_data_fit[,x]^2), listw = reg_listw)
+	linear_mod = errorsarlm(working_data_fit[,use_reg] ~ working_data_fit[,x], listw=reg_listw)
+	quad_mod = 	errorsarlm(working_data_fit[,use_reg]~working_data_fit[,x]+I(working_data_fit[,x]^2), listw = reg_listw)
 
 	c(AIC(linear_mod), AIC(quad_mod), linear_mod$s2, quad_mod$s2, coef(linear_mod),	coef(quad_mod))
 })
@@ -109,7 +110,7 @@ sarmods_reg = data.frame(t(sarmods_reg))
 names(sarmods_reg) = c('AIC_line','AIC_quad','ML_s2_line','ML_s2_quad',
 	'line_lambda','line_int','line_slope','quad_lambda', 'quad_int','quad_slope','quad_sq')
 
-write.csv(sarmods_reg, 'univariate_models_regS_AllSp_sar.csv', row.names=T)
+write.csv(sarmods_reg, 'univariate_models_regFIA_AllSp_sar.csv', row.names=T)
 
 ## Make a chart of linear vs quadratic and concavity
 
@@ -134,7 +135,7 @@ modcompare_sar = data.frame(predictor=varnames[rownames(modcompare_sar),'midName
 modcompare_sar = modcompare_sar[order(modcompare_sar$scale, modcompare_sar$mode, modcompare_sar$deltaAIC),]
 
 write.csv(modcompare, 'Univariate model shapes GLM-NB.csv', row.names=T)
-write.csv(modcompare_sar, 'Univariate model shapes of regS SAR.csv', row.names=T)
+write.csv(modcompare_sar, 'Univariate model shapes of regFIA SAR.csv', row.names=T)
 
 # Read in previously saved tables
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
@@ -225,9 +226,9 @@ reg_nb = make_regnb(spdata_test)
 reg_listw = make_reglistw(spdata_test, reg_nb)
 
 # Fit spatial error models for regional richness
-RH_regmod = errorsarlm(regS ~ ., data = cbind(working_data_test[,c('regS',RHvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% RHvars],2,sep='')]), listw=reg_listw)
-RO_regmod = errorsarlm(regS ~ ., data = cbind(working_data_test[,c('regS',ROvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% ROvars],2,sep='')]), listw=reg_listw)
-R_regmod = errorsarlm(regS ~ ., data = cbind(working_data_test[,c('regS',RHvars, ROvars)], sqdata_reg[,paste(sq_vars_sar,2,sep='')]), listw=reg_listw)
+RH_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(RHvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% RHvars],2,sep='')]), listw=reg_listw)
+RO_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(ROvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% ROvars],2,sep='')]), listw=reg_listw)
+R_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(RHvars, ROvars)], sqdata_reg[,paste(sq_vars_sar,2,sep='')]), listw=reg_listw)
 
 # Calculate R2
 null_mod = errorsarlm(regS ~ 1, data=working_data_test, listw=reg_listw)
@@ -245,7 +246,7 @@ barwide=1.5
 use_shade = c('CC','55','99','FF')
 use_color = c('#2415B0','#00BF32','#126A71')
 
-svg('./Figures/New Analysis/variation partitioning loc-reg.svg', height=5, width=10)
+svg('./Figures/New Analysis/variation partitioning loc-reg FIA.svg', height=5, width=10)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -302,14 +303,14 @@ svg('./Figures/New Analysis/variation partitioning loc-reg.svg', height=5, width
 		cex=2, bty='n')
 
 	# Add panel text A, B, C
-	par(xpd=T)
-	text(c(0,2,4),1.05, c('A','B','C'), cex=2, adj=c(0,0))
-	par(xpd=F)
+	#par(xpd=T)
+	#text(c(0,2,4),1.05, c('A','B','C'), cex=2, adj=c(0,0))
+	#par(xpd=F)
 dev.off()
 
 
 ## Figure. Plot Heterogeneity - Optimality variation partitioning in 2 panels
-svg('./Figures/New Analysis/variation partitioning het-opt.svg', height=5, width=8)
+svg('./Figures/New Analysis/variation partitioning het-opt FIA.svg', height=5, width=8)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -321,9 +322,9 @@ svg('./Figures/New Analysis/variation partitioning het-opt.svg', height=5, width
 
 	## Background bars
 	rect(0,0,barwide,1,col='white', lwd=3)	
-	rect(4,0,4+barwide,1,col='white', lwd=3)
+	rect(2,0,2+barwide,1,col='white', lwd=3)
 
-	## Full Model
+	## Regional Model
 	# Add rectangle for first component
 	rect(0,0,barwide, sum(part_hetopt_reg[1]), lwd=3, col=paste(use_color[1],use_shade[2],sep=''))
 	# Add rectangle for second component
@@ -331,26 +332,31 @@ svg('./Figures/New Analysis/variation partitioning het-opt.svg', height=5, width
 	# Add rectangle for overlap
 	rect(0,part_hetopt_reg[1],barwide,sum(part_hetopt_reg[1:2]), lwd=3, col=paste(use_color[1],use_shade[3],sep=''))
 
-	## Among Optimality variables
+	## Local Model
 	# Add rectangle for first component
-	rect(4,0,4+barwide, sum(part_hetopt_loc[1]), lwd=3, col=paste(use_color[2],use_shade[2],sep=''))
+	rect(2,0,2+barwide, sum(part_hetopt_loc[1]), lwd=3, col=paste(use_color[2],use_shade[2],sep=''))
 	# Add rectangle for second component
-	rect(4,sum(part_hetopt_loc[1:2]), 4+barwide,sum(part_hetopt_loc[1:3]), lwd=3, col=paste(use_color[2],use_shade[1],sep=''))
+	rect(2,sum(part_hetopt_loc[1:2]), 2+barwide,sum(part_hetopt_loc[1:3]), lwd=3, col=paste(use_color[2],use_shade[1],sep=''))
 	# Add rectangle for overlap
-	rect(4,part_hetopt_loc[1], 4+barwide,sum(part_hetopt_loc[1:2]), lwd=3, col=paste(use_color[2],use_shade[3],sep=''))
+	rect(2,part_hetopt_loc[1], 2+barwide,sum(part_hetopt_loc[1:2]), lwd=3, col=paste(use_color[2],use_shade[3],sep=''))
 
 	## Add axis
 	axis(2, las=1, cex.axis=2, lwd=3)
 	mtext('Variation Explained', 2, 4, cex=2)
 	
 	# Add Text
-	text_height = c(0,.1, .4, .8)
-	text(2+barwide/2, text_height, labels=c('Heterogeneity','Shared','Optimality','Unexplained'), pos=3, offset=0, cex=2)
+	#text_height = c(0,.1, .4, .8)
+	#text(2+barwide/2, text_height, labels=c('Heterogeneity','Shared','Optimality','Unexplained'), pos=3, offset=0, cex=2)
 
 	# Add panel text A, B, C
-	par(xpd=T)
-	text(c(0,4),1.05, c('A','B'), cex=2, adj=c(0,0))
-	par(xpd=F)
+	#par(xpd=T)
+	#text(c(0,4),1.05, c('A','B'), cex=2, adj=c(0,0))
+	#par(xpd=F)
+	
+	# Add Key
+	legend('right', c('Unexplained', 'Heterogeneity','Shared','Optimality'), 
+		fill= c('white',paste(use_color[c(2,3,1)], use_shade[1], sep='')),
+		cex=2, bty='n')
 dev.off()
 
 ####################################################################################
@@ -477,13 +483,14 @@ dev.off()
 
 working_data_test = cbind(working_data_test, sqdata_reg)
 
-RH_regmod = errorsarlm(regS ~ wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
-RO_regmod = errorsarlm(regS ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2, data = working_data_test, listw=reg_listw)
-R_regmod = errorsarlm(regS ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2 + 
+# Change response variable: regS, regFIA
+RH_regmod = errorsarlm(regFIA ~ wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
+RO_regmod = errorsarlm(regFIA ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2, data = working_data_test, listw=reg_listw)
+R_regmod = errorsarlm(regFIA ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2 + 
 	wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
 
 
-save(R_regmod, RH_regmod, RO_regmod, reg_listw, working_data_test, file='regmods_objects.RData')
+save(R_regmod, RH_regmod, RO_regmod, reg_listw, working_data_test, file='regmods_objects_FIA.RData')
 
 # Do these on cluster using scripts 'dredge_regional_models.R' and 'dredge_regional_model_full.R'
 #ROreg_dredge = dredge(RO_regmod, subset=dc('pseas_reg_mean', 'pseas_reg_mean2'))
@@ -492,13 +499,16 @@ save(R_regmod, RH_regmod, RO_regmod, reg_listw, working_data_test, file='regmods
 
 load('./Data/regmod_full_dredged.RData')
 load('./Data/regmods_dredged.RData')
+load('./Data/regmod_full_dredged_FIA.RData')
+load('./Data/regmods_dredged_FIA.RData')
+
 
 subset(R_dredge, weight >0.01) 
 subset(RHreg_dredge, weight >0.01) # Remove regS_tree and its square
 subset(ROreg_dredge, weight >0.01) # Possibly remove wetness_reg_mean
 
 # Calculate model-averaged coefficients for models whose evidence ratio is greater than 0.05
-keep_models = which(R_dredge$weight/R_dredge$weight[1] >= 0.05) # 11 best models out of 4608 total
+keep_models = which(R_dredge$weight/R_dredge$weight[1] >= 0.05) # 11 best models out of 4608 total , 14 for regS with FIA species
 
 Rreg_avg = model.avg(R_dredge[keep_models,])
 Rreg_avg_full = model.avg(R_dredge) # average across all models
@@ -522,11 +532,11 @@ svg('./Figures/New Analysis/regional richness model avg full coefs.svg', height=
 plot_coefs(make_coefTable(Rreg_avg_full), 'mode')
 dev.off()
 
-write.csv(make_impTable(Rreg_avg, length(keep_models)), './Figures/New Analysis/regional richness model var importance.csv', row.names=F)
+write.csv(make_impTable(Rreg_avg, length(keep_models)), './Figures/New Analysis/regional richness model var importance FIA.csv', row.names=F)
 
 ## Make table of coefficients from model averages
 Rreg_coef = format_coefTable(Rreg_avg)
-write.table(Rreg_coef, './Figures/New Analysis/regional richness model avg coefs.txt', sep='\t', row.names=F, quote=F)
+write.table(Rreg_coef, './Figures/New Analysis/regional richness model avg coefs FIA.txt', sep='\t', row.names=F, quote=F)
 
 
 ### Pairwise comparisons of variables

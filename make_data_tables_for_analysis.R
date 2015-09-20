@@ -50,6 +50,7 @@ fd_data = read.csv('./Data/LichenTraits/fia_lichen_LIAS_means_diversity.csv')
 
 # Lichen regional richness data - not available for all plots because calculated from CNALH download on 2014-10-08, excluding AK
 reg_data = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20.csv')
+reg_fia = read.csv('./Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20_fia_species.csv')
 
 # Environmental data
 env_data = read.csv('./Data/fia_lichen_env_data_points.csv')
@@ -69,6 +70,7 @@ master = merge(master, tree_pca, all.x=T, all.y=F)
 master = merge(master, regS_tree, all.x=T, all.y=F)
 master = merge(master, fd_data, all.x=T, all.y=F)
 master = merge(master, reg_data, all.x=T, all.y=F)
+master = merge(master, reg_fia[,c('yrplot.id', 'regFIA')],all.x=T, all.y=F)
 master = merge(master, env_data, all.x=T, all.y=F)
 master = merge(master, env_reg_data, all.x=T, all.y=F)
 
@@ -80,12 +82,12 @@ master$pseas_reg_cv = master$pseas_reg_var/master$pseas_reg_mean
 master$rh_reg_cv = master$rh_reg_var/master$rh_reg_mean
 
 # Save data
-write.csv(master, './Data/fia_lichen_master_data_2015-05-08.csv', row.names=F)
+write.csv(master, './Data/fia_lichen_master_data_2015-09-19.csv', row.names=F)
 
 rownames(master) = master$yrplot.id
 ###############################################################################
 ### Data Subsetting ###
-master = read.csv('./Data/fia_lichen_master_data_2015-05-08.csv', row.names=1)
+master = read.csv('./Data/fia_lichen_master_data_2015-09-19.csv', row.names=1)
 
 # Use recent plots after plot design had been standardized
 model_data = subset(master, MEASYEAR>=1997)
@@ -171,7 +173,7 @@ myvars = c('lichen.rich','Parmeliaceae','Physciaceae','fric','fdiv','raoQ','wetn
 	'mat_reg_var','iso_reg_var','pseas_reg_var','ap_reg_cv','rh_reg_cv','mat_reg_cv','iso_reg_cv','pseas_reg_cv','totalNS_reg','regS_tree',
 	'bark_moist_pct.ba','bark_moist_pct.rao.ba','wood_SG.ba','wood_SG.rao.ba','PC1',
 	'LogSeed.ba','LogSeed.rao.ba','PIE.ba.tree','propDead','light.mean','lightDist.mean',
-	'regS','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
+	'regS','regFIA','regParm','regPhys','tot_abun_log','parm_abun_log','phys_abun_log'
 )
 
 model_data = cbind(model_data[,myvars], newvars[,2:ncol(newvars)])
