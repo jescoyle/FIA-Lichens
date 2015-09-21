@@ -34,7 +34,7 @@ other_data = trans_data[,c('lichen.rich','fric','raoQ','Parmeliaceae','Physciace
 
 # Define predictor variable and appropriate abundance and regional richness variables
 use_response = 'lichen.rich' # This changes based on the analysis
-use_reg = 'regFIA' # Main analyses are with regS
+use_reg = 'regFIA' # Main analyses used to be with regS
 use_abun = 'tot_abun_log'
 use_data$richness = other_data[,use_response]
 use_data$reg = other_data[,use_reg]
@@ -139,7 +139,7 @@ write.csv(modcompare_sar, 'Univariate model shapes of regFIA SAR.csv', row.names
 
 # Read in previously saved tables
 modcompare = read.csv('Univariate model shapes GLM-NB.csv', row.names=1)
-modcompare_sar = read.csv('Univariate model shapes of regS SAR.csv', row.names=1)
+modcompare_sar = read.csv('Univariate model shapes of regFIA SAR.csv', row.names=1)
 
 # Which variables have AIC supported concave-down relationships?
 sq_vars = rownames(subset(modcompare, concavity=='down'&type=='quadratic'))
@@ -207,6 +207,15 @@ Rs = sapply(list(RO_mod, LO_mod, O_mod), function(x) calc_r2(x, null_mod))
 names(Rs) = c('region','local','full')
 part_regloc_opt = partvar2(Rs)
 
+# Print out model stats
+modlist = list(RregS_mod, L_mod, full_mod, RO_mod, LO_mod, O_mod, RH_mod, LH_mod, H_mod)
+names(modlist) = paste('L', 1:9, sep='')
+sapply(modlist, function(x) {
+	R2 = attr(r.squaredLR(x, null=null_mod), 'adj.r.squared')
+	Deviance = deviance(x)
+	aic = AIC(x)
+	data.frame(R2, Deviance, aic)
+})
 
 ### Heterogeneity vs. optimality variance partitioning
 
@@ -228,10 +237,10 @@ reg_listw = make_reglistw(spdata_test, reg_nb)
 # Fit spatial error models for regional richness
 RH_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(RHvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% RHvars],2,sep='')]), listw=reg_listw)
 RO_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(ROvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% ROvars],2,sep='')]), listw=reg_listw)
-R_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(RHvars, ROvars)], sqdata_reg[,paste(sq_vars_sar,2,sep='')]), listw=reg_listw)
+R_regmod = errorsarlm(working_data_test[,use_reg] ~ ., data = cbind(working_data_test[,c(RHvars, ROvars)], sqdata_reg[,paste(sq_vars_sar[sq_vars_sar %in% c(ROvars,RHvars)],2,sep='')]), listw=reg_listw)
 
 # Calculate R2
-null_mod = errorsarlm(regS ~ 1, data=working_data_test, listw=reg_listw)
+null_mod = errorsarlm(working_data_test[,use_reg] ~ 1, data=working_data_test, listw=reg_listw)
 Rs = sapply(list(RH_regmod, RO_regmod, R_regmod), function(x) calc_r2(x, null_mod))
 names(Rs) = c('het','opt','full')
 part_hetopt_reg = partvar2(Rs)
@@ -240,6 +249,15 @@ part_hetopt_reg = partvar2(Rs)
 L_K = lapply(list(RregS_mod, L_mod, full_mod, RO_mod, LO_mod, O_mod, RH_mod, LH_mod, H_mod), logLik)
 R_K = lapply(list(RH_regmod, RO_regmod, R_regmod), logLik)
 
+# Print out stats for all models
+modlist = list(RH_regmod, RO_regmod, R_regmod)
+names(modlist) = paste('R', 1:3, sep='')
+sapply(modlist, function(x) {
+	R2 = attr(r.squaredLR(x, null=null_mod), 'adj.r.squared')
+	Deviance = deviance(x)
+	aic = AIC(x)
+	data.frame(R2, Deviance, aic)
+})
 
 ## Figure. Plot local-regional variation partioning analysis in three panels
 barwide=1.5

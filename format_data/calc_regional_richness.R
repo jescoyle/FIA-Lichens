@@ -249,6 +249,9 @@ parmphys_fia = subset(allsp, family %in% c('Parmeliaceae','Physciaceae'))
 fia_taxa = read.csv('./Data/REF_LICHEN_SPECIES.CSV')
 fia_taxa$SciName = str_trim(with(fia_taxa, paste(GENUS,SPECIES))) # Want to use out-of-date names also since herbarium records are old
 allsp_fia = subset(allsp, scientificName %in% fia_taxa$SciName)
+
+write.csv(allsp_fia, './Data/CNALH_records_fia_species_NAm_2014-10-08.csv', row.names=F)
+
 # How many records for each species?
 sptab = table(allsp_fia$scientificName) #795 of 981
 
@@ -343,10 +346,11 @@ write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CN
 # Save data comparing FIA species and FIA genera
 regS$regFIA = richness
 regS$regS = richness
-write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20_fia_species', row.names=F)
+write.csv(regS, '../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20_fia_species.csv', row.names=F)
 
+regS = read.csv('../FIA Lichen/Data/Regional Richness/fia_lichen_reg_richness_CNALH-2014-09-20_fia_species.csv')
 regS$reg_dif = regS$regS - regS$regFIA
-
+nobs = 
 #
 fia_geo2 = merge(fia_geo, regS)
 
@@ -360,12 +364,12 @@ spplot(fia_geo2, 'reg_dif', col.regions=colorRampPalette(c('dark blue','blue','g
 ## see script 'calc_regional_richnee_multi-radii.R' for actual calculation run on cluster
 
 # Load R objects with richness and number of observations computed at different scales and number of sampled records
-load('./data/Regional Richness/regS_across_scales.Rdata')
+load('./data/Regional Richness/regS_across_scales_fiaspecies.Rdata')
 
 # Objects are regS and nobs, scales
 # Define scales over which richness was calculated
 scales = c(50, 100, 250, 400, 500)
-nsamps = c(25, 50, 100, 200, 250, 500, 750, 1000, 1500, 2000, 2500, 3000)
+nsamps = c(25, 50, 100, 200, 250, 500, 750, 1000, 1500, 2000, 2500)
 
 # Calculate % of plots with nsamp at each scale
 pcts = array(NA, dim=c(length(nsamps), length(scales)), dimnames=list(nsamp=nsamps, scale=paste('R',scales, sep='')))
@@ -376,7 +380,7 @@ for(j in colnames(pcts)){
 
 # Format and save table
 pcts_tab = apply(format(pcts*100, digits=1), c(1,2), function(x) paste(x, '%', sep=''))
-write.table(pcts_tab, './Figures/pct plots with different num records across scales.txt', sep='\t', row.names=T, quote=F)
+write.table(pcts_tab, './Figures/pct plots with different num records across scales fiaspecies.txt', sep='\t', row.names=T, quote=F)
 
 # Plot example rarefaction curves from two different regions
 most_samps = rownames(nobs)[order(nobs[,'R400'], decreasing=T)]
@@ -387,7 +391,7 @@ ex_plots = c('1998_55_3_9514','2007_4_1_89307','1999_53_37_10205','1998_50_21_74
 names(ex_plots) = master[ex_plots,'state.abbr']
 nobs[ex_plots,]
 
-use_regS = regS[,'R400',]
+use_regS = regS[,'R500',]
 
 pdf('./Figures/regional richness rarefaction.pdf', height=5, width=5)
 par(mar=c(4,4,1,1))
@@ -403,16 +407,16 @@ nobs[ex_plots, ]
 # Calculate correlations between richness calculated at different scales
 # Compare 100 samples at 250km and 2500 samples at 500km
 
-cor(regS[,'R250','500'], regS[,'R500','2500'], method='spearman', use='complete.obs')
-cor(regS[,'R250','500'], regS[,'R500','2500'], method='pearson', use='complete.obs')
+cor(regS[,'R250','500'], regS[,'R500','2000'], method='spearman', use='complete.obs')
+cor(regS[,'R250','500'], regS[,'R500','2000'], method='pearson', use='complete.obs')
 
-cor(regS[,'R250','100'], regS[,'R500','2500'], method='spearman', use='complete.obs')
-cor(regS[,'R250','100'], regS[,'R500','2500'], method='pearson', use='complete.obs')
+cor(regS[,'R250','100'], regS[,'R500','2000'], method='spearman', use='complete.obs')
+cor(regS[,'R250','100'], regS[,'R500','2000'], method='pearson', use='complete.obs')
 
 ## Map regional richness using 250km sampling radius and 500 subsamples
 
 # Colors
-ncuts=10
+ncuts=12
 mycol = read.csv('C:/Users/jrcoyle/Documents/UNC/Projects/blue2red_10colramp.txt')
 mycol = apply(mycol,1,function(x) rgb(x[1],x[2],x[3],maxColorValue=256))
 mycol = mycol[10:1]
@@ -427,7 +431,7 @@ OUTLINES = readOGR('../../GIS shape files/N Am Outline','na_base_Lambert_Azimuth
 OUTLINES.laea = spTransform(OUTLINES,CRS(plot_prj))
 
 # Make spatial points data frame with only 1923 plots used in models
-reg500 = regS[,'R500','2500']
+reg500 = regS[,'R500','2000']
 reg250 = regS[,'R250','500']
 sp_data = data.frame(master[dimnames(regS)$yrplot.id,c('LON','LAT')], reg500, reg250)
 coordinates(sp_data) = c('LON','LAT')
@@ -436,9 +440,9 @@ sp_data = spTransform(sp_data, CRS(plot_prj))
 
 range(sp_data$reg250, na.rm=T)
 
-pdf('./Figures/Maps/Map regional lichen richness R250-S500.pdf', height=8, width=12)
+pdf('./Figures/Maps/Map regional lichen richness R250-S500 FIA.pdf', height=8, width=12)
 trellis.par.set(axis.line=list(col=NA))
-colcuts = seq(90, 210, 12) #seq(230,430,20)  
+colcuts = seq(67, 175, 9)   
 spplot(sp_data, 'reg250', ylim=c(-1600,1500), main='', panel=function(x,y,subscripts,...){
 		sp.polygons(OUTLINES.laea, fill='white')
 		panel.pointsplot(x,y,...)

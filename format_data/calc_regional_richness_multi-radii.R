@@ -97,7 +97,7 @@ calc_rich_samp = function(recs, nsamp, reps){
 ### Data & Analysis
 
 # Read in CNALH records
-allsp = read.csv('CNALH_records_fia_genera_NAm_2014-10-08.csv')
+allsp = read.csv('CNALH_records_fia_species_NAm_2014-10-08.csv')
 
 # Read in plot locations
 master_locs = read.csv('../fia_lichen_plot_locations.csv')
@@ -118,7 +118,7 @@ proj4string(fia_geo) = CRS("+proj=longlat")
 
 # Define scales over which richness should be calculated
 scales = c(50, 100, 250, 400, 500)
-nsamps = c(25, 50, 100, 200, 250, 500, 750, 1000, 1500, 2000, 2500, 3000)
+nsamps = c(25, 50, 100, 200, 250, 500, 750, 1000, 1500, 2000, 2500)
 
 # Define number of 
 
@@ -156,7 +156,7 @@ for(r in scales){
 	print(paste('Done with',r))
 }
 
-save(regS, nobs, file='regS_across_scales.RData')
+save(regS, nobs, file='regS_across_scales_fiaspecies.RData')
 
 
 
