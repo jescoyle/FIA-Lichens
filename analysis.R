@@ -1,5 +1,6 @@
-## This script conducts variation partitioning analyses and variable importance analyses
-## use in the second version of the FIA Lichen manuscript
+## This script conducts variation partitioning analyses and variable importance analyses used in:
+## "Environmental optimality, not heterogeneity, drives regional and local species richness in lichen epiphytes" by J.R. Coyle and A.H. Hurlbert
+
 
 
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
