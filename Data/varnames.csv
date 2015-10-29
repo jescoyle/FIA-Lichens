@@ -1,0 +1,159 @@
+,displayName,shortName,midName
+yrplot.id,,,
+plot.id,Plot ID,,
+STATE,State,,
+COUNTY,County,,
+YEAR,Year,,
+LAT,Latitude,,
+LON,Longitude,,
+ELEVATION,Elevation,,
+lichen.rich_log,Log local lichen species richness,,Local lichen richness
+lichen.rich,Lichen species richness,,
+Parmeliaceae,Parmeliaceae species richness,,
+Physciaceae,Physciaceae species richness,,
+Cladoniaceae,Cladoniaceae species richness,,
+Coccocarpiaceae,Coccocarpiaceae species richness,,
+Collemataceae,Collemataceae species richness,,
+Lobariaceae,Lobariaceae species richness,,
+Caliciaceae,Caliciaceae species richness,,
+Pannariaceae,Pannariaceae species richness,,
+Lecideaceae,Lecideaceae species richness,,
+Nephromataceae,Nephromataceae species richness,,
+Peltigeraceae,Peltigeraceae species richness,,
+Placynthiaceae,Placynthiaceae species richness,,
+Ramalinaceae,Ramalinaceae species richness,,
+Sphaerophoraceae,Sphaerophoraceae species richness,,
+Teloschistaceae,Teloschistaceae species richness,,
+Umbilicariaceae,Umbilicariaceae species richness,,
+Candelariaceae,Candelariaceae species richness,,
+Lecanoraceae,Lecanoraceae species richness,,
+genus.rich,Generic richness,,
+S.tree,Tree species richness,,
+D.abun.tree,,,
+D.area.tree,,,
+maxDiam,Diameter of largest tree,,
+numTreesBig,Number of trees > 5in,,
+numTreesSm,Number of trees < 5in,,
+propDead,Dead tree proportion,,% Trees dead
+numDead,Number of dead trees,,
+numCut,Number of cut trees,,
+Conifer_area,Conifer Cover,,
+PIE.stems.tree,Abundance-weighted tree diversity (PIE),,
+PIE.ba.tree,Basal area-weighted tree diversity (PIE),Tree diversity,Tree diversity
+wood_moist_pct.rao.pres,Wood moisture diversity,,
+bark_moist_pct.rao.pres,Bark moisture diversity,,
+wood_SG.rao.pres,Wood density diversity,,
+bark_SG.rao.pres,Bark density diversity,,
+LogSeed.rao.pres,Seed mass diversity,,
+wood_moist_pct.rao.stems,Wood moisture diversity,,
+bark_moist_pct.rao.stems,Bark moisture diversity,,
+wood_SG.rao.stems,Wood density diversity,,
+bark_SG.rao.stems,Bark density diversity,,
+LogSeed.rao.stems,Seed mass diversity,,
+wood_moist_pct.stems,Mean wood moisture,,
+bark_moist_pct.stems,Mean bark moisture,,
+wood_SG.stems,Mean wood density,,
+bark_SG.stems,Mean bark density,,
+LogSeed.stems,Mean seed mass,,
+wood_moist_pct.rao.ba,Wood moisture diversity,,
+bark_moist_pct.rao.ba,Bark moisture diversity,,Bark moisture diversity
+wood_SG.rao.ba,Wood density diversity,,Wood density diversity
+bark_SG.rao.ba,Bark density diversity,,
+LogSeed.rao.ba,Seed mass diversity,Seed mass diversity,Seed mass diversity
+wood_moist_pct.ba,Mean wood moisture,,
+bark_moist_pct.ba,Mean bark moisture,,Mean bark moisture
+wood_SG.ba,Mean wood density,Wood density,Mean wood density
+bark_SG.ba,Mean bark density,,
+LogSeed.ba,Mean seed mass,,Mean seed mass
+diamDist.mean,Tree size variability,,
+n.stems,Number of trees,,
+basal.area,Tree basal area,,
+light.mean,Mean canopy density,Mean light,Mean canopy density
+light.var,Canopy density variance,,
+lightDist.mean,Canopy density variability,,Canopy variability
+mat,Mean annual temp.,MAT,Mean annual temp.
+mdr,Mean diurnal temp range,,
+iso,Isothermality,Isothermality,Isothermality
+tseas,Temp seasonality,,
+tmax,Max temp,,
+tmin,Min temp,,
+tar,Temp annual range,,
+twetq,Mean temp of the wettest quarter,,
+tdryq,Mean temp of the driest quarter,,
+twarmq,Mean temp of the warmest quarter,,
+tcoldq,Mean temp of the coldest quarter,,
+ap,Annual precipitation,,
+pwet,Precip of the wettest month,,
+pdry,Precip of the driest month,,
+pseas,Precipitation seasonality,Precip. Seasonality,Precip. Seasonality
+pwetq,Precip of the wettest quarter,,
+pdryq,Precip of the driest quarter,,
+pwarmq,Precip of the warmest quarter,,
+pcoldq,Precip of the coldest quarter,,
+mat.mean,Mean annual temp,,
+mdr.mean,Mean diurnal temp range,,
+iso.mean,Isothermality,,Isothermality
+tseas.mean,Temp seasonality,,
+tmax.mean,Max temp,,
+tmin.mean,Min temp,,
+tar.mean,Temp annual range,,
+twetq.mean,Mean temp of the wettest quarter,,
+tdryq.mean,Mean temp of the driest quarter,,
+twarmq.mean,Mean temp of the warmest quarter,,
+tcoldq.mean,Mean temp of the coldest quarter,,
+ap.mean,Annual precipitation,,
+pwet.mean,Precip of the wettest month,,
+pdry.mean,Precip of the driest month,,
+pseas.mean,Precipitation seasonality,,
+pwetq.mean,Precip of the wettest quarter,,
+pdryq.mean,Precip of the driest quarter,,
+pwarmq.mean,Precip of the warmest quarter,,
+pcoldq.mean,Precip of the coldest quarter,,
+gen2sp,Genus : species ratio,,
+vp,Mean annual vapor pressure,,
+rh,Mean annual relative humidity,,
+totalNS,Total N + S deposition,Pollution,Tot. N + S deposition
+vp_county,Mean annual vapor pressure (county avg),,
+rh_county,Mean annual relative humidity (county avg),,
+totalNS_county,Total N + S deposition (county avg),,
+ap_county,Annual precipitation (county avg),,
+mat_county,Mean annual temp (county avg),,
+iso_county,Isothermality,,
+pseas_county,Precipitation seasonality,,
+totalCirc,Total tree circumference,Tot. tree circ.,Tot. tree circumference
+POP10_SQMI,Human population density,,
+regS,Regional lichen species richness,Regional richness,Regional lichen richness
+FH,Forest heterogeneity,,
+FM,Forest mean conditions,,
+bigTrees,Large trees (PC1),Large trees,Large trees
+diamDiversity,Tree size variation (PC2),,Tree size variation
+wetness,Wet climate (PC1),Wet climate,High precip - high RH
+rain_lowRH,High precip-low relative humidity (PC2),Low RH,High precip - low RH
+avg_abun,Average lichen abundance,,
+tot_abun,Total lichen abundance,,
+tot_abun_log,Total lichen abundance,Local abundance,Lichen abundance
+parm_abun_log,Parmeliaceae abundance,,
+phys_abun_log,Physciaceae abundance,,
+abun_log,Lichen abundance,,Lichen abundance
+radiation,Solar radiation,Solar radiation,Solar radiation
+PC1,Tree composition (PC1),Tree composition,Tree composition
+PC2,Tree composition (PC2),Tree composition,Tree composition
+PC3,Tree composition (PC3),Tree composition,Tree composition
+soilPC1,Soil cations and pH (PC1),,Soil cations (PC1)
+soilPC2,Soil Mn (PC2),,Soil Mn (PC2)
+mat_reg_mean,Regional MAT (mean),MAT (mean),Mean annual temp. (reg. mean)
+iso_reg_mean,Regional ISO (mean),ISO (mean),Isothermality (reg. mean)
+ap_reg_mean,Regional AP (mean),AP (mean),
+pseas_reg_mean,Regional PSEAS (mean),PSEAS (mean),Precip. Seasonality (reg. mean)
+rh_reg_mean,Regional RH (mean),RH (mean),
+wetness_reg_mean,Regional hi-precip hi-RH (mean),Precip. PC1 (mean),High precip. - high RH (reg. mean)
+rain_lowRH_reg_mean,Regional hi-precip low-RH (mean),Precip. PC2 (mean),High precip. - low RH (reg. mean)
+mat_reg_var,Regional MAT (var),MAT (var),Mean annual temp. (reg. var.)
+iso_reg_var,Regional ISO (var),ISO (var),Isothermality (reg. var.)
+ap_reg_var,Regional AP (var),AP (var),
+pseas_reg_var,Regional PSEAS (var),PSEAS (var),Precip. Seasonality (reg. var.)
+rh_reg_var,Regional RH (var),RH (var),
+wetness_reg_var,Regional hi-precip hi-RH (var),Precip. PC1 (var),High precip. - high RH (reg. var.)
+rain_lowRH_reg_var,Regional hi-precip low-RH (var),Precip. PC2 (var),High precip. - low RH (reg. var.)
+regS_tree,Regional tree richness,Regional tree richness,Reg. tree richness
+totalNS_reg,Regional N+S deposition,Regional pollution,Reg. N + S deposition

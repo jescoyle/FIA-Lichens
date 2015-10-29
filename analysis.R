@@ -4,7 +4,6 @@
 
 source('./UNC/Projects/FIA Lichen/GitHub/FIA-Lichens/load_data.R')
 source('./GitHub/FIA-Lichens/fia_lichen_analysis_functions.R')
-source('./GitHub/FIA-Lichens/fia_lichen_analysis2_functions.R')
 
 #save.image('varpart_analysis.Rdata')
 #load('varpart_analysis.Rdata')
@@ -217,6 +216,8 @@ sapply(modlist, function(x) {
 	data.frame(R2, Deviance, aic)
 })
 
+
+
 ### Heterogeneity vs. optimality variance partitioning
 
 ## Within local variables
@@ -264,7 +265,7 @@ barwide=1.5
 use_shade = c('CC','55','99','FF')
 use_color = c('#2415B0','#00BF32','#126A71')
 
-svg('./Figures/New Analysis/variation partitioning loc-reg FIA.svg', height=5, width=10)
+svg('./Figures/New Analysis/variation partitioning loc-reg FIA all obs.svg', height=5, width=10)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -328,7 +329,7 @@ dev.off()
 
 
 ## Figure. Plot Heterogeneity - Optimality variation partitioning in 2 panels
-svg('./Figures/New Analysis/variation partitioning het-opt FIA.svg', height=5, width=8)
+svg('./Figures/New Analysis/variation partitioning het-opt FIA all obs.svg', height=5, width=8)
 	par(mar=c(0,6,1.5,0))
 
 	# Create plotting window
@@ -398,24 +399,6 @@ sds = apply(use_data[,c('richness', allvars)], 2, function(x) sqrt(var(x, na.rm=
 sds = sds/sds['richness']
 
 ## Get top variables in each category
-
-# RH
-RHdredge = dredge(RH_mod, beta=T, subset=dc('pseas_reg_var', 'pseas_reg_var2')&dc('regS_tree', 'regS_tree2')) 
-# Can leave out wetness_reg_var
-
-# RO
-ROdredge = dredge(RO_mod, beta=T, subset=dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
-# Leave out rain_lowRH_reg_mean and its square
-
-# LH
-LHdredge = dredge(LH_mod, beta=T, subset=dc('propDead','propDead2')&dc('wood_SG.rao.ba','wood_SG.rao.ba2')&dc('bark_moist_pct.rao.ba','bark_moist_pct.rao.ba2'))
-subset(LHdredge, weight >0.01)
-# Maybe leave out lightDist.mean propDead and its square and wood_SG.rao.ba square
-
-# LO
-LOdredge = dredge(LO_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2'))
-subset(LOdredge, weight >0.01)
-# Maybe leave out iso, bark_moist_pct.ba and wood_SG squared
 
 # Optimality variables
 #Odredge = dredge(O_mod, beta=T, subset=dc('light.mean','light.mean2')&dc('wood_SG.ba','wood_SG.ba2')&dc('radiation','radiation2')&dc('PC1','PC12')&dc('wetness','wetness2')dc('rain_lowRH_reg_mean','rain_lowRH_reg_mean2')&dc('wetness_reg_mean', 'wetness_reg_mean2'))
@@ -501,7 +484,7 @@ dev.off()
 
 working_data_test = cbind(working_data_test, sqdata_reg)
 
-# Change response variable: regS, regFIA
+# Can change response variable: regS, regFIA
 RH_regmod = errorsarlm(regFIA ~ wetness_reg_var + iso_reg_var + rain_lowRH_reg_var + pseas_reg_var + mat_reg_var + regS_tree + regS_tree2, data = working_data_test, listw=reg_listw)
 RO_regmod = errorsarlm(regFIA ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2, data = working_data_test, listw=reg_listw)
 R_regmod = errorsarlm(regFIA ~ wetness_reg_mean + iso_reg_mean + rain_lowRH_reg_mean + pseas_reg_mean + mat_reg_mean + pseas_reg_mean2 + 
